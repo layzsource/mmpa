@@ -1,11 +1,13 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from "vite";
 
+// Phase 13.0 — Electron-friendly build
 export default defineConfig({
-  server: {
-    port: 3000,
-    strictPort: true,   // 🚨 fail instead of auto-hopping
-  },
+  base: "./",
   build: {
-    outDir: 'dist',
+    outDir: "dist",
+    assetsDir: "assets",
+    sourcemap: true,
+    emptyOutDir: true,
   },
+  server: { port: 3002 },
 });

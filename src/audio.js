@@ -1,258 +1,456 @@
-import { state } from './state.js';
+// 🎶 Audio Engine — Phase 13.1 (Electron-safe, single-init, no prompts)
+// - No automatic mic popups; initializes on first start() or user gesture.
+// - Survives Electron focus/visibility changes.
+// - Safe if no input device; logs but never crashes.
+// - Provides analyser spectrum + RMS; optional self-register into hudCallbacks.
 
-console.log("🎶 audio.js loaded");
+console.log("🧠 AUDIO DEBUG PROBE ACTIVE — Phase 13.1a");
 
-let audioContext = null;
-let analyser = null;
-let microphone = null;
-let frequencyData = null;
-let isAudioEnabled = false;
-let audioSensitivity = 1.0;
-let audioCallbacks = [];
+const LOG = (...args) => console.log("audio.js:", ...args);
+LOG("🎶 audio.js loaded (Phase 13.1)");
 
-// Frequency ranges for bass, mid, treble
-const SAMPLE_RATE = 44100; // Standard sample rate
-const FFT_SIZE = 1024;
-const FREQUENCY_BIN_COUNT = FFT_SIZE / 2;
+// Phase 13.13 — Global Reactivity Gain (0.0 .. 4.0), default 1.0
+function _scaleBands(b) {
+  const g = Math.max(0, Math.min(4.0, (window.ReactivityGain ??= 1.0)));
+  if (g === 1) return b;
+  return {
+    bass:   Math.min(1, (b?.bass   ?? 0) * g),
+    mid:    Math.min(1, (b?.mid    ?? 0) * g),
+    treble: Math.min(1, (b?.treble ?? 0) * g),
+    level:  Math.min(1, (b?.level  ?? 0) * g),
+  };
+}
 
-// Frequency ranges in Hz
-const BASS_RANGE = { min: 20, max: 250 };
-const MID_RANGE = { min: 250, max: 2000 };
-const TREBLE_RANGE = { min: 2000, max: 8000 };
+class AudioCore {
+  constructor() {
+    this.ctx = null;
+    this.source = null;         // MediaStreamSource
+    this.analyser = null;
+    this.inputGain = null;      // GainNode before analyser (metering/headroom)
+    this.stream = null;
+    this.deviceId = null;
+    this.state = "idle";        // idle | ready | running | error
+    this.fftSize = 2048;
+    this.smoothing = 0.8;
+    this.freqData = null;
+    this.timeData = null;
+    this.onReadyCbs = new Set();
+    this.onErrorCbs = new Set();
 
-// Current audio analysis values
-let audioValues = {
-  bass: 0.0,
-  mid: 0.0,
-  treble: 0.0,
-  isEnabled: false,
-  sensitivity: 1.0
-};
+    // Phase 13.4: Event emitter for frame updates
+    this.frameListeners = new Set();
+    this.bands = { bass: 0, mid: 0, treble: 0, level: 0 };
+    this.frameLoop = null;
+
+    // one-time handlers
+    this._boundResume = this._resumeIfSuspended.bind(this);
+    this._visibility = this._handleVisibility.bind(this);
+    document.addEventListener("visibilitychange", this._visibility);
+    window.addEventListener("focus", this._boundResume);
+  }
+
+  // 🧩 Phase 13.8b — Test Tone feeds ANALYSER chain (not speakers)
+  async toggleTestTone(enable = !this.testToneActive) {
+    await this._ensureContext();
+    if (enable && !this.testToneOsc) {
+      console.log("📢 AudioEngine: Test Tone ON @ 220 Hz (to analyser)");
+      // build osc -> toneGain -> inputGain -> analyser
+      const osc = this.ctx.createOscillator();
+      const toneGain = this.ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 220;
+      toneGain.gain.value = 0.25;
+
+      // disconnect mic source from inputGain while tone is active
+      try { this.source?.disconnect(this.inputGain); } catch {}
+
+      osc.connect(toneGain).connect(this.inputGain);
+      osc.start();
+
+      this.testToneOsc = osc;
+      this.testToneGain = toneGain;
+      this.testToneActive = true;
+      return;
+    }
+
+    if (!enable && this.testToneOsc) {
+      console.log("🔇 AudioEngine: Test Tone OFF");
+      try {
+        this.testToneOsc.stop();
+        this.testToneOsc.disconnect();
+        this.testToneGain.disconnect();
+      } catch {}
+      this.testToneOsc = null;
+      this.testToneGain = null;
+      this.testToneActive = false;
+
+      // restore mic chain if available
+      if (this.source && this.inputGain) {
+        try { this.source.connect(this.inputGain); } catch {}
+      }
+    }
+  }
+
+  // List audio input devices (mics, loopbacks)
+  async listInputs() {
+    if (!navigator.mediaDevices?.enumerateDevices) return [];
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    return devices.filter(d => d.kind === "audioinput");
+  }
+
+  // public: switch device and rewire into analyser
+  async selectDevice(deviceId) {
+    this.deviceId = deviceId || null;
+    await this._ensureInput(true);
+    // if a test tone is active, it still goes into inputGain; both are okay
+    console.log("🎛️ AudioEngine: switched input", this.deviceId || "(default)");
+  }
+
+  // small helper to bump/trim preamp from HUD
+  setPreGain(mult) {
+    if (!this.preGain) return;
+    this.preGain.gain.value = Math.max(0.1, Math.min(16.0, mult));
+    console.log("🔉 AudioEngine preGain =", this.preGain.gain.value.toFixed(2), "x");
+  }
+
+  // ---- public API ----------------------------------------------------------
+
+  async init(opts = {}) {
+    if (this.state !== "idle") return;
+    this.fftSize = opts.fftSize || this.fftSize;
+    this.smoothing = opts.smoothing ?? this.smoothing;
+    this.deviceId = opts.deviceId || null;
+    try {
+      await this._ensureContext();
+      await this._ensureInput();
+      this._ensureAnalyser();
+      this.state = "ready";
+      LOG("✅ Audio engine ready");
+      this._notify(this.onReadyCbs);
+    } catch (err) {
+      this.state = "error";
+      console.error("audio.js: ❌ init failed:", err);
+      this._notify(this.onErrorCbs, err);
+    }
+  }
+
+  async start() {
+    console.log("🔍 Phase 13.1a: AudioEngine.start() called, state=", this.state);
+    // lazy init
+    if (this.state === "idle") await this.init();
+    if (this.state === "error") return false;
+    await this._resumeIfSuspended();
+    this.state = "running";
+
+    // Phase 13.4: Start frame loop for event broadcasting
+    if (!this.frameLoop) {
+      this._startFrameLoop();
+    }
+
+    console.log("🔍 Phase 13.1a: AudioEngine.start() complete, state=", this.state);
+    return true;
+  }
+
+  // Phase 13.4: Event emitter methods
+  on(event, callback) {
+    if (event === 'frame' && typeof callback === 'function') {
+      this.frameListeners.add(callback);
+    }
+  }
+
+  off(event, callback) {
+    if (event === 'frame') {
+      this.frameListeners.delete(callback);
+    }
+  }
+
+  emit(event, data) {
+    if (event === 'frame') {
+      for (const listener of this.frameListeners) {
+        try {
+          listener(data);
+        } catch (e) {
+          console.error("AudioEngine frame listener error:", e);
+        }
+      }
+    }
+  }
+
+  _startFrameLoop() {
+    let loopFrameCount = 0;
+    const update = () => {
+      if (this.state !== "running") {
+        this.frameLoop = null;
+        LOG("🛑 Frame loop stopped, state:", this.state);
+        return;
+      }
+
+      this.updateBands();
+      // Phase 13.13: emit scaled bands
+      this.emit('frame', _scaleBands(this.bands));
+
+      // Log every 120 frames (every 2 seconds at 60fps)
+      if (loopFrameCount++ % 120 === 0) {
+        LOG(`🎧 Frame loop tick #${loopFrameCount}, listeners: ${this.frameListeners.size}, bands:`, this.bands);
+      }
+
+      this.frameLoop = requestAnimationFrame(update);
+    };
+    this.frameLoop = requestAnimationFrame(update);
+    LOG("🎧 AudioEngine frame loop started, listeners:", this.frameListeners.size);
+  }
+
+  updateBands() {
+    if (!this.analyser) return;
+
+    const spectrum = this.getSpectrum();
+    const rms = this.getRMS();
+    const n = spectrum.length;
+
+    if (n > 0) {
+      const bassEnd = Math.floor(n * 0.15);
+      const midEnd = Math.floor(n * 0.6);
+      const avg = (arr, a, b) => arr.slice(a, b).reduce((s, v) => s + v, 0) / (b - a);
+
+      this.bands = {
+        bass: avg(spectrum, 0, bassEnd) / 255,
+        mid: avg(spectrum, bassEnd, midEnd) / 255,
+        treble: avg(spectrum, midEnd, n) / 255,
+        level: rms
+      };
+
+      // after computing this.bands = { bass, mid, treble, level }
+      if (!this._printedNonZero && (this.bands.level > 0.02)) {
+        this._printedNonZero = true;
+        console.log("✅ Mic bands active:", this.bands);
+      }
+    }
+  }
+
+  async stop() {
+    try {
+      if (this.stream) {
+        for (const t of this.stream.getTracks()) t.stop();
+      }
+    } catch {}
+    this.stream = null;
+    this.source = null;
+    // keep ctx alive; we just drop input
+    this.state = "ready";
+  }
+
+  async setDeviceId(deviceId) {
+    if (deviceId === this.deviceId) return;
+    this.deviceId = deviceId || null;
+    if (!this.ctx) await this._ensureContext();
+    await this._ensureInput(true); // force rebuild source
+    this._ensureAnalyser();        // relink graph
+    LOG("🔁 Switched audio device:", this.deviceId || "(default)");
+  }
+
+  onReady(cb) { this.onReadyCbs.add(cb); return () => this.onReadyCbs.delete(cb); }
+  onError(cb) { this.onErrorCbs.add(cb); return () => this.onErrorCbs.delete(cb); }
+
+  getAnalyser() { return this.analyser; }
+
+  getRMS() {
+    if (!this.analyser) return 0;
+    if (!this.timeData) this.timeData = new Uint8Array(this.analyser.fftSize);
+    this.analyser.getByteTimeDomainData(this.timeData);
+    let sum = 0;
+    for (let i = 0; i < this.timeData.length; i++) {
+      const v = (this.timeData[i] - 128) / 128; // [-1,1]
+      sum += v * v;
+    }
+    return Math.sqrt(sum / this.timeData.length);
+  }
+
+  getSpectrum() {
+    if (!this.analyser) return new Uint8Array(0);
+    if (!this.freqData) this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
+    this.analyser.getByteFrequencyData(this.freqData);
+    return this.freqData;
+  }
+
+  // Optional: tick for HUD
+  tick() {
+    // no-op placeholder; HUD can poll getRMS/getSpectrum
+  }
+
+  // ---- internals -----------------------------------------------------------
+
+  async _ensureContext() {
+    if (this.ctx) return;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) throw new Error("WebAudio not supported");
+    this.ctx = new Ctx({ latencyHint: "interactive" });
+    LOG("🧠 AudioContext created:", this.ctx.state);
+  }
+
+  // ✅ Phase 13.9 — Robust mic path into analyser with pre-gain
+  async _ensureInput(recreate = false) {
+    await this._ensureContext();
+    if (!this.inputGain) this.inputGain = this.ctx.createGain();
+    if (!this.preGain)   this.preGain   = this.ctx.createGain(); // preamp for weak mics
+    // default preamp ~ +12dB (≈4x). We'll expose this in HUD too.
+    if (typeof this.preGain.gain.value !== "number" || this.preGain.gain.value === 0) {
+      this.preGain.gain.value = 4.0;
+    }
+
+    // (re)create stream
+    if (recreate || !this.stream) {
+      // close prior
+      try { this.source?.disconnect(); } catch {}
+      try { this.stream?.getTracks?.().forEach(t => t.stop()); } catch {}
+
+      const constraints = this.deviceId
+        ? { audio: { deviceId: { exact: this.deviceId } } }
+        : { audio: true };
+
+      this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+      this.source = this.ctx.createMediaStreamSource(this.stream);
+    }
+
+    // wiring: source → preGain → inputGain → analyser
+    this._ensureAnalyser();
+    try { this.source.disconnect(); } catch {}
+    try { this.preGain.disconnect(); } catch {}
+    try { this.inputGain.disconnect(); } catch {}
+
+    this.source.connect(this.preGain);
+    this.preGain.connect(this.inputGain);
+    this.inputGain.connect(this.analyser);
+
+    // do NOT connect to destination here (analyser only)
+    this.state = "ready";
+    console.log("🎙️ Mic path wired → analyser (preGain:", this.preGain.gain.value.toFixed(2) + ")");
+  }
+
+  _ensureAnalyser() {
+    if (!this.ctx || !this.source) return;
+    // (re)build nodes
+    if (!this.inputGain) this.inputGain = this.ctx.createGain();
+    this.inputGain.gain.value = 1.0;
+
+    if (!this.analyser) this.analyser = this.ctx.createAnalyser();
+    this.analyser.fftSize = this.fftSize;
+    this.analyser.smoothingTimeConstant = this.smoothing;
+
+    // wire: source -> inputGain -> analyser (no audio to destination)
+    try {
+      this.source.disconnect();
+    } catch {}
+    this.inputGain.disconnect?.();
+    this.analyser.disconnect?.();
+
+    this.source.connect(this.inputGain);
+    this.inputGain.connect(this.analyser);
+  }
+
+  async _resumeIfSuspended() {
+    if (!this.ctx) return;
+    if (this.ctx.state === "suspended") {
+      try {
+        await this.ctx.resume();
+        LOG("▶️ AudioContext resumed");
+      } catch (e) {
+        console.warn("AudioContext resume failed:", e);
+      }
+    }
+  }
+
+  _handleVisibility() {
+    if (document.visibilityState === "visible") this._resumeIfSuspended();
+  }
+
+  _notify(set, arg) { for (const cb of set) try { cb(arg); } catch (e) { console.error(e); } }
+}
+
+// Singleton instance
+export const AudioEngine = new AudioCore();
+
+// Expose globally for DevTools testing
+if (typeof window !== "undefined") {
+  window.AudioEngine = AudioEngine;
+  window.AudioProbe = {
+    // Phase 13.4: Enhanced probe with event testing
+    start: () => AudioEngine.start(),
+    stop: () => AudioEngine.stop(),
+    info: () => ({
+      ctx: AudioEngine.ctx?.state,
+      hasAnalyser: !!AudioEngine.analyser,
+      state: AudioEngine.state,
+      frameListeners: AudioEngine.frameListeners.size,
+      bands: AudioEngine.bands,
+    }),
+    getBands: () => AudioEngine.bands,
+    getRMS: () => AudioEngine.getRMS(),
+    getSpectrum: () => AudioEngine.getSpectrum(),
+    // Test event subscription
+    testEvent: () => {
+      const testListener = (bands) => {
+        console.log("🧪 AudioProbe test listener:", bands);
+      };
+      AudioEngine.on('frame', testListener);
+      console.log("✅ Test listener registered. Check console for frame events.");
+      return () => {
+        AudioEngine.off('frame', testListener);
+        console.log("🧹 Test listener removed");
+      };
+    },
+  };
+
+  // Legacy alias
+  window.AudioEngineProbe = window.AudioProbe;
+}
+
+// Optional auto-registration with HUD if present (non-breaking)
+try {
+  if (window?.hudCallbacks && typeof window.hudCallbacks === "object") {
+    window.hudCallbacks.audio = () => AudioEngine.tick();
+    LOG("🔗 Registered hudCallbacks.audio");
+  }
+} catch {}
+
+// ---- Legacy API compatibility (Phase 13.1) ----
+// Preserve old function names for backward compatibility
 
 export function initAudio() {
-  console.log("🎶 Audio system initialized");
+  LOG("initAudio() called (legacy API - no-op in Phase 13.1)");
 }
 
 export function enableAudio() {
-  if (isAudioEnabled) {
-    console.log("🎶 Audio already enabled");
-    return Promise.resolve();
-  }
-
-  return navigator.mediaDevices.getUserMedia({ audio: true })
-    .then(stream => {
-      console.log("🎤 Microphone initialized");
-
-      // Create audio context
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-      // Create analyser node
-      analyser = audioContext.createAnalyser();
-      analyser.fftSize = FFT_SIZE;
-      analyser.smoothingTimeConstant = 0.8;
-
-      // Create microphone source
-      microphone = audioContext.createMediaStreamSource(stream);
-      microphone.connect(analyser);
-
-      // Initialize frequency data array
-      frequencyData = new Uint8Array(analyser.frequencyBinCount);
-
-      isAudioEnabled = true;
-      audioValues.isEnabled = true;
-
-      // Start analysis loop
-      startAudioAnalysis();
-
-      notifyAudioUpdate();
-      return true;
-    })
-    .catch(error => {
-      console.warn("🎶 Microphone access denied or failed:", error.message);
-      isAudioEnabled = false;
-      audioValues.isEnabled = false;
-      notifyAudioUpdate();
-      return false;
-    });
+  LOG("enableAudio() called (legacy API - delegating to AudioEngine.start())");
+  console.log("🔍 Phase 13.1a: enableAudio() → AudioEngine.start()");
+  return AudioEngine.start();
 }
 
-export function disableAudio() {
-  if (!isAudioEnabled) return;
-
-  console.log("🎶 Disabling audio");
-
-  if (microphone) {
-    microphone.disconnect();
-    microphone = null;
-  }
-
-  if (audioContext) {
-    audioContext.close();
-    audioContext = null;
-  }
-
-  analyser = null;
-  frequencyData = null;
-  isAudioEnabled = false;
-  audioValues.isEnabled = false;
-
-  // Reset audio values
-  audioValues.bass = 0.0;
-  audioValues.mid = 0.0;
-  audioValues.treble = 0.0;
-
-  notifyAudioUpdate();
-}
-
-export function setAudioSensitivity(sensitivity) {
-  audioSensitivity = Math.max(0.1, Math.min(3.0, sensitivity));
-  audioValues.sensitivity = audioSensitivity;
-  console.log(`🎶 Audio sensitivity set to ${audioSensitivity.toFixed(2)}`);
-  notifyAudioUpdate();
+export function updateAudio() {
+  // Legacy no-op - audio updates are now passive via getSpectrum/getRMS
+  AudioEngine.tick();
 }
 
 export function getAudioValues() {
-  return { ...audioValues };
-}
+  const rms = AudioEngine.getRMS();
+  const spectrum = AudioEngine.getSpectrum();
 
-// Phase 11.4.1: Audio Gating - Centralized gated access to audio data
-export function getEffectiveAudio() {
-  // Gate through both audio.enabled AND audioReactive toggle
-  if (!state.audio.enabled || !state.audioReactive || !isAudioEnabled) {
-    return { bass: 0, mid: 0, treble: 0, level: 0, isEnabled: false };
-  }
-  return { ...audioValues, level: audioValues.bass || 0 }; // Add level field for compatibility
-}
+  // Calculate legacy bass/mid/treble from spectrum
+  const bass = spectrum.length > 0 ? spectrum.slice(0, 10).reduce((a, b) => a + b, 0) / 10 / 255 : 0;
+  const mid = spectrum.length > 30 ? spectrum.slice(10, 30).reduce((a, b) => a + b, 0) / 20 / 255 : 0;
+  const treble = spectrum.length > 50 ? spectrum.slice(30, 50).reduce((a, b) => a + b, 0) / 20 / 255 : 0;
 
-export function isAudioActive() {
-  return isAudioEnabled;
+  return {
+    bass,
+    mid,
+    treble,
+    level: rms,
+    isEnabled: AudioEngine.state === "running"
+  };
 }
 
 export function onAudioUpdate(callback) {
-  audioCallbacks.push(callback);
-}
-
-function startAudioAnalysis() {
-  function analyze() {
-    if (!isAudioEnabled || !analyser || !frequencyData) return;
-
-    // Get frequency data
-    analyser.getByteFrequencyData(frequencyData);
-
-    // Calculate frequency ranges
-    const bassLevel = getFrequencyRangeAverage(BASS_RANGE);
-    const midLevel = getFrequencyRangeAverage(MID_RANGE);
-    const trebleLevel = getFrequencyRangeAverage(TREBLE_RANGE);
-
-    // Apply sensitivity and normalize (0-1)
-    audioValues.bass = Math.min(1.0, (bassLevel / 255) * audioSensitivity);
-    audioValues.mid = Math.min(1.0, (midLevel / 255) * audioSensitivity);
-    audioValues.treble = Math.min(1.0, (trebleLevel / 255) * audioSensitivity);
-
-    // Notify listeners
-    notifyAudioUpdate();
-
-    // Continue analysis
-    requestAnimationFrame(analyze);
+  // Legacy event-based API - convert to callback registration
+  if (typeof callback === "function") {
+    AudioEngine.onReady(callback);
   }
-
-  analyze();
-}
-
-function getFrequencyRangeAverage(range) {
-  if (!frequencyData || !audioContext) return 0;
-
-  const nyquist = SAMPLE_RATE / 2;
-  const minBin = Math.floor((range.min / nyquist) * FREQUENCY_BIN_COUNT);
-  const maxBin = Math.floor((range.max / nyquist) * FREQUENCY_BIN_COUNT);
-
-  let sum = 0;
-  let count = 0;
-
-  for (let i = minBin; i <= maxBin && i < frequencyData.length; i++) {
-    sum += frequencyData[i];
-    count++;
-  }
-
-  return count > 0 ? sum / count : 0;
-}
-
-function notifyAudioUpdate() {
-  const audioData = {
-    bass: audioValues.bass,
-    mid: audioValues.mid,
-    treble: audioValues.treble,
-    isEnabled: audioValues.isEnabled,
-    sensitivity: audioValues.sensitivity
-  };
-
-  audioCallbacks.forEach(callback => {
-    try {
-      callback(audioData);
-    } catch (error) {
-      console.error('🎶 Error in audio callback:', error);
-    }
-  });
-}
-
-// Export audio state for presets
-export function getAudioState() {
-  return {
-    enabled: isAudioEnabled,
-    sensitivity: audioSensitivity
-  };
-}
-
-export function setAudioState(state) {
-  if (state.sensitivity !== undefined) {
-    setAudioSensitivity(state.sensitivity);
-  }
-
-  if (state.enabled && !isAudioEnabled) {
-    enableAudio();
-  } else if (!state.enabled && isAudioEnabled) {
-    disableAudio();
-  }
-}
-
-// Simple update function for direct state updates
-export function updateAudio() {
-  if (!analyser || !frequencyData) return;
-
-  analyser.getByteFrequencyData(frequencyData);
-
-  // Simple frequency band averaging
-  const bass = avg(frequencyData.slice(0, 10)) / 255;
-  const mid = avg(frequencyData.slice(10, 40)) / 255;
-  const treble = avg(frequencyData.slice(40, 80)) / 255;
-
-  // Update state directly
-  state.audio.bass = bass;
-  state.audio.mid = mid;
-  state.audio.treble = treble;
-
-  // Audio smoothing for vessel
-  const alpha = state.vessel.audioSmoothing;
-  if (!state.audio.smooth) {
-    state.audio.smooth = { bass, mid, treble };
-  } else {
-    state.audio.smooth = {
-      bass: alpha * state.audio.smooth.bass + (1 - alpha) * bass,
-      mid: alpha * state.audio.smooth.mid + (1 - alpha) * mid,
-      treble: alpha * state.audio.smooth.treble + (1 - alpha) * treble,
-    };
-  }
-
-  // Hard cutoff when audio reactive is OFF
-  if (!state.audioReactive) {
-    // Wipe audio values so they don't leak into geometry
-    state.audio.bass = 0.5;
-    state.audio.mid = 0.5;
-    state.audio.treble = 0.5;
-    state.audio.smooth = { bass: 0.5, mid: 0.5, treble: 0.5 };
-  }
-}
-
-function avg(arr) {
-  return arr.reduce((a, b) => a + b, 0) / arr.length;
 }

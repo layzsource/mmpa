@@ -62,6 +62,13 @@ export const state = {
     treble: 0.0,     // High frequency (2000-8000Hz)
     enabled: false,  // Audio reactivity enabled
     sensitivity: 1.0, // Audio sensitivity multiplier
+    audioGain: 1.0,  // Phase 13.30: Master reactivity multiplier
+    autoTone: true,  // Phase 13.30: Auto test tone on silent boot
+  },
+
+  // Phase 13.30: UI configuration
+  ui: {
+    projectorMode: false  // Projector mode toggle
   },
 
   // Audio reactivity toggle
@@ -80,7 +87,8 @@ export const state = {
     layoutIndex: 0,         // NEW (layout index for MIDI cycling: 0=lattice, 1=hoops, 2=shells)
     audioSmoothing: 0.7,    // NEW (audio smoothing factor)
     hueShiftRange: 20,      // NEW (hue shift range in degrees)
-    mode: 'gyre'            // Phase 2.x: Vessel mode ('gyre' | 'conflat6')
+    mode: 'gyre',           // Phase 2.x: Vessel mode ('gyre' | 'conflat6')
+    visible: false          // Phase 12.0: Compass rings visibility (hidden by default)
   },
 
   // Particle system
@@ -282,6 +290,20 @@ export const state = {
   // Wireframe overlay configuration
   wireframe: {
     enabled: true
+  },
+
+  // Phase 12.0: Geometry system (morph shape + textures)
+  geometry: {
+    skyboxMode: false,
+    wireframe: false,
+    faceTextures: {
+      front: null,
+      back: null,
+      left: null,
+      right: null,
+      top: null,
+      bottom: null
+    }
   },
 
   // Debug visualization options (OFF by default)
@@ -615,5 +637,9 @@ window.addEventListener('mandala:imageCleared', () => {
   state.mandala.customImageName = null;
   console.log('🎯 State updated: mandala custom image cleared (returning to emoji)');
 });
+
+// Phase 13.31: Ensure defaults exist
+state.audio = state.audio || {};
+if (state.audio.audioGain == null) state.audio.audioGain = 1.0;
 
 console.log("🎯 State initialized:", state);

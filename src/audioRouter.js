@@ -1,55 +1,148 @@
-import { onAudioUpdate } from './audio.js';
-import { state, setMorphWeights } from './state.js';
+// 🎶 audioRouter.js — Phase 13.31 (Stability Minimum)
+// Event-driven relay: AudioEngine → audioState → geometry/particles/HUD
 
-console.log("🎶 audioRouter.js loaded");
+import { AudioEngine } from "./audio.js";
+import { notifyHUDUpdate } from "./hud.js";
+import { applyAudioBandsToSprites } from "./sprites.js";
+import { state } from "./state.js";
 
-// Audio-reactive weights that get combined with base weights
-let audioMorphWeights = { cube: 0.0, sphere: 0.0, pyramid: 0.0, torus: 0.0 };
+console.log("🎶 audioRouter.js loaded (Phase 13.31)");
 
-// Audio updates to state routing
-onAudioUpdate((audioData) => {
-  // Update audio state values
-  state.audio.bass = audioData.bass || 0.0;
-  state.audio.mid = audioData.mid || 0.0;
-  state.audio.treble = audioData.treble || 0.0;
-  state.audio.enabled = audioData.isEnabled || false;
-  state.audio.sensitivity = audioData.sensitivity || 1.0;
+let audioState = {
+  bass: 0,
+  mid: 0,
+  treble: 0,
+  level: 0,
+  spectrum: new Uint8Array(0),
+};
 
-  if (audioData.isEnabled) {
-    // Map audio frequencies to morph targets
-    // Bass → Cube weight
-    // Mid → Sphere weight
-    // Treble → Pyramid weight
-    // Torus unaffected for Phase 6
-    audioMorphWeights.cube = audioData.bass || 0.0;
-    audioMorphWeights.sphere = audioData.mid || 0.0;
-    audioMorphWeights.pyramid = audioData.treble || 0.0;
-    audioMorphWeights.torus = 0.0;
-
-    // Apply audio-reactive morphing by combining with existing weights
-    applyAudioReactiveMorphing();
-  } else {
-    // Reset audio weights when disabled
-    audioMorphWeights = { cube: 0.0, sphere: 0.0, pyramid: 0.0, torus: 0.0 };
-  }
-});
-
-function applyAudioReactiveMorphing() {
-  if (!state.audio.enabled) return;
-
-  // Get current base morph weights (from HUD/MIDI/Presets)
-  const baseWeights = { ...state.morphWeights };
-
-  // Combine audio weights with existing weights additively
-  const combinedWeights = {};
-
-  // Apply audio influence additively to existing weights
-  Object.keys(baseWeights).forEach(target => {
-    combinedWeights[target] = baseWeights[target] + (audioMorphWeights[target] || 0);
-  });
-
-  // Set the combined weights (this will auto-normalize in state.js)
-  setMorphWeights(combinedWeights);
+// Phase 13.31: Numeric guards
+function toNums(b) {
+  return {
+    bass: +b.bass || 0,
+    mid: +b.mid || 0,
+    treble: +b.treble || 0,
+    level: +b.level || 0
+  };
 }
 
-console.log("🎶 Audio routing configured");
+// Phase 13.31: Single gain & shape step
+const shape = x => Math.pow(Math.max(0, x), 0.6);
+
+function process(b) {
+  const g = state.audio?.audioGain ?? 1;
+  const n = toNums(b);
+  return {
+    bass: shape(n.bass) * g,
+    mid: shape(n.mid) * g,
+    treble: shape(n.treble) * g,
+    level: shape(n.level) * g
+  };
+}
+
+// Phase 13.31: Auto-calibrate + tone
+const _tone = {
+  startTime: 0,
+  rmsHistory: [],
+  silentDuration: 0,
+  activeDuration: 0,
+  toneActive: false
+};
+
+function checkAutoTone(rms) {
+  const now = performance.now();
+  if (_tone.startTime === 0) _tone.startTime = now;
+
+  const elapsed = now - _tone.startTime;
+
+  // Track RMS over 1s
+  _tone.rmsHistory.push(rms);
+  if (_tone.rmsHistory.length > 60) _tone.rmsHistory.shift(); // ~1s at 60fps
+
+  const avgRms = _tone.rmsHistory.reduce((a, b) => a + b, 0) / _tone.rmsHistory.length;
+
+  // If < 0.002 for 1s after start → enable tone
+  if (!_tone.toneActive && elapsed > 1000 && avgRms < 0.002) {
+    _tone.silentDuration += 16; // ~1 frame
+    if (_tone.silentDuration >= 1000) {
+      console.log("🔊 Silent boot → auto test tone ON (220Hz)");
+      AudioEngine.setTestTone?.(true, 220);
+      _tone.toneActive = true;
+      _tone.silentDuration = 0;
+    }
+  } else {
+    _tone.silentDuration = 0;
+  }
+
+  // If rms > 0.01 for 300ms → disable tone
+  if (_tone.toneActive && rms > 0.01) {
+    _tone.activeDuration += 16;
+    if (_tone.activeDuration >= 300) {
+      console.log("🔇 Mic activity → auto test tone OFF");
+      AudioEngine.setTestTone?.(false);
+      _tone.toneActive = false;
+      _tone.activeDuration = 0;
+    }
+  } else {
+    _tone.activeDuration = 0;
+  }
+}
+
+// Phase 13.4: Event-driven update relay
+export function initAudioRouter() {
+  console.log("🎧 Initializing audio router event relay...");
+
+  let frameCount = 0;
+  AudioEngine.on('frame', (bands) => {
+    if (!bands) {
+      console.warn("⚠️ audioRouter received null bands");
+      return;
+    }
+
+    try {
+      // Phase 13.31: Process bands (numeric guards + gain + shape)
+      const processed = process(bands);
+
+      // Update audioState with processed bands
+      audioState.bass = processed.bass;
+      audioState.mid = processed.mid;
+      audioState.treble = processed.treble;
+      audioState.level = processed.level;
+      audioState.spectrum = AudioEngine.getSpectrum();
+
+      // Phase 13.31: Auto-calibrate + tone
+      if (state.audio?.autoTone) {
+        checkAutoTone(processed.level);
+      }
+
+      // Log every 60 frames (once per second at 60fps)
+      if (frameCount++ % 60 === 0) {
+        console.log("🎧 Audio frame relay:", {
+          bass: audioState.bass.toFixed(3),
+          mid: audioState.mid.toFixed(3),
+          treble: audioState.treble.toFixed(3),
+          level: audioState.level.toFixed(3),
+          hasCallback: !!window?.hudCallbacks?.audioReactive
+        });
+      }
+
+      // Broadcast to geometry/particles if callbacks exist
+      if (window?.hudCallbacks?.audioReactive) {
+        window.hudCallbacks.audioReactive(audioState);
+      }
+
+      // Phase 13.10: Apply audio to sprites
+      applyAudioBandsToSprites(audioState);
+
+      // Notify HUD Signal Bridge
+      notifyHUDUpdate();
+    } catch (err) {
+      console.error("❌ audioRouter relay error:", err);
+    }
+  });
+
+  console.log("✅ Audio router event relay registered");
+}
+
+export { audioState };
+console.log("🎶 Audio routing configured (Phase 13.31)");

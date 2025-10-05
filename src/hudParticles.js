@@ -2,6 +2,7 @@
 // Extracted from hud.js for better organization
 
 import { state } from './state.js';
+import { HUD, notifyHUDUpdate, registerHUDCallback } from "./hud.js";
 
 console.log("✨ hudParticles.js loaded");
 
@@ -179,5 +180,76 @@ export function createParticlesHudSection(container, notifyHUDUpdate, createTogg
   particleAudioJitterControl.title = 'Add velocity bursts on FFT peaks';
   container.appendChild(particleAudioJitterControl);
 
+  // ——— Phase 13.11: Sprites Reactivity Controls (additive, safe) ———
+  (function addSpriteControls() {
+    // Safe guard: if config not present yet, skip rendering
+    const cfg = window.SpritesReactConfig;
+    if (!cfg) return;
+
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'margin-top:12px;padding-top:8px;border-top:1px solid #333;';
+    wrap.innerHTML = `
+      <div style="font-weight:600;margin-bottom:6px;">🧩 Sprites Reactivity</div>
+
+      <label style="display:block;margin-bottom:4px;">Attack
+        <input id="sp-attack" type="range" min="0.05" max="0.8" step="0.01">
+      </label>
+
+      <label style="display:block;margin:8px 0 4px;">Release
+        <input id="sp-release" type="range" min="0.05" max="0.6" step="0.01">
+      </label>
+
+      <label style="display:block;margin:8px 0 4px;">Beat Threshold
+        <input id="sp-thresh" type="range" min="0.2" max="0.9" step="0.01">
+      </label>
+
+      <label style="display:block;margin:8px 0 4px;">Size Amp
+        <input id="sp-size" type="range" min="0.1" max="2.0" step="0.05">
+      </label>
+
+      <label style="display:block;margin:8px 0 4px;">Spawn Amp
+        <input id="sp-spawn" type="range" min="0.1" max="3.0" step="0.05">
+      </label>
+
+      <label style="display:block;margin:8px 0 4px;">Hue Amp
+        <input id="sp-hue" type="range" min="0" max="240" step="5">
+      </label>
+
+      <label style="display:block;margin:8px 0 4px;">Beat Flash
+        <input id="sp-flash" type="range" min="0" max="0.8" step="0.05">
+      </label>
+    `;
+    container.appendChild(wrap);
+
+    const $ = (id) => wrap.querySelector(id);
+    // Initialize sliders from current config
+    $('#sp-attack').value  = cfg.attack ?? 0.35;
+    $('#sp-release').value = cfg.release ?? 0.12;
+    $('#sp-thresh').value  = cfg.beatThresh ?? 0.48;
+    $('#sp-size').value    = cfg.sizeMulAmp ?? 1.10;
+    $('#sp-spawn').value   = cfg.spawnAmp ?? 1.70;
+    $('#sp-hue').value     = cfg.hueAmp ?? 140.0;
+    $('#sp-flash').value   = cfg.beatFlash ?? 0.35;
+
+    const apply = () => {
+      cfg.attack     = parseFloat($('#sp-attack').value);
+      cfg.release    = parseFloat($('#sp-release').value);
+      cfg.beatThresh = parseFloat($('#sp-thresh').value);
+      cfg.sizeMulAmp = parseFloat($('#sp-size').value);
+      cfg.spawnAmp   = parseFloat($('#sp-spawn').value);
+      cfg.hueAmp     = parseFloat($('#sp-hue').value);
+      cfg.beatFlash  = parseFloat($('#sp-flash').value);
+      console.log('🧩 SpritesReactConfig updated:', { ...cfg });
+    };
+
+    ['#sp-attack','#sp-release','#sp-thresh','#sp-size','#sp-spawn','#sp-hue','#sp-flash']
+      .forEach(id => $(id).addEventListener('input', apply));
+  })();
+
   console.log("✨ Particles HUD section created");
+}
+
+// Phase 13.4.2: Export refresh callback for manual registration
+export function refreshParticlesHUD() {
+  console.log("✨ HUD(Particles): refresh");
 }

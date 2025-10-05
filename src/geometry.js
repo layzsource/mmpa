@@ -9,6 +9,7 @@ import { getShadowBox } from './main.js'; // Phase 2.3.3
 import { createPostProcessing } from './postprocessing.js'; // Dual Trail System
 import { updateInterpolation, updateChain } from './presetRouter.js'; // Phase 11.2.8, 11.3.0
 import { updateVisual } from './visual.js'; // Phase 11.6.0
+import { initPeriaktos } from './periaktos.js'; // Phase 13.1.0: Periaktos mirror geometry
 
 console.log("🔺 geometry.js loaded");
 
@@ -164,7 +165,18 @@ function createMorphGeometry() {
   return geometry;
 }
 
-// Use MeshStandardMaterial for better lighting
+// Phase 12.0: Per-face texture materials (6 faces: front/back/left/right/top/bottom)
+// Default: colored faces as fallback when no textures uploaded
+const faceMaterials = [
+  new THREE.MeshStandardMaterial({ color: 0xff0000, roughness: 0.7, metalness: 0.3 }), // Right (red)
+  new THREE.MeshStandardMaterial({ color: 0x00ff00, roughness: 0.7, metalness: 0.3 }), // Left (green)
+  new THREE.MeshStandardMaterial({ color: 0x0000ff, roughness: 0.7, metalness: 0.3 }), // Top (blue)
+  new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.7, metalness: 0.3 }), // Bottom (yellow)
+  new THREE.MeshStandardMaterial({ color: 0x00ffff, roughness: 0.7, metalness: 0.3 }), // Front (cyan)
+  new THREE.MeshStandardMaterial({ color: 0xff00ff, roughness: 0.7, metalness: 0.3 })  // Back (magenta)
+];
+
+// Wireframe material for wireframe mode
 const material = new THREE.MeshStandardMaterial({
   color: state.color,
   wireframe: true,
@@ -177,10 +189,27 @@ const morphGeometry = createMorphGeometry();
 const morphMesh = new THREE.Mesh(morphGeometry, material);
 morphMesh.visible = true;
 morphMesh.position.set(0, 0, 0);
-scene.add(morphMesh);
 
 // Initialize morph target influences (start with cube)
 morphMesh.morphTargetInfluences = [0, 1, 0, 0]; // [sphere, cube, pyramid, torus]
+
+// Phase 12.1: Explicit initializer for morph shape
+export function initMorphShape(targetScene) {
+  targetScene.add(morphMesh);
+  console.log("🔺 Morph Shape added to scene (cube-sphere conflation)");
+
+  // Phase 13.1.0: Initialize Periaktos mirror geometry
+  initPeriaktos();
+  console.log("🌀 Periaktos initialized");
+
+  return morphMesh;
+}
+
+// Auto-initialize for backward compatibility
+scene.add(morphMesh);
+
+// Export face materials for texture upload
+export { faceMaterials };
 
 // Keep reference for backward compatibility
 const morphObjects = {
@@ -372,6 +401,86 @@ function updateDirectionalLightPosition() {
     Math.sin(radX) * 10,
     Math.cos(radY) * Math.cos(radX) * 10
   );
+}
+
+// Phase 12.0: Set texture on specific face (0=right, 1=left, 2=top, 3=bottom, 4=front, 5=back)
+export function setFaceTexture(faceIndex, texture) {
+  if (faceIndex < 0 || faceIndex >= 6) {
+    console.error(`❌ Invalid face index: ${faceIndex}. Must be 0-5.`);
+    return;
+  }
+
+  faceMaterials[faceIndex].map = texture;
+  faceMaterials[faceIndex].color.set(0xffffff); // Ensure texture is visible
+  faceMaterials[faceIndex].needsUpdate = true;
+  console.log(`🖼️ Texture set on face ${faceIndex}`);
+}
+
+// Phase 12.0: Clear texture from specific face (restore colored face)
+export function clearFaceTexture(faceIndex) {
+  if (faceIndex < 0 || faceIndex >= 6) return;
+
+  const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0x00ffff, 0xff00ff];
+  faceMaterials[faceIndex].map = null;
+  faceMaterials[faceIndex].color.set(colors[faceIndex]);
+  faceMaterials[faceIndex].needsUpdate = true;
+  console.log(`🎨 Face ${faceIndex} restored to color`);
+}
+
+// Phase 12.0: Toggle wireframe vs face-textured mode (extended API)
+export function setWireframeMode(enabled) {
+  state.geometry.wireframe = !!enabled;
+  if (enabled) {
+    morphMesh.material = material; // Single wireframe material
+  } else {
+    morphMesh.material = faceMaterials; // Array of face materials
+  }
+  console.log(`🔲 Wireframe mode: ${enabled ? 'ON' : 'OFF'}`);
+}
+
+// Phase 12.0: Skybox mode - allows camera to go inside/outside morph shape (extended API)
+export function setSkyboxMode(enabled) {
+  state.geometry.skyboxMode = !!enabled;
+  faceMaterials.forEach(mat => {
+    mat.side = enabled ? THREE.DoubleSide : THREE.FrontSide;
+  });
+  material.side = enabled ? THREE.DoubleSide : THREE.FrontSide;
+  console.log(`📦 Skybox mode (double-sided): ${enabled ? 'ON' : 'OFF'}`);
+}
+
+// Phase 12.0: Center camera and morph shape (reset position/rotation + fit to view)
+export function centerCameraAndMorph(controls) {
+  // Reset morph transform
+  morphMesh.position.set(0, 0, 0);
+  morphMesh.rotation.set(0, 0, 0);
+
+  // Compute bounding box size to frame
+  const box = new THREE.Box3().setFromObject(morphMesh);
+  const size = box.getSize(new THREE.Vector3());
+  const bounding = Math.max(size.x, size.y, size.z) || 10;
+
+  // Camera fit logic (perspective)
+  const fov = (camera.fov || 75) * Math.PI / 180;
+  const dist = (bounding * 0.5) / Math.tan(fov / 2);
+
+  // Aim camera
+  camera.position.set(0, 0, dist * 1.4);
+  camera.lookAt(0, 0, 0);
+  if (controls && typeof controls.update === 'function') controls.update();
+
+  // Update renderer aspect
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight, false);
+
+  console.log("🎯 Camera and morph shape centered");
+}
+
+// Phase 12.0: Set morph amount (0=cube, 1=sphere conflation)
+export function setMorphAmount(t /* 0..1 */) {
+  if (morphMesh && morphMesh.morphTargetInfluences) {
+    morphMesh.morphTargetInfluences[0] = THREE.MathUtils.clamp(t, 0, 1);
+  }
 }
 
 // Export functions for telemetry and other modules

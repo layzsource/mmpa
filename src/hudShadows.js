@@ -56,3 +56,7 @@ export function createShadowsHudSection(container, notifyHUDUpdate, createToggle
 
   console.log("🌑 Shadows HUD section created");
 }
+
+// Phase 13.2: Register update callback
+// Phase 13.4.2: Removed registerHUDCallback to fix circular dependency
+// Signal Bridge pattern doesn't need explicit registration

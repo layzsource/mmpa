@@ -1,0 +1,1787 @@
+src/periaktos.js:14:export function initPeriaktos() {
+src/periaktos.js:15:  console.log("🌀 Periaktos initialized, state:", currentTarget);
+src/midi.js:7:export function initMIDI(callback) {
+src/midi.js:25:      console.log('🎹 MIDI system initialized');
+src/presets.js:2:import { initParticles } from './particles.js';
+src/presets.js:10:export function initPresets() {
+src/presets.js:11:  console.log("💾 Presets system initialized");
+src/presets.js:178:      // Reinitialize vessel with new layout
+src/presets.js:179:      import('./vessel.js').then(({ reinitVessel }) => {
+src/presets.js:181:          reinitVessel(scene);
+src/presets.js:247:    // Reinitialize particles with new layout
+src/presets.js:249:      initParticles(state.particles);
+src/presets.js:250:      console.log("✨ Particles reinitialized via initParticles");
+src/mandalaUpload.js:25:    fileInput.addEventListener("change", (e) => {
+src/mandalaUpload.js:45:    document.body.appendChild(fileInput);
+src/mandalaUpload.js:58:  uploadBtn.addEventListener("click", () => {
+src/mandalaUpload.js:66:  clearBtn.addEventListener("click", () => {
+src/mandalaUpload.js:82:  uploadContainer.appendChild(uploadBtn);
+src/mandalaUpload.js:83:  uploadContainer.appendChild(clearBtn);
+src/mandalaUpload.js:93:  window.addEventListener('mandala:imageSelected', (e) => {
+src/telemetry.js:17:export function initTelemetry(getState) {
+src/telemetry.js:20:  console.log("📡 Telemetry initialized");
+src/telemetry.js:44:  telemetryOverlay.appendChild(title);
+src/telemetry.js:48:  telemetryOverlay.appendChild(fpsDisplay);
+src/telemetry.js:52:  telemetryOverlay.appendChild(midiDisplay);
+src/telemetry.js:56:  telemetryOverlay.appendChild(hudDisplay);
+src/telemetry.js:60:  telemetryOverlay.appendChild(morphDisplay);
+src/telemetry.js:64:  telemetryOverlay.appendChild(presetDisplay);
+src/telemetry.js:68:  telemetryOverlay.appendChild(audioDisplay);
+src/telemetry.js:72:  telemetryOverlay.appendChild(visualDisplay);
+src/telemetry.js:74:  document.body.appendChild(telemetryOverlay);
+src/hudParticles.js:20:  container.appendChild(particleSeparator);
+src/hudParticles.js:25:  container.appendChild(particleTitle);
+src/hudParticles.js:34:  perfDiv.appendChild(fpsLabel);
+src/hudParticles.js:39:  perfDiv.appendChild(drawCallsLabel);
+src/hudParticles.js:41:  container.appendChild(perfDiv);
+src/hudParticles.js:47:  container.appendChild(particlesEnableControl);
+src/hudParticles.js:53:  particleDensityControl.title = 'Number of particles (1000-10000, requires reinit)';
+src/hudParticles.js:54:  container.appendChild(particleDensityControl);
+src/hudParticles.js:63:  particleLayoutDiv.appendChild(particleLayoutLabel);
+src/hudParticles.js:79:    particleLayoutSelect.appendChild(optionEl);
+src/hudParticles.js:83:  particleLayoutSelect.addEventListener('change', () => {
+src/hudParticles.js:87:  particleLayoutDiv.appendChild(particleLayoutSelect);
+src/hudParticles.js:88:  container.appendChild(particleLayoutDiv);
+src/hudParticles.js:94:  container.appendChild(particlePolishLabel);
+src/hudParticles.js:100:  container.appendChild(hueShiftControl);
+src/hudParticles.js:107:  container.appendChild(sizeControl);
+src/hudParticles.js:113:  container.appendChild(opacityControl);
+src/hudParticles.js:119:  container.appendChild(organicMotionControl);
+src/hudParticles.js:126:  container.appendChild(organicStrengthControl);
+src/hudParticles.js:132:  container.appendChild(audioHueControl);
+src/hudParticles.js:139:  container.appendChild(audioGainControl);
+src/hudParticles.js:146:  container.appendChild(velocityControl);
+src/hudParticles.js:152:  container.appendChild(motionSmoothnessControl);
+src/hudParticles.js:160:  container.appendChild(particleDensityDebugControl);
+src/hudParticles.js:167:  container.appendChild(particleSizeDebugControl);
+src/hudParticles.js:174:  container.appendChild(particleMotionStrengthControl);
+src/hudParticles.js:181:  container.appendChild(particleAudioJitterControl);
+src/hudParticles.js:222:    container.appendChild(wrap);
+src/hudParticles.js:246:      .forEach(id => $(id).addEventListener('input', apply));
+src/hudPresets.js:21:  parentContainer.appendChild(presetSeparator);
+src/hudPresets.js:26:  parentContainer.appendChild(presetTitle);
+src/hudPresets.js:54:  saveButton.addEventListener('click', () => {
+src/hudPresets.js:69:  saveContainer.appendChild(saveInput);
+src/hudPresets.js:70:  saveContainer.appendChild(saveButton);
+src/hudPresets.js:71:  saveContainer.appendChild(categoryInput);
+src/hudPresets.js:72:  saveContainer.appendChild(tagsInput);
+src/hudPresets.js:73:  parentContainer.appendChild(saveContainer);
+src/hudPresets.js:105:  filterContainer.appendChild(searchLabel);
+src/hudPresets.js:106:  filterContainer.appendChild(searchInput);
+src/hudPresets.js:107:  filterContainer.appendChild(categoryFilterLabel);
+src/hudPresets.js:108:  filterContainer.appendChild(categoryFilter);
+src/hudPresets.js:109:  filterContainer.appendChild(tagFilterLabel);
+src/hudPresets.js:110:  filterContainer.appendChild(tagFilter);
+src/hudPresets.js:111:  parentContainer.appendChild(filterContainer);
+src/hudPresets.js:117:  parentContainer.appendChild(presetListLabel);
+src/hudPresets.js:130:  parentContainer.appendChild(presetListContainer);
+src/hudPresets.js:157:  loadButton.addEventListener('click', () => {
+src/hudPresets.js:163:  updateButton.addEventListener('click', () => {
+src/hudPresets.js:169:  deleteButton.addEventListener('click', () => {
+src/hudPresets.js:179:  actionContainer.appendChild(loadButton);
+src/hudPresets.js:180:  actionContainer.appendChild(updateButton);
+src/hudPresets.js:181:  actionContainer.appendChild(deleteButton);
+src/hudPresets.js:182:  parentContainer.appendChild(actionContainer);
+src/hudPresets.js:204:  interpolationToggle.addEventListener('change', () => {
+src/hudPresets.js:211:  interpolationToggleLabel.appendChild(interpolationToggle);
+src/hudPresets.js:212:  interpolationToggleLabel.appendChild(interpolationStatus);
+src/hudPresets.js:226:  durationSlider.addEventListener('input', () => {
+src/hudPresets.js:232:  interpolationContainer.appendChild(interpolationTitle);
+src/hudPresets.js:233:  interpolationContainer.appendChild(interpolationToggleLabel);
+src/hudPresets.js:234:  interpolationContainer.appendChild(durationLabel);
+src/hudPresets.js:235:  interpolationContainer.appendChild(durationSlider);
+src/hudPresets.js:236:  parentContainer.appendChild(interpolationContainer);
+src/hudPresets.js:241:  parentContainer.appendChild(chainSeparator);
+src/hudPresets.js:261:  chainHeaderRow.appendChild(chainHeader);
+src/hudPresets.js:262:  chainHeaderRow.appendChild(statusBadge);
+src/hudPresets.js:263:  chainSection.appendChild(chainHeaderRow);
+src/hudPresets.js:276:  chainSection.appendChild(chainList);
+src/hudPresets.js:300:  durInput.addEventListener("input", () => durVal.textContent = durInput.value);
+src/hudPresets.js:301:  durRow.appendChild(durLabel);
+src/hudPresets.js:302:  durRow.appendChild(durInput);
+src/hudPresets.js:303:  durRow.appendChild(durVal);
+src/hudPresets.js:304:  chainSection.appendChild(durRow);
+src/hudPresets.js:321:  loopLabel.appendChild(loopCheckbox);
+src/hudPresets.js:322:  loopLabel.appendChild(document.createTextNode("🔁 Loop"));
+src/hudPresets.js:332:  shuffleLabel.appendChild(shuffleCheckbox);
+src/hudPresets.js:333:  shuffleLabel.appendChild(document.createTextNode("🔀 Shuffle"));
+src/hudPresets.js:335:  optionsRow.appendChild(loopLabel);
+src/hudPresets.js:336:  optionsRow.appendChild(shuffleLabel);
+src/hudPresets.js:337:  chainSection.appendChild(optionsRow);
+src/hudPresets.js:360:  progressBar.appendChild(progressFill);
+src/hudPresets.js:361:  progressContainer.appendChild(progressLabel);
+src/hudPresets.js:362:  progressContainer.appendChild(progressBar);
+src/hudPresets.js:365:  chainSection.appendChild(progressContainer);
+src/hudPresets.js:391:  btnRow.appendChild(startBtn);
+src/hudPresets.js:392:  btnRow.appendChild(stopBtn);
+src/hudPresets.js:393:  btnRow.appendChild(resetChainBtn);
+src/hudPresets.js:394:  chainSection.appendChild(btnRow);
+src/hudPresets.js:424:  playbackRow.appendChild(skipPrevBtn);
+src/hudPresets.js:425:  playbackRow.appendChild(pauseResumeBtn);
+src/hudPresets.js:426:  playbackRow.appendChild(skipNextBtn);
+src/hudPresets.js:427:  chainSection.appendChild(playbackRow);
+src/hudPresets.js:434:  chainSection.appendChild(timeRemainingLabel);
+src/hudPresets.js:448:  saveChainRow.appendChild(saveChainInput);
+src/hudPresets.js:449:  saveChainRow.appendChild(saveChainBtn);
+src/hudPresets.js:450:  chainSection.appendChild(saveChainRow);
+src/hudPresets.js:482:  chainIORow.appendChild(exportChainsBtn);
+src/hudPresets.js:483:  chainIORow.appendChild(importChainsBtn);
+src/hudPresets.js:484:  chainIORow.appendChild(importChainsInput);
+src/hudPresets.js:486:  savedChainsHeader.appendChild(savedChainsTitle);
+src/hudPresets.js:487:  savedChainsHeader.appendChild(chainIORow);
+src/hudPresets.js:488:  chainSection.appendChild(savedChainsHeader);
+src/hudPresets.js:493:  chainSection.appendChild(savedChainsList);
+src/hudPresets.js:499:  resetBtn.addEventListener('click', () => {
+src/hudPresets.js:503:  chainSection.appendChild(resetBtn);
+src/hudPresets.js:505:  parentContainer.appendChild(chainSection);
+src/hudPresets.js:515:      chainList.appendChild(emptyMsg);
+src/hudPresets.js:528:      row.appendChild(cb);
+src/hudPresets.js:529:      row.appendChild(document.createTextNode(name));
+src/hudPresets.js:530:      chainList.appendChild(row);
+src/hudPresets.js:544:        savedChainsList.appendChild(emptyMsg);
+src/hudPresets.js:560:        loadBtn.addEventListener("click", () => {
+src/hudPresets.js:568:        deleteBtn.addEventListener("click", () => {
+src/hudPresets.js:576:        row.appendChild(nameSpan);
+src/hudPresets.js:577:        row.appendChild(loadBtn);
+src/hudPresets.js:578:        row.appendChild(deleteBtn);
+src/hudPresets.js:579:        savedChainsList.appendChild(row);
+src/hudPresets.js:585:  startBtn.addEventListener("click", () => {
+src/hudPresets.js:606:  stopBtn.addEventListener("click", () => {
+src/hudPresets.js:612:  resetChainBtn.addEventListener("click", () => {
+src/hudPresets.js:618:  pauseResumeBtn.addEventListener("click", () => {
+src/hudPresets.js:629:  skipPrevBtn.addEventListener("click", () => {
+src/hudPresets.js:634:  skipNextBtn.addEventListener("click", () => {
+src/hudPresets.js:640:  exportChainsBtn.addEventListener("click", () => {
+src/hudPresets.js:645:  importChainsBtn.addEventListener("click", () => {
+src/hudPresets.js:649:  importChainsInput.addEventListener("change", (e) => {
+src/hudPresets.js:660:  saveChainBtn.addEventListener("click", () => {
+src/hudPresets.js:773:  document.body.appendChild(toastContainer);
+src/hudPresets.js:780:    toastContainer.appendChild(toast);
+src/hudPresets.js:803:  document.head.appendChild(toastStyle);
+src/hudPresets.js:806:  window.addEventListener("chainStarted", (e) => {
+src/hudPresets.js:811:  window.addEventListener("chainStepComplete", (e) => {
+src/hudPresets.js:816:  window.addEventListener("chainLoopRestarted", () => {
+src/hudPresets.js:820:  window.addEventListener("chainFinished", () => {
+src/hudPresets.js:825:  window.addEventListener("chainStarted", () => {
+src/hudPresets.js:855:  window.addEventListener("chainFinished", () => {
+src/hudPresets.js:888:  window.addEventListener("chainPaused", () => {
+src/hudPresets.js:893:  window.addEventListener("chainResumed", () => {
+src/hudPresets.js:898:  window.addEventListener("chainSkipped", (e) => {
+src/hudPresets.js:905:  window.addEventListener("chainReset", () => {
+src/hudPresets.js:936:  window.addEventListener("chainStopped", () => {
+src/hudPresets.js:973:  window.addEventListener("chainStarted", () => {
+src/hudPresets.js:995:  window.addEventListener("chainFinished", () => {
+src/hudPresets.js:1003:  window.addEventListener("chainProgress", (e) => {
+src/hudPresets.js:1027:  document.addEventListener("presetsImported", refreshChainList);
+src/hudPresets.js:1028:  document.addEventListener("presetSaved", refreshChainList);
+src/hudPresets.js:1029:  document.addEventListener("presetDeleted", refreshChainList);
+src/hudPresets.js:1051:  exportButton.addEventListener('click', () => {
+src/hudPresets.js:1055:  importButton.addEventListener('click', () => {
+src/hudPresets.js:1059:  fileInput.addEventListener('change', (e) => {
+src/hudPresets.js:1067:  importExportContainer.appendChild(exportButton);
+src/hudPresets.js:1068:  importExportContainer.appendChild(importButton);
+src/hudPresets.js:1069:  importExportContainer.appendChild(fileInput);
+src/hudPresets.js:1070:  parentContainer.appendChild(importExportContainer);
+src/hudPresets.js:1073:  categoryFilter.addEventListener('change', () => {
+src/hudPresets.js:1079:  tagFilter.addEventListener('input', () => {
+src/hudPresets.js:1086:  searchInput.addEventListener('input', () => {
+src/hudAudio.js:29:  toggle.addEventListener('change', (e) => onChange(e.target.checked));
+src/hudAudio.js:31:  container.appendChild(label);
+src/hudAudio.js:32:  label.appendChild(toggle);
+src/hudAudio.js:52:  slider.addEventListener('input', (e) => {
+src/hudAudio.js:58:  container.appendChild(label);
+src/hudAudio.js:59:  label.appendChild(valueDisplay);
+src/hudAudio.js:60:  container.appendChild(slider);
+src/hudAudio.js:76:  parentContainer.appendChild(separator);
+src/hudAudio.js:82:  parentContainer.appendChild(title);
+src/hudAudio.js:89:  parentContainer.appendChild(enableControl);
+src/hudAudio.js:95:  parentContainer.appendChild(sensitivityControl);
+src/hudAudio.js:101:  parentContainer.appendChild(gainControl);
+src/hudAudio.js:114:  devWrap.appendChild(devLabel);
+src/hudAudio.js:115:  devWrap.appendChild(devSelect);
+src/hudAudio.js:116:  parentContainer.appendChild(devWrap);
+src/hudAudio.js:126:        devSelect.appendChild(opt);
+src/hudAudio.js:132:  devSelect.addEventListener('change', async () => {
+src/hudAudio.js:150:  gainSlider.addEventListener('input', (e) => window.AudioEngine?.setPreGain?.(parseFloat(e.target.value)));
+src/hudAudio.js:151:  gainWrap.appendChild(gainLabel);
+src/hudAudio.js:152:  gainWrap.appendChild(gainSlider);
+src/hudAudio.js:153:  parentContainer.appendChild(gainWrap);
+src/hudAudio.js:161:  ttBtn.addEventListener('click', async () => {
+src/hudAudio.js:164:  ttWrap.appendChild(ttBtn);
+src/hudAudio.js:165:  parentContainer.appendChild(ttWrap);
+src/hudAudio.js:171:  applyBtn.addEventListener('click', () => {
+src/hudAudio.js:180:  parentContainer.appendChild(applyBtn);
+src/hudMandala.js:22:  container.appendChild(emojiMandalaLabel);
+src/hudMandala.js:33:  container.appendChild(mandalaToggle);
+src/hudMandala.js:45:  container.appendChild(ringCountControl);
+src/hudMandala.js:51:  container.appendChild(layoutModeLabel);
+src/hudMandala.js:67:    layoutModeDropdown.appendChild(option);
+src/hudMandala.js:70:  layoutModeDropdown.addEventListener("change", () => {
+src/hudMandala.js:79:  container.appendChild(layoutModeDropdown);
+src/hudMandala.js:91:  container.appendChild(symmetryControl);
+src/hudMandala.js:99:  container.appendChild(mandalaRotSpeedControl);
+src/hudMandala.js:107:  container.appendChild(mandalaAudioModToggle);
+src/hudMandala.js:115:  container.appendChild(layeredAudioToggle);
+src/hudMandala.js:123:  container.appendChild(mandalaAudioReactiveToggle);
+src/hudMandala.js:131:  container.appendChild(mandalaSensitivityControl);
+src/hudMandala.js:137:  container.appendChild(layoutPresetLabel);
+src/hudMandala.js:154:    layoutPresetDropdown.appendChild(option);
+src/hudMandala.js:157:  layoutPresetDropdown.addEventListener("change", () => {
+src/hudMandala.js:163:  container.appendChild(layoutPresetDropdown);
+src/hudMandala.js:171:  container.appendChild(ringSpacingControl);
+src/hudMandala.js:179:  container.appendChild(baseRadiusControl);
+src/hudMandala.js:187:  container.appendChild(globalScaleControl);
+src/hudMandala.js:195:  container.appendChild(rainbowModeToggle);
+src/hudMandala.js:201:  container.appendChild(emojiPickerLabel);
+src/hudMandala.js:222:    radio.addEventListener("change", () => {
+src/hudMandala.js:229:    radioLabel.appendChild(radio);
+src/hudMandala.js:230:    radioLabel.appendChild(emojiSpan);
+src/hudMandala.js:231:    emojiPickerContainer.appendChild(radioLabel);
+src/hudMandala.js:234:  container.appendChild(emojiPickerContainer);
+src/hudMandala.js:243:  container.appendChild(ringLayoutLabel);
+src/hudMandala.js:251:  ringLayoutInput.addEventListener("input", (e) => {
+src/hudMandala.js:257:  container.appendChild(ringLayoutInput);
+src/hudMandala.js:263:  container.appendChild(musicalModeLabel);
+src/hudMandala.js:271:  container.appendChild(musicalModeToggle);
+src/hudMandala.js:277:  container.appendChild(scaleLabel);
+src/hudMandala.js:288:    scaleDropdown.appendChild(option);
+src/hudMandala.js:291:  scaleDropdown.addEventListener("change", () => {
+src/hudMandala.js:296:  container.appendChild(scaleDropdown);
+src/hudMandala.js:307:  container.appendChild(rootNoteControl);
+src/hudMandala.js:313:  container.appendChild(performanceLabel);
+src/hudMandala.js:321:  container.appendChild(performanceModeToggle);
+src/hudMandala.js:329:  container.appendChild(diffRotationToggle);
+src/hudMandala.js:337:  container.appendChild(extendedRingCountControl);
+src/hudMandala.js:345:  container.appendChild(extendedSymmetryControl);
+src/hudMandala.js:358:  container.appendChild(scaleSequenceToggle);
+src/hudMandala.js:366:  container.appendChild(scaleIntervalControl);
+src/hudMandala.js:372:  container.appendChild(scaleSeqLabel);
+src/hudMandala.js:380:  scaleSeqInput.addEventListener("input", (e) => {
+src/hudMandala.js:386:  container.appendChild(scaleSeqInput);
+src/visual.js.phase13.31.bak:14:export function initVisual(scene) {
+src/visual.js.phase13.31.bak:21:  scene.add(backgroundMesh);
+src/visual.js.phase13.31.bak:22:  console.log("🖼️ Background plane initialized");
+src/hudGeometry.js:17:  section.appendChild(title);
+src/hudGeometry.js:27:  skyboxCheckbox.addEventListener('change', () => {
+src/hudGeometry.js:31:  skyboxLabel.appendChild(skyboxCheckbox);
+src/hudGeometry.js:32:  skyboxLabel.appendChild(document.createTextNode(' Skybox Mode (double-sided)'));
+src/hudGeometry.js:33:  section.appendChild(skyboxLabel);
+src/hudGeometry.js:43:  wireframeCheckbox.addEventListener('change', () => {
+src/hudGeometry.js:47:  wireframeLabel.appendChild(wireframeCheckbox);
+src/hudGeometry.js:48:  wireframeLabel.appendChild(document.createTextNode(' Wireframe'));
+src/hudGeometry.js:49:  section.appendChild(wireframeLabel);
+src/hudGeometry.js:57:  centerButton.addEventListener('click', () => {
+src/hudGeometry.js:61:  section.appendChild(centerButton);
+src/hudGeometry.js:63:  container.appendChild(section);
+src/hudVessel.js:27:  toggle.addEventListener('change', (e) => onChange(e.target.checked));
+src/hudVessel.js:29:  container.appendChild(label);
+src/hudVessel.js:30:  label.appendChild(toggle);
+src/hudVessel.js:50:  slider.addEventListener('input', (e) => {
+src/hudVessel.js:56:  container.appendChild(label);
+src/hudVessel.js:57:  label.appendChild(valueDisplay);
+src/hudVessel.js:58:  container.appendChild(slider);
+src/hudVessel.js:70:  picker.addEventListener('input', (e) => onChange(e.target.value));
+src/hudVessel.js:72:  container.appendChild(label);
+src/hudVessel.js:73:  label.appendChild(picker);
+src/hudVessel.js:96:    select.appendChild(optionEl);
+src/hudVessel.js:99:  select.addEventListener('change', (e) => onChange(e.target.value));
+src/hudVessel.js:101:  container.appendChild(label);
+src/hudVessel.js:102:  container.appendChild(select);
+src/hudVessel.js:118:  parentContainer.appendChild(separator);
+src/hudVessel.js:124:  parentContainer.appendChild(title);
+src/hudVessel.js:130:  parentContainer.appendChild(enableControl);
+src/hudVessel.js:138:  parentContainer.appendChild(modeControl);
+src/hudVessel.js:144:  parentContainer.appendChild(opacityControl);
+src/hudVessel.js:150:  parentContainer.appendChild(scaleControl);
+src/hudVessel.js:156:  parentContainer.appendChild(colorControl);
+src/hudVessel.js:162:  parentContainer.appendChild(spinControl);
+src/hudVessel.js:168:  parentContainer.appendChild(spinSpeedControl);
+src/hudVessel.js:175:  parentContainer.appendChild(layoutControl);
+src/hudVessel.js:181:  parentContainer.appendChild(audioSmoothingControl);
+src/hudVessel.js:187:  parentContainer.appendChild(hueShiftControl);
+src/hudVessel.js:194:  parentContainer.appendChild(compassRingsControl);
+src/hudVessel.js:200:  parentContainer.appendChild(debugDiv);
+src/vessel.js:7:  if (__vessel && scene && !scene.children.includes(__vessel)) scene.add(__vessel);
+src/vessel.js:23:  scene && scene.add(__vessel);
+src/vessel.js:29:export function setVesselVisible(on = true) { if (__vessel) __vessel.visible = !!on; }
+src/vessel.js:46:    if (scene && !scene.children.includes(__vessel)) scene.add(__vessel);
+src/vessel.js:58:export function initVessel(){}
+src/main.js:37:      document.body.appendChild(a); a.click(); a.remove();
+src/main.js:48:      document.body.appendChild(a); a.click(); a.remove();
+src/main.js:79:    window.addEventListener("keydown", handler, true);
+src/main.js:84:    document.addEventListener("DOMContentLoaded", ()=>window.Hotkeys.install(), {once:true});
+src/main.js:107:console.log("📦 ShadowBox safe stub active (Phase 2.3.3SS) - prevents initialization errors");
+src/main.js:125:import { initHUD, updatePresetList } from './hud.js';
+src/main.js:126:import { initMIDI, getMIDIDeviceCount } from './midi.js';
+src/main.js:127:import { getHUDIdleSpin, getVisualData, getMorphState, scene, renderer, camera, initMorphShape } from './geometry.js'; // Phase 12.1: added initMorphShape
+src/main.js:128:import { initShadows } from './shadows.js';
+src/main.js:129:import { initSprites } from './sprites.js';
+src/main.js:130:import { initParticles, getParticleSystemInstance, EmojiParticles, EmojiStreamManager, EmojiSequencer, EmojiPatternBankManager } from './particles.js'; // Phase 11.7.1, 11.7.15, 11.7.16, 11.7.17
+src/main.js:135:import { initTelemetry } from './telemetry.js';
+src/main.js:136:import { initPresets, createDefaultPresets, listPresets, getCurrentPresetName } from './presets.js';
+src/main.js:137:import { initAudio, getAudioValues, AudioEngine } from './audio.js';
+src/main.js:167:import { initAudioRouter } from './audioRouter.js';
+src/main.js:171:import { initDefaultBindings } from './controlBindings.js';
+src/main.js:172:initDefaultBindings();
+src/main.js:179:    console.log("⚠️ ShadowBox initialized in FAILSAFE mode (Phase 2.3.3R) - rendering disabled");
+src/main.js:210:initHUD();
+src/main.js:212:initMIDI(() => {
+src/main.js:216:initPresets();
+src/main.js:229:initAudio();
+src/main.js:232:initAudioRouter();
+src/main.js:234:initShadows(scene);
+src/main.js:236:initSprites(scene);
+src/main.js:239:const morphShape = initMorphShape(scene);
+src/main.js:241:console.log("🔺 Morph Shape initialized and exposed globally");
+src/main.js:264:window.addEventListener('keydown', (e) => {
+src/main.js:284:  initParticles(scene, state.particlesCount);
+src/main.js:315:console.log("🎛️ MandalaController initialized and exposed globally");
+src/main.js:327:window.addEventListener('mousedown', () => { isMouseDown = true; });
+src/main.js:328:window.addEventListener('mouseup', () => { isMouseDown = false; });
+src/main.js:329:window.addEventListener('mousemove', (e) => {
+src/main.js:349:initTelemetry(() => ({
+src/main.js:376:// Update preset list in HUD after initialization
+src/main.js:381:window.addEventListener('keydown', (e) => {
+src/main.js:426:      console.log(`   visible=${obj.visible} | position=(${obj.position.x.toFixed(2)}, ${obj.position.y.toFixed(2)}, ${obj.position.z.toFixed(2)})`);
+src/main.js:434:// Run once after everything has initialized
+src/main.js:440:// No manual initialization needed - HUD modules auto-register via registerHUDCallback()
+src/main.js:458:  document.head.appendChild(style);
+src/main.js:537:    btn.addEventListener('mouseenter', () => {
+src/main.js:540:    btn.addEventListener('mouseleave', () => {
+src/main.js:543:    btn.addEventListener('click', () => {
+src/main.js:546:    document.body.appendChild(btn);
+src/main.js:558:    document.addEventListener('DOMContentLoaded', createProjectorButton);
+src/main.js:564:  window.addEventListener('keydown', async (e) => {
+src/main.js:578:  document.addEventListener('fullscreenchange', () => {
+src/main.js:635:    document.body.appendChild(a);
+src/main.js:663:  document.head.appendChild(style);
+src/main.js:741:  window.addEventListener('keydown', async (e) => {
+src/sprites.js:40:// One-time lazy init per sprite (no constructor edits needed)
+src/sprites.js:99:export function initSprites(scene) {
+src/sprites.js:122:  spriteGroup.visible = state.sprites.enabled;
+src/sprites.js:123:  scene.add(spriteGroup);
+src/sprites.js:124:  console.log(`✨ Sprites initialized (count: ${count}, enabled: ${state.sprites.enabled})`);
+src/sprites.js:134:  spriteGroup.visible = state.sprites.enabled;
+src/sprites.js:204:export function reinitSprites(scene) {
+src/sprites.js:206:  initSprites(scene);
+src/hudRouter.js:4:import { initParticles, destroyParticles } from './particles.js';
+src/hudRouter.js:128:      initParticles(scene, state.particlesCount);
+src/hudRouter.js:143:      initParticles(scene, state.particlesCount);
+src/hudRouter.js:145:      // Phase 4.8: Reapply size and audio gain after reinit
+src/hudRouter.js:366:    // Reinit particle system
+src/hudRouter.js:367:    import('./particles.js').then(({ destroyParticles, initParticles, getParticleSystemInstance }) => {
+src/hudRouter.js:369:      initParticles(scene, 5000);
+src/hudRouter.js:514:    state.vessel.visible = update.vesselVisible;
+src/hudRouter.js:516:    // Phase 2.2.0: Reinitialize vessel with new mode (pass renderer/camera)
+src/hudRouter.js:517:    import('./vessel.js').then(({ reinitVessel }) => {
+src/hudRouter.js:518:      reinitVessel(scene, renderer, camera);
+src/hudRouter.js:527:    // Reinitialize vessel with new layout (only applies in gyre mode)
+src/hudRouter.js:529:      import('./vessel.js').then(({ reinitVessel }) => {
+src/hudRouter.js:530:        reinitVessel(scene, renderer, camera);
+src/hudRouter.js:569:    // Reinitialize sprites with new count
+src/hudRouter.js:570:    import('./sprites.js').then(({ reinitSprites }) => {
+src/hudRouter.js:572:        reinitSprites(scene);
+src/hudShadows.js:20:  container.appendChild(shadowsSeparator);
+src/hudShadows.js:25:  container.appendChild(shadowsTitle);
+src/hudShadows.js:31:  container.appendChild(shadowsEnableControl);
+src/hudShadows.js:37:  container.appendChild(groundShadowControl);
+src/hudShadows.js:43:  container.appendChild(backdropShadowControl);
+src/hudShadows.js:49:  container.appendChild(shadowOpacityControl);
+src/hudShadows.js:55:  container.appendChild(shadowColorControl);
+src/postprocessing.js:30:  console.log("🎞️ EffectComposer initialized with AfterimagePass (damp: 0.96)");
+src/audio.js:1:// 🎶 Audio Engine — Phase 13.1 (Electron-safe, single-init, no prompts)
+src/audio.js:2:// - No automatic mic popups; initializes on first start() or user gesture.
+src/audio.js:48:    document.addEventListener("visibilitychange", this._visibility);
+src/audio.js:49:    window.addEventListener("focus", this._boundResume);
+src/audio.js:118:  async init(opts = {}) {
+src/audio.js:132:      console.error("audio.js: ❌ init failed:", err);
+src/audio.js:139:    // lazy init
+src/audio.js:140:    if (this.state === "idle") await this.init();
+src/audio.js:418:export function initAudio() {
+src/audio.js:419:  LOG("initAudio() called (legacy API - no-op in Phase 13.1)");
+src/state.js:626:window.addEventListener('mandala:imageSelected', (e) => {
+src/state.js:634:window.addEventListener('mandala:imageCleared', () => {
+src/state.js:645:console.log("🎯 State initialized:", state);
+src/hud.js.bak:51:export function initHUD() {
+src/hud.js.bak:53:  document.body.appendChild(hudPanel);
+src/hud.js.bak:60:    console.log("✅ HUD initialized — onHUDUpdate active");
+src/hud.js.bak:63:  console.log("📟 HUD initialized");
+src/hud.js.bak:100:  document.head.appendChild(style);
+src/hud.js.bak:131:  collapseBtn.addEventListener('click', () => {
+src/hud.js.bak:144:  header.appendChild(title);
+src/hud.js.bak:145:  header.appendChild(collapseBtn);
+src/hud.js.bak:146:  panel.appendChild(header);
+src/hud.js.bak:175:    btn.addEventListener('click', () => {
+src/hud.js.bak:184:    tabNav.appendChild(btn);
+src/hud.js.bak:190:    controlsContainer.appendChild(container);
+src/hud.js.bak:194:  // Set initial active state
+src/hud.js.bak:219:  tabContainers['Visual'].appendChild(emojiParticlesLabel);
+src/hud.js.bak:229:    emojiPicker.appendChild(option);
+src/hud.js.bak:259:        scene.add(particleSystem.points);
+src/hud.js.bak:275:  emojiPicker.addEventListener("change", (e) => {
+src/hud.js.bak:284:  emojiContainer.appendChild(emojiParticlesToggle);
+src/hud.js.bak:285:  emojiContainer.appendChild(emojiPicker);
+src/hud.js.bak:286:  tabContainers['Visual'].appendChild(emojiContainer);
+src/hud.js.bak:305:  tabContainers['Visual'].appendChild(emojiCountControl);
+src/hud.js.bak:311:  tabContainers['Visual'].appendChild(emojiLayoutLabel);
+src/hud.js.bak:331:    emojiLayoutDropdown.appendChild(option);
+src/hud.js.bak:334:  emojiLayoutDropdown.addEventListener("change", (e) => {
+src/hud.js.bak:340:  tabContainers['Visual'].appendChild(emojiLayoutDropdown);
+src/hud.js.bak:349:  tabContainers['Visual'].appendChild(emojiAudioReactivityControl);
+src/hud.js.bak:358:  tabContainers['Visual'].appendChild(emojiSignalLinkingControl);
+src/hud.js.bak:364:  tabContainers['Visual'].appendChild(emojiSetLabel);
+src/hud.js.bak:384:    emojiSetDropdown.appendChild(option);
+src/hud.js.bak:387:  emojiSetDropdown.addEventListener("change", (e) => {
+src/hud.js.bak:393:  tabContainers['Visual'].appendChild(emojiSetDropdown);
+src/hud.js.bak:402:  tabContainers['Visual'].appendChild(emojiAutoCycleControl);
+src/hud.js.bak:412:  tabContainers['Visual'].appendChild(emojiStoryModeControl);
+src/hud.js.bak:418:  tabContainers['Visual'].appendChild(beatSyncLabel);
+src/hud.js.bak:427:  tabContainers['Visual'].appendChild(bpmControl);
+src/hud.js.bak:436:  tabContainers['Visual'].appendChild(beatSyncToggle);
+src/hud.js.bak:442:  tabContainers['Visual'].appendChild(subdivisionLabel);
+src/hud.js.bak:454:    subdivisionDropdown.appendChild(option);
+src/hud.js.bak:456:  subdivisionDropdown.addEventListener("change", (e) => {
+src/hud.js.bak:461:  tabContainers['Visual'].appendChild(subdivisionDropdown);
+src/hud.js.bak:470:  tabContainers['Visual'].appendChild(onsetDetectionToggle);
+src/hud.js.bak:480:  tabContainers['Visual'].appendChild(sequencerToggle);
+src/hud.js.bak:486:  tabContainers['Visual'].appendChild(emojiMixerLabel);
+src/hud.js.bak:492:  tabContainers['Visual'].appendChild(emojiStreamsContainer);
+src/hud.js.bak:531:    emojiInput.addEventListener("input", () => {
+src/hud.js.bak:543:    countSlider.addEventListener("input", () => {
+src/hud.js.bak:551:    toggle.addEventListener("change", () => {
+src/hud.js.bak:558:    removeBtn.addEventListener("click", () => {
+src/hud.js.bak:571:    row.appendChild(emojiInput);
+src/hud.js.bak:572:    row.appendChild(countSlider);
+src/hud.js.bak:573:    row.appendChild(countLabel);
+src/hud.js.bak:574:    row.appendChild(toggle);
+src/hud.js.bak:575:    row.appendChild(removeBtn);
+src/hud.js.bak:591:  addStreamBtn.addEventListener("click", () => {
+src/hud.js.bak:597:    emojiStreamsContainer.appendChild(row);
+src/hud.js.bak:609:  tabContainers['Visual'].appendChild(addStreamBtn);
+src/hud.js.bak:620:        emojiStreamsContainer.appendChild(row);
+src/hud.js.bak:635:  tabContainers['Visual'].appendChild(emojiSequencerLabel);
+src/hud.js.bak:645:  tabContainers['Visual'].appendChild(sequencerEnableToggle);
+src/hud.js.bak:655:  tabContainers['Visual'].appendChild(sequencerBPMControl);
+src/hud.js.bak:666:  tabContainers['Visual'].appendChild(timelineLengthControl);
+src/hud.js.bak:672:  tabContainers['Visual'].appendChild(timelineGridContainer);
+src/hud.js.bak:698:      headerRow.appendChild(beatLabel);
+src/hud.js.bak:700:    container.appendChild(headerRow);
+src/hud.js.bak:711:      row.appendChild(emojiLabel);
+src/hud.js.bak:735:        // Set initial state
+src/hud.js.bak:740:        beatBtn.addEventListener("click", () => {
+src/hud.js.bak:749:        row.appendChild(beatBtn);
+src/hud.js.bak:752:      container.appendChild(row);
+src/hud.js.bak:759:  // Build initial grid
+src/hud.js.bak:766:  resetSequencerBtn.addEventListener("click", () => {
+src/hud.js.bak:771:  tabContainers['Visual'].appendChild(resetSequencerBtn);
+src/hud.js.bak:777:  tabContainers['Visual'].appendChild(emojiBanksLabel);
+src/hud.js.bak:803:    bankBtn.addEventListener("click", () => {
+src/hud.js.bak:817:    bankBtn.addEventListener("contextmenu", (e) => {
+src/hud.js.bak:827:    banksGridContainer.appendChild(bankBtn);
+src/hud.js.bak:830:  tabContainers['Visual'].appendChild(banksGridContainer);
+src/hud.js.bak:871:  saveToBankBtn.addEventListener("click", () => {
+src/hud.js.bak:881:  bankControlsRow.appendChild(saveToBankBtn);
+src/hud.js.bak:887:  clearBankBtn.addEventListener("click", () => {
+src/hud.js.bak:895:  bankControlsRow.appendChild(clearBankBtn);
+src/hud.js.bak:897:  tabContainers['Visual'].appendChild(bankControlsRow);
+src/hud.js.bak:903:  tabContainers['Visual'].appendChild(bankInfoText);
+src/hud.js.bak:909:  tabContainers['Visual'].appendChild(emojiPhysicsLabel);
+src/hud.js.bak:915:  tabContainers['Visual'].appendChild(physicsModeLabel);
+src/hud.js.bak:931:    physicsModeDropdown.appendChild(option);
+src/hud.js.bak:934:  physicsModeDropdown.addEventListener("change", () => {
+src/hud.js.bak:950:  tabContainers['Visual'].appendChild(physicsModeDropdown);
+src/hud.js.bak:957:  tabContainers['Visual'].appendChild(collisionToggle);
+src/hud.js.bak:964:  tabContainers['Visual'].appendChild(audioModToggle);
+src/hud.js.bak:971:  tabContainers['Visual'].appendChild(mouseInteractionToggle);
+src/hud.js.bak:978:  tabContainers['Visual'].appendChild(gravityStrengthControl);
+src/hud.js.bak:985:  tabContainers['Visual'].appendChild(orbitStrengthControl);
+src/hud.js.bak:992:  tabContainers['Visual'].appendChild(repulsionStrengthControl);
+src/hud.js.bak:998:  tabContainers['Visual'].appendChild(emojiFusionLabel);
+src/hud.js.bak:1010:  tabContainers['Visual'].appendChild(fusionToggle);
+src/hud.js.bak:1018:  tabContainers['Visual'].appendChild(fusionThresholdControl);
+src/hud.js.bak:1024:  tabContainers['Visual'].appendChild(emojiConstellationLabel);
+src/hud.js.bak:1030:  tabContainers['Visual'].appendChild(constellationTypeLabel);
+src/hud.js.bak:1050:    constellationTypeDropdown.appendChild(option);
+src/hud.js.bak:1053:  constellationTypeDropdown.addEventListener("change", () => {
+src/hud.js.bak:1060:  tabContainers['Visual'].appendChild(constellationTypeDropdown);
+src/hud.js.bak:1068:  tabContainers['Visual'].appendChild(constellationScaleControl);
+src/hud.js.bak:1076:  tabContainers['Visual'].appendChild(rotationSpeedControl);
+src/hud.js.bak:1084:  tabContainers['Visual'].appendChild(audioSyncToggle);
+src/hud.js.bak:1092:  tabContainers['Visual'].appendChild(constellationBeatSyncToggle);
+src/hud.js.bak:1098:  tabContainers['Visual'].appendChild(customPatternLabel);
+src/hud.js.bak:1105:  customPatternInput.addEventListener("change", async (e) => {
+src/hud.js.bak:1128:  tabContainers['Visual'].appendChild(customPatternInput);
+src/hud.js.bak:1140:  tabContainers['Visual'].appendChild(trailsLabel);
+src/hud.js.bak:1146:  tabContainers['Visual'].appendChild(trailEnabledControl);
+src/hud.js.bak:1153:  tabContainers['Visual'].appendChild(trailLengthControl);
+src/hud.js.bak:1160:  tabContainers['Visual'].appendChild(trailOpacityControl);
+src/hud.js.bak:1167:  tabContainers['Visual'].appendChild(trailFadeControl);
+src/hud.js.bak:1174:  tabContainers['Visual'].appendChild(trailAudioReactiveControl);
+src/hud.js.bak:1180:  tabContainers['Visual'].appendChild(trailLengthMinControl);
+src/hud.js.bak:1186:  tabContainers['Visual'].appendChild(trailLengthMaxControl);
+src/hud.js.bak:1192:  tabContainers['Visual'].appendChild(motionTrailsLabel);
+src/hud.js.bak:1199:  tabContainers['Visual'].appendChild(motionTrailsControl);
+src/hud.js.bak:1206:  tabContainers['Visual'].appendChild(motionTrailIntensityControl);
+src/hud.js.bak:1212:  resetButton.addEventListener('click', () => {
+src/hud.js.bak:1215:  tabContainers['Visual'].appendChild(resetButton);
+src/hud.js.bak:1221:  centerMeBtn.addEventListener('click', async () => {
+src/hud.js.bak:1226:  tabContainers['Visual'].appendChild(centerMeBtn);
+src/hud.js.bak:1231:  tabContainers['Visual'].appendChild(visualSeparator);
+src/hud.js.bak:1236:  tabContainers['Visual'].appendChild(visualTitle);
+src/hud.js.bak:1245:  tabContainers['Visual'].appendChild(ambientLightControl);
+src/hud.js.bak:1251:  tabContainers['Visual'].appendChild(directionalLightControl);
+src/hud.js.bak:1257:  tabContainers['Visual'].appendChild(directionalAngleXControl);
+src/hud.js.bak:1263:  tabContainers['Visual'].appendChild(directionalAngleYControl);
+src/hud.js.bak:1269:  tabContainers['Visual'].appendChild(colorPickerControl);
+src/hud.js.bak:1274:  tabContainers['Visual'].appendChild(colorLayersSeparator);
+src/hud.js.bak:1279:  tabContainers['Visual'].appendChild(colorLayersTitle);
+src/hud.js.bak:1285:  tabContainers['Visual'].appendChild(geometryLayerLabel);
+src/hud.js.bak:1290:  tabContainers['Visual'].appendChild(geometryBaseColorControl);
+src/hud.js.bak:1295:  tabContainers['Visual'].appendChild(geometryAudioColorControl);
+src/hud.js.bak:1301:  tabContainers['Visual'].appendChild(geometryIntensityControl);
+src/hud.js.bak:1307:  tabContainers['Visual'].appendChild(vesselLayerLabel);
+src/hud.js.bak:1312:  tabContainers['Visual'].appendChild(vesselBaseColorControl);
+src/hud.js.bak:1317:  tabContainers['Visual'].appendChild(vesselAudioColorControl);
+src/hud.js.bak:1323:  tabContainers['Visual'].appendChild(vesselIntensityControl);
+src/hud.js.bak:1329:  tabContainers['Visual'].appendChild(shadowsLayerLabel);
+src/hud.js.bak:1334:  tabContainers['Visual'].appendChild(shadowsBaseColorControl);
+src/hud.js.bak:1339:  tabContainers['Visual'].appendChild(shadowsAudioColorControl);
+src/hud.js.bak:1345:  tabContainers['Visual'].appendChild(shadowsIntensityControl);
+src/hud.js.bak:1351:  tabContainers['Visual'].appendChild(particlesLayerLabel);
+src/hud.js.bak:1357:  tabContainers['Visual'].appendChild(particlesBaseColorControl);
+src/hud.js.bak:1363:  tabContainers['Visual'].appendChild(particlesAudioColorControl);
+src/hud.js.bak:1369:  tabContainers['Visual'].appendChild(particlesIntensityControl);
+src/hud.js.bak:1377:  tabContainers['Visual'].appendChild(shadowBoxSeparator);
+src/hud.js.bak:1382:  tabContainers['Visual'].appendChild(shadowBoxTitle);
+src/hud.js.bak:1388:  tabContainers['Visual'].appendChild(projectParticlesToShadowControl);
+src/hud.js.bak:1396:  tabContainers['Visual'].appendChild(shadowPaletteControl);
+src/hud.js.bak:1403:  tabContainers['Visual'].appendChild(shadowThresholdControl);
+src/hud.js.bak:1409:  tabContainers['Visual'].appendChild(shadowBleachGainControl);
+src/hud.js.bak:1416:  tabContainers['Visual'].appendChild(shadowBgColorControl);
+src/hud.js.bak:1422:  tabContainers['Visual'].appendChild(shadowFgColorControl);
+src/hud.js.bak:1430:  tabContainers['Visual'].appendChild(spritesSeparator);
+src/hud.js.bak:1435:  tabContainers['Visual'].appendChild(spritesTitle);
+src/hud.js.bak:1441:  tabContainers['Visual'].appendChild(spritesEnableControl);
+src/hud.js.bak:1447:  tabContainers['Visual'].appendChild(spritesCountControl);
+src/hud.js.bak:1456:  panel.appendChild(controlsContainer);
+src/hud.js.bak:1474:  toggle.addEventListener('change', () => {
+src/hud.js.bak:1482:  toggle.addEventListener('change', () => {
+src/hud.js.bak:1487:  labelEl.appendChild(toggle);
+src/hud.js.bak:1488:  labelEl.appendChild(status);
+src/hud.js.bak:1489:  container.appendChild(labelEl);
+src/hud.js.bak:1514:  slider.addEventListener('input', () => {
+src/hud.js.bak:1520:  container.appendChild(labelEl);
+src/hud.js.bak:1521:  container.appendChild(slider);
+src/hud.js.bak:1522:  container.appendChild(valueDisplay);
+src/hud.js.bak:1550:    select.appendChild(optionEl);
+src/hud.js.bak:1553:  select.addEventListener('change', () => {
+src/hud.js.bak:1557:  container.appendChild(labelEl);
+src/hud.js.bak:1558:  container.appendChild(select);
+src/hud.js.bak:1580:  colorPicker.addEventListener('change', () => {
+src/hud.js.bak:1586:  container.appendChild(labelEl);
+src/hud.js.bak:1587:  container.appendChild(colorPicker);
+src/hud.js.bak:1588:  container.appendChild(colorDisplay);
+src/hud.js.bak:1635:          categoryFilter.appendChild(option);
+src/hud.js.bak:1645:      listContainer.appendChild(emptyMessage);
+src/hud.js.bak:1701:        presetItem.appendChild(nameSpan);
+src/hud.js.bak:1710:        presetItem.appendChild(metaSpan);
+src/hud.js.bak:1713:        presetItem.addEventListener('mouseenter', () => {
+src/hud.js.bak:1718:        presetItem.addEventListener('mouseleave', () => {
+src/hud.js.bak:1726:        presetItem.addEventListener('click', () => {
+src/hud.js.bak:1741:        listContainer.appendChild(presetItem);
+src/hud.js.bak:1749:        listContainer.appendChild(noResultsMessage);
+src/vessel.js.phase13.31.bak:107:    scene.add(this.plane);
+src/vessel.js.phase13.31.bak:146:export function initVessel(scene, renderer, camera) {
+src/vessel.js.phase13.31.bak:206:    console.log("✅ Vessel initialized - Conflat 6 (directional compass rings)");
+src/vessel.js.phase13.31.bak:253:    console.log(`✅ Vessel initialized - Gyre mode (${state.vessel.layout} layout)`);
+src/vessel.js.phase13.31.bak:257:  vesselGroup.visible = state.vessel.enabled;
+src/vessel.js.phase13.31.bak:262:  scene.add(vesselGroup);
+src/vessel.js.phase13.31.bak:276:  vesselGroup.visible = state.vessel.enabled && state.vessel.visible;
+src/vessel.js.phase13.31.bak:336:  reinitVessel(scene);
+src/vessel.js.phase13.31.bak:342:export function reinitVessel(scene, renderer, camera) {
+src/vessel.js.phase13.31.bak:349:  // Reinitialize with current layout
+src/vessel.js.phase13.31.bak:350:  initVessel(scene, renderer, camera);
+src/vessel.js.phase13.31.bak:351:  // Ensure material color is synced after reinit
+src/vessel.js.phase13.31.bak:372:  state.vessel.visible = !!visible;
+src/vessel.js.phase13.31.bak:374:    vesselGroup.visible = state.vessel.enabled && state.vessel.visible;
+src/particles.js.backup_phase4:61:export function initParticles(scene, count = 1000) {
+src/particles.js.backup_phase4:64:  console.log(`✨ Particles initialized (v2.2.1, count=${clampedCount}, layout=${state.particles.layout})`);
+src/particles.js.backup_phase4:125:  scene.add(particleSystem);
+src/particles.js.backup_phase4:172:    // Store base positions (initial layout positions)
+src/particles.js.backup_phase4:276:export function reinitParticles(scene) {
+src/particles.js.backup_phase4:280:  // Reinitialize with current layout and count
+src/particles.js.backup_phase4:281:  initParticles(scene, state.particles.count);
+src/particles.js.backup_phase4:286:  console.log(`✨ Particles reinitalized with layout: ${state.particles.layout}`);
+src/presetRouter.js:418:  document.body.appendChild(a);
+src/presetRouter.js:1216:  document.body.appendChild(a);
+src/hudMidi.js:40:  toggle.addEventListener('change', (e) => onChange(e.target.checked));
+src/hudMidi.js:42:  container.appendChild(label);
+src/hudMidi.js:43:  label.appendChild(toggle);
+src/hudMidi.js:59:  parentContainer.appendChild(separator);
+src/hudMidi.js:65:  parentContainer.appendChild(title);
+src/hudMidi.js:75:  deviceCountDiv.appendChild(deviceCountLabel);
+src/hudMidi.js:77:  parentContainer.appendChild(deviceCountDiv);
+src/hudMidi.js:84:  parentContainer.appendChild(logToggle);
+src/hudMidi.js:96:  parentContainer.appendChild(infoDiv);
+src/hudMidi.js:119:    parentContainer.appendChild(wrap);
+src/hudMidi.js:129:    btn.addEventListener('click', () => {
+src/hudMidi.js:136:    $('#ml-bind-audio').addEventListener('click', () => {
+src/hudMidi.js:139:    $('#ml-bind-hue').addEventListener('click', () => {
+src/hudMidi.js:142:    $('#ml-bind-rings').addEventListener('click', () => {
+src/hud.js.backup:17:export function initHUD() {
+src/hud.js.backup:19:  document.body.appendChild(hudPanel);
+src/hud.js.backup:20:  console.log("📟 HUD initialized");
+src/hud.js.backup:61:  document.head.appendChild(style);
+src/hud.js.backup:92:  collapseBtn.addEventListener('click', () => {
+src/hud.js.backup:105:  header.appendChild(title);
+src/hud.js.backup:106:  header.appendChild(collapseBtn);
+src/hud.js.backup:107:  panel.appendChild(header);
+src/hud.js.backup:136:    btn.addEventListener('click', () => {
+src/hud.js.backup:145:    tabNav.appendChild(btn);
+src/hud.js.backup:151:    controlsContainer.appendChild(container);
+src/hud.js.backup:155:  // Set initial active state
+src/hud.js.backup:171:  tabContainers['Presets'].appendChild(presetSeparator);
+src/hud.js.backup:176:  tabContainers['Presets'].appendChild(presetTitle);
+src/hud.js.backup:204:  saveButton.addEventListener('click', () => {
+src/hud.js.backup:219:  saveContainer.appendChild(saveInput);
+src/hud.js.backup:220:  saveContainer.appendChild(saveButton);
+src/hud.js.backup:221:  saveContainer.appendChild(categoryInput);
+src/hud.js.backup:222:  saveContainer.appendChild(tagsInput);
+src/hud.js.backup:223:  tabContainers['Presets'].appendChild(saveContainer);
+src/hud.js.backup:255:  filterContainer.appendChild(searchLabel);
+src/hud.js.backup:256:  filterContainer.appendChild(searchInput);
+src/hud.js.backup:257:  filterContainer.appendChild(categoryFilterLabel);
+src/hud.js.backup:258:  filterContainer.appendChild(categoryFilter);
+src/hud.js.backup:259:  filterContainer.appendChild(tagFilterLabel);
+src/hud.js.backup:260:  filterContainer.appendChild(tagFilter);
+src/hud.js.backup:261:  tabContainers['Presets'].appendChild(filterContainer);
+src/hud.js.backup:267:  tabContainers['Presets'].appendChild(presetListLabel);
+src/hud.js.backup:280:  tabContainers['Presets'].appendChild(presetListContainer);
+src/hud.js.backup:307:  loadButton.addEventListener('click', () => {
+src/hud.js.backup:313:  updateButton.addEventListener('click', () => {
+src/hud.js.backup:319:  deleteButton.addEventListener('click', () => {
+src/hud.js.backup:329:  actionContainer.appendChild(loadButton);
+src/hud.js.backup:330:  actionContainer.appendChild(updateButton);
+src/hud.js.backup:331:  actionContainer.appendChild(deleteButton);
+src/hud.js.backup:332:  tabContainers['Presets'].appendChild(actionContainer);
+src/hud.js.backup:354:  interpolationToggle.addEventListener('change', () => {
+src/hud.js.backup:361:  interpolationToggleLabel.appendChild(interpolationToggle);
+src/hud.js.backup:362:  interpolationToggleLabel.appendChild(interpolationStatus);
+src/hud.js.backup:376:  durationSlider.addEventListener('input', () => {
+src/hud.js.backup:382:  interpolationContainer.appendChild(interpolationTitle);
+src/hud.js.backup:383:  interpolationContainer.appendChild(interpolationToggleLabel);
+src/hud.js.backup:384:  interpolationContainer.appendChild(durationLabel);
+src/hud.js.backup:385:  interpolationContainer.appendChild(durationSlider);
+src/hud.js.backup:386:  tabContainers['Presets'].appendChild(interpolationContainer);
+src/hud.js.backup:391:  tabContainers['Presets'].appendChild(chainSeparator);
+src/hud.js.backup:411:  chainHeaderRow.appendChild(chainHeader);
+src/hud.js.backup:412:  chainHeaderRow.appendChild(statusBadge);
+src/hud.js.backup:413:  chainSection.appendChild(chainHeaderRow);
+src/hud.js.backup:426:  chainSection.appendChild(chainList);
+src/hud.js.backup:450:  durInput.addEventListener("input", () => durVal.textContent = durInput.value);
+src/hud.js.backup:451:  durRow.appendChild(durLabel);
+src/hud.js.backup:452:  durRow.appendChild(durInput);
+src/hud.js.backup:453:  durRow.appendChild(durVal);
+src/hud.js.backup:454:  chainSection.appendChild(durRow);
+src/hud.js.backup:471:  loopLabel.appendChild(loopCheckbox);
+src/hud.js.backup:472:  loopLabel.appendChild(document.createTextNode("🔁 Loop"));
+src/hud.js.backup:482:  shuffleLabel.appendChild(shuffleCheckbox);
+src/hud.js.backup:483:  shuffleLabel.appendChild(document.createTextNode("🔀 Shuffle"));
+src/hud.js.backup:485:  optionsRow.appendChild(loopLabel);
+src/hud.js.backup:486:  optionsRow.appendChild(shuffleLabel);
+src/hud.js.backup:487:  chainSection.appendChild(optionsRow);
+src/hud.js.backup:510:  progressBar.appendChild(progressFill);
+src/hud.js.backup:511:  progressContainer.appendChild(progressLabel);
+src/hud.js.backup:512:  progressContainer.appendChild(progressBar);
+src/hud.js.backup:515:  chainSection.appendChild(progressContainer);
+src/hud.js.backup:541:  btnRow.appendChild(startBtn);
+src/hud.js.backup:542:  btnRow.appendChild(stopBtn);
+src/hud.js.backup:543:  btnRow.appendChild(resetChainBtn);
+src/hud.js.backup:544:  chainSection.appendChild(btnRow);
+src/hud.js.backup:574:  playbackRow.appendChild(skipPrevBtn);
+src/hud.js.backup:575:  playbackRow.appendChild(pauseResumeBtn);
+src/hud.js.backup:576:  playbackRow.appendChild(skipNextBtn);
+src/hud.js.backup:577:  chainSection.appendChild(playbackRow);
+src/hud.js.backup:584:  chainSection.appendChild(timeRemainingLabel);
+src/hud.js.backup:598:  saveChainRow.appendChild(saveChainInput);
+src/hud.js.backup:599:  saveChainRow.appendChild(saveChainBtn);
+src/hud.js.backup:600:  chainSection.appendChild(saveChainRow);
+src/hud.js.backup:632:  chainIORow.appendChild(exportChainsBtn);
+src/hud.js.backup:633:  chainIORow.appendChild(importChainsBtn);
+src/hud.js.backup:634:  chainIORow.appendChild(importChainsInput);
+src/hud.js.backup:636:  savedChainsHeader.appendChild(savedChainsTitle);
+src/hud.js.backup:637:  savedChainsHeader.appendChild(chainIORow);
+src/hud.js.backup:638:  chainSection.appendChild(savedChainsHeader);
+src/hud.js.backup:643:  chainSection.appendChild(savedChainsList);
+src/hud.js.backup:649:  resetBtn.addEventListener('click', () => {
+src/hud.js.backup:653:  chainSection.appendChild(resetBtn);
+src/hud.js.backup:655:  tabContainers['Presets'].appendChild(chainSection);
+src/hud.js.backup:665:      chainList.appendChild(emptyMsg);
+src/hud.js.backup:678:      row.appendChild(cb);
+src/hud.js.backup:679:      row.appendChild(document.createTextNode(name));
+src/hud.js.backup:680:      chainList.appendChild(row);
+src/hud.js.backup:694:        savedChainsList.appendChild(emptyMsg);
+src/hud.js.backup:710:        loadBtn.addEventListener("click", () => {
+src/hud.js.backup:718:        deleteBtn.addEventListener("click", () => {
+src/hud.js.backup:726:        row.appendChild(nameSpan);
+src/hud.js.backup:727:        row.appendChild(loadBtn);
+src/hud.js.backup:728:        row.appendChild(deleteBtn);
+src/hud.js.backup:729:        savedChainsList.appendChild(row);
+src/hud.js.backup:735:  startBtn.addEventListener("click", () => {
+src/hud.js.backup:756:  stopBtn.addEventListener("click", () => {
+src/hud.js.backup:762:  resetChainBtn.addEventListener("click", () => {
+src/hud.js.backup:768:  pauseResumeBtn.addEventListener("click", () => {
+src/hud.js.backup:779:  skipPrevBtn.addEventListener("click", () => {
+src/hud.js.backup:784:  skipNextBtn.addEventListener("click", () => {
+src/hud.js.backup:790:  exportChainsBtn.addEventListener("click", () => {
+src/hud.js.backup:795:  importChainsBtn.addEventListener("click", () => {
+src/hud.js.backup:799:  importChainsInput.addEventListener("change", (e) => {
+src/hud.js.backup:810:  saveChainBtn.addEventListener("click", () => {
+src/hud.js.backup:923:  document.body.appendChild(toastContainer);
+src/hud.js.backup:930:    toastContainer.appendChild(toast);
+src/hud.js.backup:953:  document.head.appendChild(toastStyle);
+src/hud.js.backup:956:  window.addEventListener("chainStarted", (e) => {
+src/hud.js.backup:961:  window.addEventListener("chainStepComplete", (e) => {
+src/hud.js.backup:966:  window.addEventListener("chainLoopRestarted", () => {
+src/hud.js.backup:970:  window.addEventListener("chainFinished", () => {
+src/hud.js.backup:975:  window.addEventListener("chainStarted", () => {
+src/hud.js.backup:1005:  window.addEventListener("chainFinished", () => {
+src/hud.js.backup:1038:  window.addEventListener("chainPaused", () => {
+src/hud.js.backup:1043:  window.addEventListener("chainResumed", () => {
+src/hud.js.backup:1048:  window.addEventListener("chainSkipped", (e) => {
+src/hud.js.backup:1055:  window.addEventListener("chainReset", () => {
+src/hud.js.backup:1086:  window.addEventListener("chainStopped", () => {
+src/hud.js.backup:1123:  window.addEventListener("chainStarted", () => {
+src/hud.js.backup:1145:  window.addEventListener("chainFinished", () => {
+src/hud.js.backup:1153:  window.addEventListener("chainProgress", (e) => {
+src/hud.js.backup:1177:  document.addEventListener("presetsImported", refreshChainList);
+src/hud.js.backup:1178:  document.addEventListener("presetSaved", refreshChainList);
+src/hud.js.backup:1179:  document.addEventListener("presetDeleted", refreshChainList);
+src/hud.js.backup:1201:  exportButton.addEventListener('click', () => {
+src/hud.js.backup:1205:  importButton.addEventListener('click', () => {
+src/hud.js.backup:1209:  fileInput.addEventListener('change', (e) => {
+src/hud.js.backup:1217:  importExportContainer.appendChild(exportButton);
+src/hud.js.backup:1218:  importExportContainer.appendChild(importButton);
+src/hud.js.backup:1219:  tabContainers['Advanced'].appendChild(importExportContainer);
+src/hud.js.backup:1220:  tabContainers['Advanced'].appendChild(fileInput);
+src/hud.js.backup:1239:  categoryFilter.addEventListener('change', () => {
+src/hud.js.backup:1245:  tagFilter.addEventListener('input', () => {
+src/hud.js.backup:1252:  searchInput.addEventListener('input', () => {
+src/hud.js.backup:1268:  tabContainers['Visual'].appendChild(emojiParticlesLabel);
+src/hud.js.backup:1278:    emojiPicker.appendChild(option);
+src/hud.js.backup:1308:        scene.add(particleSystem.points);
+src/hud.js.backup:1324:  emojiPicker.addEventListener("change", (e) => {
+src/hud.js.backup:1333:  emojiContainer.appendChild(emojiParticlesToggle);
+src/hud.js.backup:1334:  emojiContainer.appendChild(emojiPicker);
+src/hud.js.backup:1335:  tabContainers['Visual'].appendChild(emojiContainer);
+src/hud.js.backup:1354:  tabContainers['Visual'].appendChild(emojiCountControl);
+src/hud.js.backup:1360:  tabContainers['Visual'].appendChild(emojiLayoutLabel);
+src/hud.js.backup:1380:    emojiLayoutDropdown.appendChild(option);
+src/hud.js.backup:1383:  emojiLayoutDropdown.addEventListener("change", (e) => {
+src/hud.js.backup:1389:  tabContainers['Visual'].appendChild(emojiLayoutDropdown);
+src/hud.js.backup:1398:  tabContainers['Visual'].appendChild(emojiAudioReactivityControl);
+src/hud.js.backup:1407:  tabContainers['Visual'].appendChild(emojiSignalLinkingControl);
+src/hud.js.backup:1413:  tabContainers['Visual'].appendChild(emojiSetLabel);
+src/hud.js.backup:1433:    emojiSetDropdown.appendChild(option);
+src/hud.js.backup:1436:  emojiSetDropdown.addEventListener("change", (e) => {
+src/hud.js.backup:1442:  tabContainers['Visual'].appendChild(emojiSetDropdown);
+src/hud.js.backup:1451:  tabContainers['Visual'].appendChild(emojiAutoCycleControl);
+src/hud.js.backup:1461:  tabContainers['Visual'].appendChild(emojiStoryModeControl);
+src/hud.js.backup:1467:  tabContainers['Visual'].appendChild(beatSyncLabel);
+src/hud.js.backup:1476:  tabContainers['Visual'].appendChild(bpmControl);
+src/hud.js.backup:1485:  tabContainers['Visual'].appendChild(beatSyncToggle);
+src/hud.js.backup:1491:  tabContainers['Visual'].appendChild(subdivisionLabel);
+src/hud.js.backup:1503:    subdivisionDropdown.appendChild(option);
+src/hud.js.backup:1505:  subdivisionDropdown.addEventListener("change", (e) => {
+src/hud.js.backup:1510:  tabContainers['Visual'].appendChild(subdivisionDropdown);
+src/hud.js.backup:1519:  tabContainers['Visual'].appendChild(onsetDetectionToggle);
+src/hud.js.backup:1529:  tabContainers['Visual'].appendChild(sequencerToggle);
+src/hud.js.backup:1535:  tabContainers['Visual'].appendChild(emojiMixerLabel);
+src/hud.js.backup:1541:  tabContainers['Visual'].appendChild(emojiStreamsContainer);
+src/hud.js.backup:1580:    emojiInput.addEventListener("input", () => {
+src/hud.js.backup:1592:    countSlider.addEventListener("input", () => {
+src/hud.js.backup:1600:    toggle.addEventListener("change", () => {
+src/hud.js.backup:1607:    removeBtn.addEventListener("click", () => {
+src/hud.js.backup:1620:    row.appendChild(emojiInput);
+src/hud.js.backup:1621:    row.appendChild(countSlider);
+src/hud.js.backup:1622:    row.appendChild(countLabel);
+src/hud.js.backup:1623:    row.appendChild(toggle);
+src/hud.js.backup:1624:    row.appendChild(removeBtn);
+src/hud.js.backup:1640:  addStreamBtn.addEventListener("click", () => {
+src/hud.js.backup:1646:    emojiStreamsContainer.appendChild(row);
+src/hud.js.backup:1658:  tabContainers['Visual'].appendChild(addStreamBtn);
+src/hud.js.backup:1669:        emojiStreamsContainer.appendChild(row);
+src/hud.js.backup:1684:  tabContainers['Visual'].appendChild(emojiSequencerLabel);
+src/hud.js.backup:1694:  tabContainers['Visual'].appendChild(sequencerEnableToggle);
+src/hud.js.backup:1704:  tabContainers['Visual'].appendChild(sequencerBPMControl);
+src/hud.js.backup:1715:  tabContainers['Visual'].appendChild(timelineLengthControl);
+src/hud.js.backup:1721:  tabContainers['Visual'].appendChild(timelineGridContainer);
+src/hud.js.backup:1747:      headerRow.appendChild(beatLabel);
+src/hud.js.backup:1749:    container.appendChild(headerRow);
+src/hud.js.backup:1760:      row.appendChild(emojiLabel);
+src/hud.js.backup:1784:        // Set initial state
+src/hud.js.backup:1789:        beatBtn.addEventListener("click", () => {
+src/hud.js.backup:1798:        row.appendChild(beatBtn);
+src/hud.js.backup:1801:      container.appendChild(row);
+src/hud.js.backup:1808:  // Build initial grid
+src/hud.js.backup:1815:  resetSequencerBtn.addEventListener("click", () => {
+src/hud.js.backup:1820:  tabContainers['Visual'].appendChild(resetSequencerBtn);
+src/hud.js.backup:1826:  tabContainers['Visual'].appendChild(emojiBanksLabel);
+src/hud.js.backup:1852:    bankBtn.addEventListener("click", () => {
+src/hud.js.backup:1866:    bankBtn.addEventListener("contextmenu", (e) => {
+src/hud.js.backup:1876:    banksGridContainer.appendChild(bankBtn);
+src/hud.js.backup:1879:  tabContainers['Visual'].appendChild(banksGridContainer);
+src/hud.js.backup:1920:  saveToBankBtn.addEventListener("click", () => {
+src/hud.js.backup:1930:  bankControlsRow.appendChild(saveToBankBtn);
+src/hud.js.backup:1936:  clearBankBtn.addEventListener("click", () => {
+src/hud.js.backup:1944:  bankControlsRow.appendChild(clearBankBtn);
+src/hud.js.backup:1946:  tabContainers['Visual'].appendChild(bankControlsRow);
+src/hud.js.backup:1952:  tabContainers['Visual'].appendChild(bankInfoText);
+src/hud.js.backup:1958:  tabContainers['Visual'].appendChild(emojiPhysicsLabel);
+src/hud.js.backup:1964:  tabContainers['Visual'].appendChild(physicsModeLabel);
+src/hud.js.backup:1980:    physicsModeDropdown.appendChild(option);
+src/hud.js.backup:1983:  physicsModeDropdown.addEventListener("change", () => {
+src/hud.js.backup:1999:  tabContainers['Visual'].appendChild(physicsModeDropdown);
+src/hud.js.backup:2006:  tabContainers['Visual'].appendChild(collisionToggle);
+src/hud.js.backup:2013:  tabContainers['Visual'].appendChild(audioModToggle);
+src/hud.js.backup:2020:  tabContainers['Visual'].appendChild(mouseInteractionToggle);
+src/hud.js.backup:2027:  tabContainers['Visual'].appendChild(gravityStrengthControl);
+src/hud.js.backup:2034:  tabContainers['Visual'].appendChild(orbitStrengthControl);
+src/hud.js.backup:2041:  tabContainers['Visual'].appendChild(repulsionStrengthControl);
+src/hud.js.backup:2047:  tabContainers['Visual'].appendChild(emojiFusionLabel);
+src/hud.js.backup:2059:  tabContainers['Visual'].appendChild(fusionToggle);
+src/hud.js.backup:2067:  tabContainers['Visual'].appendChild(fusionThresholdControl);
+src/hud.js.backup:2073:  tabContainers['Visual'].appendChild(emojiConstellationLabel);
+src/hud.js.backup:2079:  tabContainers['Visual'].appendChild(constellationTypeLabel);
+src/hud.js.backup:2099:    constellationTypeDropdown.appendChild(option);
+src/hud.js.backup:2102:  constellationTypeDropdown.addEventListener("change", () => {
+src/hud.js.backup:2109:  tabContainers['Visual'].appendChild(constellationTypeDropdown);
+src/hud.js.backup:2117:  tabContainers['Visual'].appendChild(constellationScaleControl);
+src/hud.js.backup:2125:  tabContainers['Visual'].appendChild(rotationSpeedControl);
+src/hud.js.backup:2133:  tabContainers['Visual'].appendChild(audioSyncToggle);
+src/hud.js.backup:2141:  tabContainers['Visual'].appendChild(constellationBeatSyncToggle);
+src/hud.js.backup:2147:  tabContainers['Visual'].appendChild(customPatternLabel);
+src/hud.js.backup:2154:  customPatternInput.addEventListener("change", async (e) => {
+src/hud.js.backup:2177:  tabContainers['Visual'].appendChild(customPatternInput);
+src/hud.js.backup:2186:  tabContainers['Visual'].appendChild(trailsLabel);
+src/hud.js.backup:2192:  tabContainers['Visual'].appendChild(trailEnabledControl);
+src/hud.js.backup:2199:  tabContainers['Visual'].appendChild(trailLengthControl);
+src/hud.js.backup:2206:  tabContainers['Visual'].appendChild(trailOpacityControl);
+src/hud.js.backup:2213:  tabContainers['Visual'].appendChild(trailFadeControl);
+src/hud.js.backup:2220:  tabContainers['Visual'].appendChild(trailAudioReactiveControl);
+src/hud.js.backup:2226:  tabContainers['Visual'].appendChild(trailLengthMinControl);
+src/hud.js.backup:2232:  tabContainers['Visual'].appendChild(trailLengthMaxControl);
+src/hud.js.backup:2238:  tabContainers['Visual'].appendChild(motionTrailsLabel);
+src/hud.js.backup:2245:  tabContainers['Visual'].appendChild(motionTrailsControl);
+src/hud.js.backup:2252:  tabContainers['Visual'].appendChild(motionTrailIntensityControl);
+src/hud.js.backup:2258:  resetButton.addEventListener('click', () => {
+src/hud.js.backup:2261:  tabContainers['Visual'].appendChild(resetButton);
+src/hud.js.backup:2266:  tabContainers['Visual'].appendChild(visualSeparator);
+src/hud.js.backup:2271:  tabContainers['Visual'].appendChild(visualTitle);
+src/hud.js.backup:2280:  tabContainers['Visual'].appendChild(ambientLightControl);
+src/hud.js.backup:2286:  tabContainers['Visual'].appendChild(directionalLightControl);
+src/hud.js.backup:2292:  tabContainers['Visual'].appendChild(directionalAngleXControl);
+src/hud.js.backup:2298:  tabContainers['Visual'].appendChild(directionalAngleYControl);
+src/hud.js.backup:2304:  tabContainers['Visual'].appendChild(colorPickerControl);
+src/hud.js.backup:2309:  tabContainers['Visual'].appendChild(colorLayersSeparator);
+src/hud.js.backup:2314:  tabContainers['Visual'].appendChild(colorLayersTitle);
+src/hud.js.backup:2320:  tabContainers['Visual'].appendChild(geometryLayerLabel);
+src/hud.js.backup:2325:  tabContainers['Visual'].appendChild(geometryBaseColorControl);
+src/hud.js.backup:2330:  tabContainers['Visual'].appendChild(geometryAudioColorControl);
+src/hud.js.backup:2336:  tabContainers['Visual'].appendChild(geometryIntensityControl);
+src/hud.js.backup:2342:  tabContainers['Visual'].appendChild(vesselLayerLabel);
+src/hud.js.backup:2347:  tabContainers['Visual'].appendChild(vesselBaseColorControl);
+src/hud.js.backup:2352:  tabContainers['Visual'].appendChild(vesselAudioColorControl);
+src/hud.js.backup:2358:  tabContainers['Visual'].appendChild(vesselIntensityControl);
+src/hud.js.backup:2364:  tabContainers['Visual'].appendChild(shadowsLayerLabel);
+src/hud.js.backup:2369:  tabContainers['Visual'].appendChild(shadowsBaseColorControl);
+src/hud.js.backup:2374:  tabContainers['Visual'].appendChild(shadowsAudioColorControl);
+src/hud.js.backup:2380:  tabContainers['Visual'].appendChild(shadowsIntensityControl);
+src/hud.js.backup:2386:  tabContainers['Visual'].appendChild(particlesLayerLabel);
+src/hud.js.backup:2392:  tabContainers['Visual'].appendChild(particlesBaseColorControl);
+src/hud.js.backup:2398:  tabContainers['Visual'].appendChild(particlesAudioColorControl);
+src/hud.js.backup:2404:  tabContainers['Visual'].appendChild(particlesIntensityControl);
+src/hud.js.backup:2412:  tabContainers['Visual'].appendChild(shadowBoxSeparator);
+src/hud.js.backup:2417:  tabContainers['Visual'].appendChild(shadowBoxTitle);
+src/hud.js.backup:2423:  tabContainers['Visual'].appendChild(projectParticlesToShadowControl);
+src/hud.js.backup:2431:  tabContainers['Visual'].appendChild(shadowPaletteControl);
+src/hud.js.backup:2438:  tabContainers['Visual'].appendChild(shadowThresholdControl);
+src/hud.js.backup:2444:  tabContainers['Visual'].appendChild(shadowBleachGainControl);
+src/hud.js.backup:2451:  tabContainers['Visual'].appendChild(shadowBgColorControl);
+src/hud.js.backup:2457:  tabContainers['Visual'].appendChild(shadowFgColorControl);
+src/hud.js.backup:2465:  tabContainers['Visual'].appendChild(spritesSeparator);
+src/hud.js.backup:2470:  tabContainers['Visual'].appendChild(spritesTitle);
+src/hud.js.backup:2476:  tabContainers['Visual'].appendChild(spritesEnableControl);
+src/hud.js.backup:2482:  tabContainers['Visual'].appendChild(spritesCountControl);
+src/hud.js.backup:2491:  panel.appendChild(controlsContainer);
+src/hud.js.backup:2509:  toggle.addEventListener('change', () => {
+src/hud.js.backup:2517:  toggle.addEventListener('change', () => {
+src/hud.js.backup:2522:  labelEl.appendChild(toggle);
+src/hud.js.backup:2523:  labelEl.appendChild(status);
+src/hud.js.backup:2524:  container.appendChild(labelEl);
+src/hud.js.backup:2549:  slider.addEventListener('input', () => {
+src/hud.js.backup:2555:  container.appendChild(labelEl);
+src/hud.js.backup:2556:  container.appendChild(slider);
+src/hud.js.backup:2557:  container.appendChild(valueDisplay);
+src/hud.js.backup:2585:    select.appendChild(optionEl);
+src/hud.js.backup:2588:  select.addEventListener('change', () => {
+src/hud.js.backup:2592:  container.appendChild(labelEl);
+src/hud.js.backup:2593:  container.appendChild(select);
+src/hud.js.backup:2615:  colorPicker.addEventListener('change', () => {
+src/hud.js.backup:2621:  container.appendChild(labelEl);
+src/hud.js.backup:2622:  container.appendChild(colorPicker);
+src/hud.js.backup:2623:  container.appendChild(colorDisplay);
+src/hud.js.backup:2670:          categoryFilter.appendChild(option);
+src/hud.js.backup:2680:      listContainer.appendChild(emptyMessage);
+src/hud.js.backup:2736:        presetItem.appendChild(nameSpan);
+src/hud.js.backup:2745:        presetItem.appendChild(metaSpan);
+src/hud.js.backup:2748:        presetItem.addEventListener('mouseenter', () => {
+src/hud.js.backup:2753:        presetItem.addEventListener('mouseleave', () => {
+src/hud.js.backup:2761:        presetItem.addEventListener('click', () => {
+src/hud.js.backup:2776:        listContainer.appendChild(presetItem);
+src/hud.js.backup:2784:        listContainer.appendChild(noResultsMessage);
+src/controlBindings.js:225:export function initDefaultBindings() {
+src/controlBindings.js:245:  initDefaultBindings
+src/hudTelemetry.js:30:  toggle.addEventListener('change', (e) => onChange(e.target.checked));
+src/hudTelemetry.js:32:  container.appendChild(label);
+src/hudTelemetry.js:33:  label.appendChild(toggle);
+src/hudTelemetry.js:49:  parentContainer.appendChild(separator);
+src/hudTelemetry.js:55:  parentContainer.appendChild(title);
+src/hudTelemetry.js:68:  parentContainer.appendChild(telemetryToggle);
+src/hudTelemetry.js:77:  parentContainer.appendChild(infoDiv);
+src/hudTelemetry.js:101:    parentContainer.appendChild(wrap);
+src/hudTelemetry.js:109:    rng.addEventListener('input', () => (lbl.textContent = rng.value));
+src/hudTelemetry.js:111:    btn.addEventListener('click', () => {
+src/hudTelemetry.js:138:    root.appendChild(wrap);
+src/hudTelemetry.js:143:    $('#feat-scan').addEventListener('click', () => {
+src/hudTelemetry.js:149:    $('#feat-pm').addEventListener('click', () => {
+src/hudTelemetry.js:157:    $('#feat-shot').addEventListener('click', () => {
+src/shadows.js:11:export function initShadows(scene) {
+src/shadows.js:27:  groundShadow.visible = state.shadows.enabled && state.shadows.ground;
+src/shadows.js:28:  scene.add(groundShadow);
+src/shadows.js:34:  backdropShadow.visible = state.shadows.enabled && state.shadows.backdrop;
+src/shadows.js:35:  scene.add(backdropShadow);
+src/shadows.js:37:  console.log("✅ Multi-plane shadow system initialized");
+src/shadows.js:44:  groundShadow.visible = state.shadows.enabled && state.shadows.ground;
+src/shadows.js:45:  backdropShadow.visible = state.shadows.enabled && state.shadows.backdrop;
+src/mandalaController.js:10:// Musical scale definitions (intervals from root)
+src/mandalaController.js:96:    console.log(`🎛️ MandalaController initialized → rings=${this.rings} | symmetry=${this.symmetry} | scale=${this.scale} (${this.mode}) | layout=${this.layoutMode} | emoji=${this.emoji}`);
+src/mandalaController.js:498:    window.addEventListener('mandala:imageSelected', (e) => {
+src/mandalaController.js:503:    window.addEventListener('mandala:imageCleared', () => {
+src/hudMorph.js:27:  toggle.addEventListener('change', (e) => onChange(e.target.checked));
+src/hudMorph.js:29:  container.appendChild(label);
+src/hudMorph.js:30:  label.appendChild(toggle);
+src/hudMorph.js:50:  slider.addEventListener('input', (e) => {
+src/hudMorph.js:56:  container.appendChild(label);
+src/hudMorph.js:57:  label.appendChild(valueDisplay);
+src/hudMorph.js:58:  container.appendChild(slider);
+src/hudMorph.js:76:    select.appendChild(optionEl);
+src/hudMorph.js:79:  select.addEventListener('change', (e) => onChange(e.target.value));
+src/hudMorph.js:81:  container.appendChild(label);
+src/hudMorph.js:82:  container.appendChild(select);
+src/hudMorph.js:99:  parentContainer.appendChild(idleSpinControl);
+src/hudMorph.js:105:  parentContainer.appendChild(xRotControl);
+src/hudMorph.js:111:  parentContainer.appendChild(yRotControl);
+src/hudMorph.js:117:  parentContainer.appendChild(scaleControl);
+src/hudMorph.js:124:  parentContainer.appendChild(morphControl);
+src/hudMorph.js:130:  parentContainer.appendChild(morphIntensityControl);
+src/hudMorph.js:135:  parentContainer.appendChild(separator);
+src/hudMorph.js:140:  parentContainer.appendChild(phase4Title);
+src/hudMorph.js:146:  parentContainer.appendChild(cubeWeightControl);
+src/hudMorph.js:151:  parentContainer.appendChild(sphereWeightControl);
+src/hudMorph.js:156:  parentContainer.appendChild(pyramidWeightControl);
+src/hudMorph.js:161:  parentContainer.appendChild(torusWeightControl);
+src/particles.js:9:// Phase 11.7.22: Musical scale definitions (intervals from root)
+src/particles.js:161:    scene.add(this.mesh);
+src/particles.js:211:    this.trailLines.visible = false; // Hidden by default
+src/particles.js:216:    scene.add(this.trailLines);
+src/particles.js:218:    this._initParticles();
+src/particles.js:221:    // Phase 11.4.2S: Log per-axis drift initialization
+src/particles.js:222:    console.log(`✨ Particle drift initialized for ${this.count} particles`);
+src/particles.js:225:  _initParticles() {
+src/particles.js:486:      this.trailLines.visible = false;
+src/particles.js:560:        this.trailLines.visible = true;
+src/particles.js:563:        this.trailLines.visible = false;
+src/particles.js:660:export function initParticles(scene, count = 5000) {
+src/particles.js:812:      this.scene.add(this.instancedMesh);
+src/particles.js:817:      console.log(`🍕 EmojiParticles (instanced) initialized: ${count} x ${emoji}`);
+src/particles.js:821:      this.initSpriteFallback(texture);
+src/particles.js:830:    window.addEventListener('mandala:imageSelected', () => {
+src/particles.js:835:    window.addEventListener('mandala:imageCleared', () => {
+src/particles.js:842:  initSpriteFallback(texture) {
+src/particles.js:852:      this.scene.add(sprite);
+src/particles.js:856:    console.log(`🍕 EmojiParticles (fallback sprites) initialized: ${this.count} x ${this.emoji}`);
+src/particles.js:2027:    console.log("🎨 EmojiStreamManager initialized");
+src/particles.js:2077:        this.scene.add(stream.instancedMesh);
+src/particles.js:2185:    console.log("🎶 EmojiSequencer initialized");
+src/particles.js:2340:    console.log("💾 EmojiPatternBankManager initialized (8 banks)");
+src/hudBackground.js:26:  uploadInput.addEventListener("change", (e) => {
+src/hudBackground.js:92:  bgScaleSlider.addEventListener('input', (e) => {
+src/hudBackground.js:99:  bgScaleContainer.appendChild(bgScaleLabel);
+src/hudBackground.js:100:  bgScaleContainer.appendChild(bgScaleSlider);
+src/hudBackground.js:101:  bgScaleContainer.appendChild(bgScaleValue);
+src/hudBackground.js:103:  container.appendChild(uploadButton);
+src/hudBackground.js:104:  container.appendChild(uploadInput);
+src/hudBackground.js:105:  container.appendChild(morphLabel);
+src/hudBackground.js:106:  container.appendChild(bgLabel);
+src/hudBackground.js:107:  container.appendChild(bgScaleContainer);
+src/hud.js:81:console.log("📟 HUD registry initialized");
+src/hud.js:104:export function initHUD() {
+src/hud.js:106:  document.body.appendChild(hudPanel);
+src/hud.js:108:  console.log("📟 HUD initialized");
+src/hud.js:145:  document.head.appendChild(style);
+src/hud.js:176:  collapseBtn.addEventListener('click', () => {
+src/hud.js:189:  header.appendChild(title);
+src/hud.js:190:  header.appendChild(collapseBtn);
+src/hud.js:191:  panel.appendChild(header);
+src/hud.js:220:    btn.addEventListener('click', () => {
+src/hud.js:229:    tabNav.appendChild(btn);
+src/hud.js:235:    controlsContainer.appendChild(container);
+src/hud.js:239:  // Set initial active state
+src/hud.js:264:  tabContainers['Visual'].appendChild(emojiParticlesLabel);
+src/hud.js:274:    emojiPicker.appendChild(option);
+src/hud.js:304:        scene.add(particleSystem.points);
+src/hud.js:320:  emojiPicker.addEventListener("change", (e) => {
+src/hud.js:329:  emojiContainer.appendChild(emojiParticlesToggle);
+src/hud.js:330:  emojiContainer.appendChild(emojiPicker);
+src/hud.js:331:  tabContainers['Visual'].appendChild(emojiContainer);
+src/hud.js:350:  tabContainers['Visual'].appendChild(emojiCountControl);
+src/hud.js:356:  tabContainers['Visual'].appendChild(emojiLayoutLabel);
+src/hud.js:376:    emojiLayoutDropdown.appendChild(option);
+src/hud.js:379:  emojiLayoutDropdown.addEventListener("change", (e) => {
+src/hud.js:385:  tabContainers['Visual'].appendChild(emojiLayoutDropdown);
+src/hud.js:394:  tabContainers['Visual'].appendChild(emojiAudioReactivityControl);
+src/hud.js:403:  tabContainers['Visual'].appendChild(emojiSignalLinkingControl);
+src/hud.js:409:  tabContainers['Visual'].appendChild(emojiSetLabel);
+src/hud.js:429:    emojiSetDropdown.appendChild(option);
+src/hud.js:432:  emojiSetDropdown.addEventListener("change", (e) => {
+src/hud.js:438:  tabContainers['Visual'].appendChild(emojiSetDropdown);
+src/hud.js:447:  tabContainers['Visual'].appendChild(emojiAutoCycleControl);
+src/hud.js:457:  tabContainers['Visual'].appendChild(emojiStoryModeControl);
+src/hud.js:463:  tabContainers['Visual'].appendChild(beatSyncLabel);
+src/hud.js:472:  tabContainers['Visual'].appendChild(bpmControl);
+src/hud.js:481:  tabContainers['Visual'].appendChild(beatSyncToggle);
+src/hud.js:487:  tabContainers['Visual'].appendChild(subdivisionLabel);
+src/hud.js:499:    subdivisionDropdown.appendChild(option);
+src/hud.js:501:  subdivisionDropdown.addEventListener("change", (e) => {
+src/hud.js:506:  tabContainers['Visual'].appendChild(subdivisionDropdown);
+src/hud.js:515:  tabContainers['Visual'].appendChild(onsetDetectionToggle);
+src/hud.js:525:  tabContainers['Visual'].appendChild(sequencerToggle);
+src/hud.js:531:  tabContainers['Visual'].appendChild(emojiMixerLabel);
+src/hud.js:537:  tabContainers['Visual'].appendChild(emojiStreamsContainer);
+src/hud.js:576:    emojiInput.addEventListener("input", () => {
+src/hud.js:588:    countSlider.addEventListener("input", () => {
+src/hud.js:596:    toggle.addEventListener("change", () => {
+src/hud.js:603:    removeBtn.addEventListener("click", () => {
+src/hud.js:616:    row.appendChild(emojiInput);
+src/hud.js:617:    row.appendChild(countSlider);
+src/hud.js:618:    row.appendChild(countLabel);
+src/hud.js:619:    row.appendChild(toggle);
+src/hud.js:620:    row.appendChild(removeBtn);
+src/hud.js:636:  addStreamBtn.addEventListener("click", () => {
+src/hud.js:642:    emojiStreamsContainer.appendChild(row);
+src/hud.js:654:  tabContainers['Visual'].appendChild(addStreamBtn);
+src/hud.js:665:        emojiStreamsContainer.appendChild(row);
+src/hud.js:680:  tabContainers['Visual'].appendChild(emojiSequencerLabel);
+src/hud.js:690:  tabContainers['Visual'].appendChild(sequencerEnableToggle);
+src/hud.js:700:  tabContainers['Visual'].appendChild(sequencerBPMControl);
+src/hud.js:711:  tabContainers['Visual'].appendChild(timelineLengthControl);
+src/hud.js:717:  tabContainers['Visual'].appendChild(timelineGridContainer);
+src/hud.js:743:      headerRow.appendChild(beatLabel);
+src/hud.js:745:    container.appendChild(headerRow);
+src/hud.js:756:      row.appendChild(emojiLabel);
+src/hud.js:780:        // Set initial state
+src/hud.js:785:        beatBtn.addEventListener("click", () => {
+src/hud.js:794:        row.appendChild(beatBtn);
+src/hud.js:797:      container.appendChild(row);
+src/hud.js:804:  // Build initial grid
+src/hud.js:811:  resetSequencerBtn.addEventListener("click", () => {
+src/hud.js:816:  tabContainers['Visual'].appendChild(resetSequencerBtn);
+src/hud.js:822:  tabContainers['Visual'].appendChild(emojiBanksLabel);
+src/hud.js:848:    bankBtn.addEventListener("click", () => {
+src/hud.js:862:    bankBtn.addEventListener("contextmenu", (e) => {
+src/hud.js:872:    banksGridContainer.appendChild(bankBtn);
+src/hud.js:875:  tabContainers['Visual'].appendChild(banksGridContainer);
+src/hud.js:916:  saveToBankBtn.addEventListener("click", () => {
+src/hud.js:926:  bankControlsRow.appendChild(saveToBankBtn);
+src/hud.js:932:  clearBankBtn.addEventListener("click", () => {
+src/hud.js:940:  bankControlsRow.appendChild(clearBankBtn);
+src/hud.js:942:  tabContainers['Visual'].appendChild(bankControlsRow);
+src/hud.js:948:  tabContainers['Visual'].appendChild(bankInfoText);
+src/hud.js:954:  tabContainers['Visual'].appendChild(emojiPhysicsLabel);
+src/hud.js:960:  tabContainers['Visual'].appendChild(physicsModeLabel);
+src/hud.js:976:    physicsModeDropdown.appendChild(option);
+src/hud.js:979:  physicsModeDropdown.addEventListener("change", () => {
+src/hud.js:995:  tabContainers['Visual'].appendChild(physicsModeDropdown);
+src/hud.js:1002:  tabContainers['Visual'].appendChild(collisionToggle);
+src/hud.js:1009:  tabContainers['Visual'].appendChild(audioModToggle);
+src/hud.js:1016:  tabContainers['Visual'].appendChild(mouseInteractionToggle);
+src/hud.js:1023:  tabContainers['Visual'].appendChild(gravityStrengthControl);
+src/hud.js:1030:  tabContainers['Visual'].appendChild(orbitStrengthControl);
+src/hud.js:1037:  tabContainers['Visual'].appendChild(repulsionStrengthControl);
+src/hud.js:1043:  tabContainers['Visual'].appendChild(emojiFusionLabel);
+src/hud.js:1055:  tabContainers['Visual'].appendChild(fusionToggle);
+src/hud.js:1063:  tabContainers['Visual'].appendChild(fusionThresholdControl);
+src/hud.js:1069:  tabContainers['Visual'].appendChild(emojiConstellationLabel);
+src/hud.js:1075:  tabContainers['Visual'].appendChild(constellationTypeLabel);
+src/hud.js:1095:    constellationTypeDropdown.appendChild(option);
+src/hud.js:1098:  constellationTypeDropdown.addEventListener("change", () => {
+src/hud.js:1105:  tabContainers['Visual'].appendChild(constellationTypeDropdown);
+src/hud.js:1113:  tabContainers['Visual'].appendChild(constellationScaleControl);
+src/hud.js:1121:  tabContainers['Visual'].appendChild(rotationSpeedControl);
+src/hud.js:1129:  tabContainers['Visual'].appendChild(audioSyncToggle);
+src/hud.js:1137:  tabContainers['Visual'].appendChild(constellationBeatSyncToggle);
+src/hud.js:1143:  tabContainers['Visual'].appendChild(customPatternLabel);
+src/hud.js:1150:  customPatternInput.addEventListener("change", async (e) => {
+src/hud.js:1173:  tabContainers['Visual'].appendChild(customPatternInput);
+src/hud.js:1185:  tabContainers['Visual'].appendChild(trailsLabel);
+src/hud.js:1191:  tabContainers['Visual'].appendChild(trailEnabledControl);
+src/hud.js:1198:  tabContainers['Visual'].appendChild(trailLengthControl);
+src/hud.js:1205:  tabContainers['Visual'].appendChild(trailOpacityControl);
+src/hud.js:1212:  tabContainers['Visual'].appendChild(trailFadeControl);
+src/hud.js:1219:  tabContainers['Visual'].appendChild(trailAudioReactiveControl);
+src/hud.js:1225:  tabContainers['Visual'].appendChild(trailLengthMinControl);
+src/hud.js:1231:  tabContainers['Visual'].appendChild(trailLengthMaxControl);
+src/hud.js:1237:  tabContainers['Visual'].appendChild(motionTrailsLabel);
+src/hud.js:1244:  tabContainers['Visual'].appendChild(motionTrailsControl);
+src/hud.js:1251:  tabContainers['Visual'].appendChild(motionTrailIntensityControl);
+src/hud.js:1257:  resetButton.addEventListener('click', () => {
+src/hud.js:1260:  tabContainers['Visual'].appendChild(resetButton);
+src/hud.js:1266:  centerMeBtn.addEventListener('click', async () => {
+src/hud.js:1271:  tabContainers['Visual'].appendChild(centerMeBtn);
+src/hud.js:1276:  tabContainers['Visual'].appendChild(visualSeparator);
+src/hud.js:1281:  tabContainers['Visual'].appendChild(visualTitle);
+src/hud.js:1290:  tabContainers['Visual'].appendChild(ambientLightControl);
+src/hud.js:1296:  tabContainers['Visual'].appendChild(directionalLightControl);
+src/hud.js:1302:  tabContainers['Visual'].appendChild(directionalAngleXControl);
+src/hud.js:1308:  tabContainers['Visual'].appendChild(directionalAngleYControl);
+src/hud.js:1314:  tabContainers['Visual'].appendChild(colorPickerControl);
+src/hud.js:1319:  tabContainers['Visual'].appendChild(colorLayersSeparator);
+src/hud.js:1324:  tabContainers['Visual'].appendChild(colorLayersTitle);
+src/hud.js:1330:  tabContainers['Visual'].appendChild(geometryLayerLabel);
+src/hud.js:1335:  tabContainers['Visual'].appendChild(geometryBaseColorControl);
+src/hud.js:1340:  tabContainers['Visual'].appendChild(geometryAudioColorControl);
+src/hud.js:1346:  tabContainers['Visual'].appendChild(geometryIntensityControl);
+src/hud.js:1352:  tabContainers['Visual'].appendChild(vesselLayerLabel);
+src/hud.js:1357:  tabContainers['Visual'].appendChild(vesselBaseColorControl);
+src/hud.js:1362:  tabContainers['Visual'].appendChild(vesselAudioColorControl);
+src/hud.js:1368:  tabContainers['Visual'].appendChild(vesselIntensityControl);
+src/hud.js:1374:  tabContainers['Visual'].appendChild(shadowsLayerLabel);
+src/hud.js:1379:  tabContainers['Visual'].appendChild(shadowsBaseColorControl);
+src/hud.js:1384:  tabContainers['Visual'].appendChild(shadowsAudioColorControl);
+src/hud.js:1390:  tabContainers['Visual'].appendChild(shadowsIntensityControl);
+src/hud.js:1396:  tabContainers['Visual'].appendChild(particlesLayerLabel);
+src/hud.js:1402:  tabContainers['Visual'].appendChild(particlesBaseColorControl);
+src/hud.js:1408:  tabContainers['Visual'].appendChild(particlesAudioColorControl);
+src/hud.js:1414:  tabContainers['Visual'].appendChild(particlesIntensityControl);
+src/hud.js:1422:  tabContainers['Visual'].appendChild(shadowBoxSeparator);
+src/hud.js:1427:  tabContainers['Visual'].appendChild(shadowBoxTitle);
+src/hud.js:1433:  tabContainers['Visual'].appendChild(projectParticlesToShadowControl);
+src/hud.js:1441:  tabContainers['Visual'].appendChild(shadowPaletteControl);
+src/hud.js:1448:  tabContainers['Visual'].appendChild(shadowThresholdControl);
+src/hud.js:1454:  tabContainers['Visual'].appendChild(shadowBleachGainControl);
+src/hud.js:1461:  tabContainers['Visual'].appendChild(shadowBgColorControl);
+src/hud.js:1467:  tabContainers['Visual'].appendChild(shadowFgColorControl);
+src/hud.js:1475:  tabContainers['Visual'].appendChild(spritesSeparator);
+src/hud.js:1480:  tabContainers['Visual'].appendChild(spritesTitle);
+src/hud.js:1486:  tabContainers['Visual'].appendChild(spritesEnableControl);
+src/hud.js:1492:  tabContainers['Visual'].appendChild(spritesCountControl);
+src/hud.js:1501:  panel.appendChild(controlsContainer);
+src/hud.js:1519:  toggle.addEventListener('change', () => {
+src/hud.js:1527:  toggle.addEventListener('change', () => {
+src/hud.js:1532:  labelEl.appendChild(toggle);
+src/hud.js:1533:  labelEl.appendChild(status);
+src/hud.js:1534:  container.appendChild(labelEl);
+src/hud.js:1559:  slider.addEventListener('input', () => {
+src/hud.js:1565:  container.appendChild(labelEl);
+src/hud.js:1566:  container.appendChild(slider);
+src/hud.js:1567:  container.appendChild(valueDisplay);
+src/hud.js:1595:    select.appendChild(optionEl);
+src/hud.js:1598:  select.addEventListener('change', () => {
+src/hud.js:1602:  container.appendChild(labelEl);
+src/hud.js:1603:  container.appendChild(select);
+src/hud.js:1625:  colorPicker.addEventListener('change', () => {
+src/hud.js:1631:  container.appendChild(labelEl);
+src/hud.js:1632:  container.appendChild(colorPicker);
+src/hud.js:1633:  container.appendChild(colorDisplay);
+src/hud.js:1680:          categoryFilter.appendChild(option);
+src/hud.js:1690:      listContainer.appendChild(emptyMessage);
+src/hud.js:1746:        presetItem.appendChild(nameSpan);
+src/hud.js:1755:        presetItem.appendChild(metaSpan);
+src/hud.js:1758:        presetItem.addEventListener('mouseenter', () => {
+src/hud.js:1763:        presetItem.addEventListener('mouseleave', () => {
+src/hud.js:1771:        presetItem.addEventListener('click', () => {
+src/hud.js:1786:        listContainer.appendChild(presetItem);
+src/hud.js:1794:        listContainer.appendChild(noResultsMessage);
+src/hud.js:1862:  btn.addEventListener('mouseenter', () => btn.style.opacity = '1');
+src/hud.js:1863:  btn.addEventListener('mouseleave', () => btn.style.opacity = '0.85');
+src/hud.js:1864:  btn.addEventListener('click', () => window.ProjectorMode?.toggle());
+src/hud.js:1866:  root.appendChild(btn);
+src/audioRouter.js:92:export function initAudioRouter() {
+src/visual.js:20:    scene.add(__conflat);
+src/visual.js:28:export function setConflatVisible(on=true){ if (__conflat) __conflat.visible = !!on; }
+src/visual.js:36:export function initVisual(scene){
+src/geometry.js:36:document.body.appendChild(renderer.domElement);
+src/geometry.js:189:morphMesh.visible = true;
+src/geometry.js:195:// Phase 12.1: Explicit initializer for morph shape
+src/geometry.js:196:export function initMorphShape(targetScene) {
+src/geometry.js:202:// Auto-initialize for backward compatibility
+src/geometry.js:203:scene.add(morphMesh);
+src/geometry.js:222:window.addEventListener('resize', () => {
+src/geometry.js:376:  scene.add(ambientLight);
+src/geometry.js:381:  scene.add(directionalLight);
+src/geometry.js:383:  console.log("🎨 Lighting system initialized");
+src/geometry.js:617:console.log("🔺 Geometry module initialized with state-based architecture");
+src/constants.js:5:export const SHADOW_LAYER = 7;
+src/periaktos.js:14:export function initPeriaktos() {
+src/periaktos.js:18:export function toggleMorph() {
+src/periaktos.js:28:export function setMorphTarget(target) {
+src/periaktos.js:45:export function onMorphUpdate(callback) {
+src/periaktos.js:49:export function getMorphState() {
+src/periaktos.js:61:export function setMorphBlend(value) {
+src/periaktos.js:89:export function getMorphBlend() {
+src/periaktos.js:93:export function onMorphBlend(callback) {
+src/periaktos.js:97:export function setMorphWeights(weights) {
+src/periaktos.js:116:export function getMorphWeights() {
+src/periaktos.js:120:export function onMorphWeights(callback) {
+src/periaktos.js:124:export function setTargetWeight(target, weight) {
+src/periaktos.js:135:export function getTargetWeight(target) {
+src/midi.js:7:export function initMIDI(callback) {
+src/midi.js:35:export function onCC(callback) {
+src/midi.js:40:export function onNote(callback) {
+src/midi.js:45:export function onPitchBend(callback) {
+src/midi.js:49:export function getMIDIDeviceCount() {
+src/presets.js:1:import { state } from './state.js';
+src/presets.js:2:import { initParticles } from './particles.js';
+src/presets.js:10:export function initPresets() {
+src/presets.js:14:export function savePreset(name, stateOverride, category = 'Uncategorized', tags = []) {
+src/presets.js:135:export function loadPreset(name) {
+src/presets.js:179:      import('./vessel.js').then(({ reinitVessel }) => {
+src/presets.js:180:        import('./geometry.js').then(({ scene }) => {
+src/presets.js:381:export function deletePreset(name) {
+src/presets.js:406:export function listPresets() {
+src/presets.js:416:export function getCurrentPresetName() {
+src/presets.js:420:export function getPresetData(name) {
+src/presets.js:425:export function onPresetUpdate(callback) {
+src/presets.js:458:export function createDefaultPresets() {
+src/mandalaUpload.js:10:export function mountMandalaUploadAfter(targetElement) {
+src/telemetry.js:17:export function initTelemetry(getState) {
+src/hudParticles.js:4:import { state } from './state.js';
+src/hudParticles.js:5:import { HUD, notifyHUDUpdate, registerHUDCallback } from "./hud.js";
+src/hudParticles.js:16:export function createParticlesHudSection(container, notifyHUDUpdate, createToggleControl, createSliderControl) {
+src/hudParticles.js:253:export function refreshParticlesHUD() {
+src/hudPresets.js:1:import { state } from './state.js';
+src/hudPresets.js:2:import { updatePresetList } from './hud.js';
+src/hudPresets.js:16:export function createPresetsHudSection(parentContainer, notifyHUDUpdate) {
+src/hudPresets.js:464:  const exportChainsBtn = document.createElement("button");
+src/hudPresets.js:465:  exportChainsBtn.id = "exportChainsBtn";
+src/hudPresets.js:466:  exportChainsBtn.textContent = "💾";
+src/hudPresets.js:467:  exportChainsBtn.title = "Export chains";
+src/hudPresets.js:468:  exportChainsBtn.style.cssText = 'padding: 2px 6px; background: #4CAF50; color: white; border: none; cursor: pointer; font-size: 10px; border-radius: 3px;';
+src/hudPresets.js:470:  const importChainsBtn = document.createElement("button");
+src/hudPresets.js:471:  importChainsBtn.id = "importChainsBtn";
+src/hudPresets.js:472:  importChainsBtn.textContent = "📂";
+src/hudPresets.js:473:  importChainsBtn.title = "Import chains";
+src/hudPresets.js:474:  importChainsBtn.style.cssText = 'padding: 2px 6px; background: #2196F3; color: white; border: none; cursor: pointer; font-size: 10px; border-radius: 3px;';
+src/hudPresets.js:476:  const importChainsInput = document.createElement("input");
+src/hudPresets.js:477:  importChainsInput.type = "file";
+src/hudPresets.js:478:  importChainsInput.id = "importChainsInput";
+src/hudPresets.js:479:  importChainsInput.accept = ".json";
+src/hudPresets.js:480:  importChainsInput.style.display = "none";
+src/hudPresets.js:482:  chainIORow.appendChild(exportChainsBtn);
+src/hudPresets.js:483:  chainIORow.appendChild(importChainsBtn);
+src/hudPresets.js:484:  chainIORow.appendChild(importChainsInput);
+src/hudPresets.js:538:    import('./presetRouter.js').then(({ listChains, getChainData }) => {
+src/hudPresets.js:640:  exportChainsBtn.addEventListener("click", () => {
+src/hudPresets.js:641:    console.log("💾 HUD export chains");
+src/hudPresets.js:642:    notifyHUDUpdate({ presetAction: "chain:export" });
+src/hudPresets.js:645:  importChainsBtn.addEventListener("click", () => {
+src/hudPresets.js:646:    importChainsInput.click();
+src/hudPresets.js:649:  importChainsInput.addEventListener("change", (e) => {
+src/hudPresets.js:652:      console.log("📂 HUD import chains:", file.name);
+src/hudPresets.js:653:      notifyHUDUpdate({ presetAction: "chain:import", file });
+src/hudPresets.js:654:      // Reset input so same file can be imported again
+src/hudPresets.js:655:      importChainsInput.value = "";
+src/hudPresets.js:977:      import('./presetRouter.js').then(({ getChainProgress }) => {
+src/hudPresets.js:1032:  const importExportContainer = document.createElement('div');
+src/hudPresets.js:1033:  importExportContainer.style.cssText = 'display: flex; gap: 5px; margin-bottom: 10px;';
+src/hudPresets.js:1035:  const exportButton = document.createElement('button');
+src/hudPresets.js:1036:  exportButton.textContent = '📥 Export';
+src/hudPresets.js:1037:  exportButton.style.cssText = 'flex: 1; padding: 6px; background: #00aa00; color: white; border: none; cursor: pointer; border-radius: 3px; font-size: 11px;';
+src/hudPresets.js:1038:  exportButton.title = 'Export all presets as JSON file';
+src/hudPresets.js:1040:  const importButton = document.createElement('button');
+src/hudPresets.js:1041:  importButton.textContent = '📤 Import';
+src/hudPresets.js:1042:  importButton.style.cssText = 'flex: 1; padding: 6px; background: #aa00aa; color: white; border: none; cursor: pointer; border-radius: 3px; font-size: 11px;';
+src/hudPresets.js:1043:  importButton.title = 'Import presets from JSON file';
+src/hudPresets.js:1045:  // Hidden file input for import
+src/hudPresets.js:1051:  exportButton.addEventListener('click', () => {
+src/hudPresets.js:1052:    notifyHUDUpdate({ presetAction: 'export' });
+src/hudPresets.js:1055:  importButton.addEventListener('click', () => {
+src/hudPresets.js:1062:      notifyHUDUpdate({ presetAction: 'import', file: file });
+src/hudPresets.js:1067:  importExportContainer.appendChild(exportButton);
+src/hudPresets.js:1068:  importExportContainer.appendChild(importButton);
+src/hudPresets.js:1069:  importExportContainer.appendChild(fileInput);
+src/hudPresets.js:1070:  parentContainer.appendChild(importExportContainer);
+src/hudPresets.js:1074:    import('./presets.js').then(({ listPresets }) => {
+src/hudPresets.js:1080:    import('./presets.js').then(({ listPresets }) => {
+src/hudPresets.js:1087:    import('./presets.js').then(({ listPresets }) => {
+src/hudAudio.js:1:import { HUD, notifyHUDUpdate, registerHUDCallback } from "./hud.js";
+src/hudAudio.js:70:export function createAudioHudSection(parentContainer, notifyHUDUpdate) {
+src/hudAudio.js:189:export function refreshAudioHUD() {
+src/hudMandala.js:4:import { state } from './state.js';
+src/hudMandala.js:5:import { mountMandalaUploadAfter } from './mandalaUpload.js';
+src/hudMandala.js:6:import { notifyHUDUpdate, registerHUDCallback } from "./hud.js";
+src/hudMandala.js:17:export function createMandalaHudSection(container, notifyHUDUpdate, createToggleControl, createSliderControl) {
+src/hudMandala.js:393:export function refreshMandalaHUD() {
+src/visual.js.phase13.31.bak:2:import * as THREE from "three";
+src/visual.js.phase13.31.bak:3:import { state } from "./state.js";
+src/visual.js.phase13.31.bak:10:export function getBackgroundMesh() {
+src/visual.js.phase13.31.bak:14:export function initVisual(scene) {
+src/visual.js.phase13.31.bak:25:export function updateVisual() {
+src/visual.js.phase13.31.bak:44:export function setBackgroundScale(scale) {
+src/hudGeometry.js:3:import { setSkyboxMode, setWireframeMode, centerCameraAndMorph } from './geometry.js';
+src/hudGeometry.js:4:import { state } from './state.js';
+src/hudGeometry.js:10:export function createGeometryHudSection(container, sceneRefs = {}) {
+src/hudVessel.js:112:export function createVesselHudSection(parentContainer, notifyHUDUpdate) {
+src/vessel.js:2:import * as THREE from 'three';
+src/vessel.js:6:export function ensureVessel(scene) {
+src/vessel.js:27:export function getVessel() { return __vessel; }
+src/vessel.js:29:export function setVesselVisible(on = true) { if (__vessel) __vessel.visible = !!on; }
+src/vessel.js:31:export function setVesselColor(hex) { if (__vessel) __vessel.material.color.set(hex); }
+src/vessel.js:33:export function setVesselWireframe(on=false){ if (__vessel) __vessel.material.wireframe = !!on; }
+src/vessel.js:35:export function setVesselAsSkydome(scene, on=true, radius=30) {
+src/vessel.js:56:export function updateVessel(){}
+src/vessel.js:57:export function renderShadowProjection(){}
+src/vessel.js:58:export function initVessel(){}
+src/midiRouter.js:1:import { onCC, onNote, onPitchBend } from './midi.js';
+src/midiRouter.js:2:import { state, setMorphWeight, setHue } from './state.js';
+src/midiRouter.js:3:import { applyMIDIBinding } from './controlBindings.js';
+src/midiRouter.js:50:  // Lazy import to avoid circular dependency
+src/midiRouter.js:51:  import('./main.js').then(module => {
+src/midiRouter.js:291:      import('./vessel.js').then(({ cycleLayout }) => {
+src/midiRouter.js:292:        import('./geometry.js').then(({ scene }) => {
+src/main.js:97:// Phase 2.3.3SS: Shadow Box Safe Stub (MUST be before imports to prevent boot crash)
+src/main.js:124:import * as THREE from 'three';
+src/main.js:125:import { initHUD, updatePresetList } from './hud.js';
+src/main.js:126:import { initMIDI, getMIDIDeviceCount } from './midi.js';
+src/main.js:127:import { getHUDIdleSpin, getVisualData, getMorphState, scene, renderer, camera, initMorphShape } from './geometry.js'; // Phase 12.1: added initMorphShape
+src/main.js:128:import { initShadows } from './shadows.js';
+src/main.js:129:import { initSprites } from './sprites.js';
+src/main.js:130:import { initParticles, getParticleSystemInstance, EmojiParticles, EmojiStreamManager, EmojiSequencer, EmojiPatternBankManager } from './particles.js'; // Phase 11.7.1, 11.7.15, 11.7.16, 11.7.17
+src/main.js:131:import { MandalaController } from './mandalaController.js'; // Phase 11.7.24
+src/main.js:133:import { ensureVessel, getVessel, setVesselVisible, setVesselAsSkydome, setVesselColor, setVesselWireframe } from './vessel.js';
+src/main.js:134:import { ensureConflat, setConflatVisible, setConflat, getConflat } from './visual.js';
+src/main.js:135:import { initTelemetry } from './telemetry.js';
+src/main.js:136:import { initPresets, createDefaultPresets, listPresets, getCurrentPresetName } from './presets.js';
+src/main.js:137:import { initAudio, getAudioValues, AudioEngine } from './audio.js';
+src/main.js:138:import { state } from './state.js';
+src/main.js:139:import { SHADOW_LAYER } from './constants.js'; // Phase 2.3.3
+src/main.js:165:import './midiRouter.js';
+src/main.js:166:import './hudRouter.js';
+src/main.js:167:import { initAudioRouter } from './audioRouter.js';
+src/main.js:168:import './presetRouter.js';
+src/main.js:171:import { initDefaultBindings } from './controlBindings.js';
+src/main.js:403:console.log("✅ main.js loaded – all modules imported");
+src/main.js:406:export function getShadowBox() {
+src/main.js:411:export function getMandalaController() {
+src/main.js:447:    html.projector-mode, body.projector-mode { cursor: none !important; }
+src/main.js:451:    .projector-mode .hud-root { display: none !important; }
+src/main.js:453:    .projector-mode body { background: #000 !important; }
+src/main.js:605:    // optional: posterize only for export (no live shader changes)
+src/main.js:658:    .hud-hidden .hud-root { display: none !important; }
+src/main.js:779:    file: import.meta?.url || '(no import.meta.url)',
+src/main.js:815:  console.log('🛰️ Beacons online (Phase 13.25) from', import.meta?.url || '(unknown)');
+src/sprites.js:2:import * as THREE from 'three';
+src/sprites.js:3:import { getEffectiveAudio, state } from './state.js';
+src/sprites.js:6:import { state as appState } from "./state.js";
+src/sprites.js:99:export function initSprites(scene) {
+src/sprites.js:130:export function updateSprites() {
+src/sprites.js:186:export function destroySprites() {
+src/sprites.js:204:export function reinitSprites(scene) {
+src/sprites.js:248:export function markSpritesReady(ctx) {
+src/sprites.js:258:export function applyAudioBandsToSprites(bands = {}) {
+src/imageUpload.js:4:import * as THREE from 'three';
+src/imageUpload.js:15:export function loadImageAsTexture(file) {
+src/imageUpload.js:59:export function clearTexture() {
+src/imageUpload.js:71:export function getCurrentTexture() {
+src/hudRouter.js:1:import { onHUDUpdate } from './hud.js';
+src/hudRouter.js:2:import { state, setMorphWeight, setMorphWeights, setColor, setHue } from './state.js';
+src/hudRouter.js:3:import { scene, renderer, camera } from './geometry.js';
+src/hudRouter.js:4:import { initParticles, destroyParticles } from './particles.js';
+src/hudRouter.js:11:  // Lazy import to avoid circular dependency
+src/hudRouter.js:12:  import('./main.js').then(module => {
+src/hudRouter.js:89:      import('./audio.js').then(({ enableAudio }) => {
+src/hudRouter.js:90:        console.log("🔍 Phase 13.1a: audio.js imported, invoking enableAudio()");
+src/hudRouter.js:146:      import('./particles.js').then(({ getParticleSystemInstance }) => {
+src/hudRouter.js:162:    import('./particles.js').then(({ getParticleSystemInstance }) => {
+src/hudRouter.js:174:    import('./particles.js').then(({ getParticleSystemInstance }) => {
+src/hudRouter.js:186:    import('./particles.js').then(({ getParticleSystemInstance }) => {
+src/hudRouter.js:198:    import('./particles.js').then(({ getParticleSystemInstance }) => {
+src/hudRouter.js:214:    import('./particles.js').then(({ getParticleSystemInstance }) => {
+src/hudRouter.js:226:    import('./particles.js').then(({ getParticleSystemInstance }) => {
+src/hudRouter.js:238:    import('./particles.js').then(({ getParticleSystemInstance }) => {
+src/hudRouter.js:251:    import('./particles.js').then(({ getParticleSystemInstance }) => {
+src/hudRouter.js:263:    import('./particles.js').then(({ getParticleSystemInstance }) => {
+src/hudRouter.js:276:    import('./particles.js').then(({ getParticleSystemInstance }) => {
+src/hudRouter.js:287:    import('./particles.js').then(({ getParticleSystemInstance }) => {
+src/hudRouter.js:298:    import('./particles.js').then(({ getParticleSystemInstance }) => {
+src/hudRouter.js:309:    import('./particles.js').then(({ getParticleSystemInstance }) => {
+src/hudRouter.js:321:    import('./particles.js').then(({ getParticleSystemInstance }) => {
+src/hudRouter.js:332:    import('./particles.js').then(({ getParticleSystemInstance }) => {
+src/hudRouter.js:343:    import('./particles.js').then(({ getParticleSystemInstance }) => {
+src/hudRouter.js:367:    import('./particles.js').then(({ destroyParticles, initParticles, getParticleSystemInstance }) => {
+src/hudRouter.js:400:    import('./particles.js').then(({ getParticleSystemInstance }) => {
+src/hudRouter.js:410:    import('./main.js').then(({ getShadowBox }) => {
+src/hudRouter.js:420:    import('./main.js').then(({ getShadowBox }) => {
+src/hudRouter.js:429:    import('./main.js').then(({ getShadowBox }) => {
+src/hudRouter.js:432:        import('./state.js').then(({ state }) => {
+src/hudRouter.js:451:    import('./main.js').then(({ getShadowBox }) => {
+src/hudRouter.js:455:        import('./state.js').then(({ state }) => {
+src/hudRouter.js:476:    import('./main.js').then(({ getShadowBox }) => {
+src/hudRouter.js:517:    import('./vessel.js').then(({ reinitVessel }) => {
+src/hudRouter.js:529:      import('./vessel.js').then(({ reinitVessel }) => {
+src/hudRouter.js:570:    import('./sprites.js').then(({ reinitSprites }) => {
+src/hudRouter.js:571:      import('./geometry.js').then(({ scene }) => {
+src/hudRouter.js:585:    import('./controlBindings.js').then(({ applyBinding }) => {
+src/hudShadows.js:4:import { state } from './state.js';
+src/hudShadows.js:16:export function createShadowsHudSection(container, notifyHUDUpdate, createToggleControl, createSliderControl, createColorPickerControl) {
+src/postprocessing.js:4:import * as THREE from 'three';
+src/postprocessing.js:5:import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+src/postprocessing.js:6:import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+src/postprocessing.js:7:import { AfterimagePass } from 'three/examples/jsm/postprocessing/AfterimagePass.js';
+src/postprocessing.js:18:export function createPostProcessing(renderer, scene, camera) {
+src/audio.js:370:export const AudioEngine = new AudioCore();
+src/audio.js:418:export function initAudio() {
+src/audio.js:422:export function enableAudio() {
+src/audio.js:428:export function updateAudio() {
+src/audio.js:433:export function getAudioValues() {
+src/audio.js:451:export function onAudioUpdate(callback) {
+src/state.js:4:export const state = {
+src/state.js:327:export const morphChain = {
+src/state.js:349:export function normalizeMorphWeights() {
+src/state.js:370:export function setMorphWeight(target, weight) {
+src/state.js:401:export function setMorphWeights(weights) {
+src/state.js:434:export function getMorphWeights() {
+src/state.js:439:export function setColor(color) {
+src/state.js:465:export function setHue(hue) {
+src/state.js:493:export function hexToRGB(hex) {
+src/state.js:500:export function rgbToHex(rgb) {
+src/state.js:509:export function blendColors(baseHex, audioHex, intensity, audioLevel) {
+src/state.js:525:export function lerp(a, b, t) {
+src/state.js:530:export function lerpColor(colorA, colorB, t) {
+src/state.js:544:export function lerpArray(arrA, arrB, t) {
+src/state.js:549:export function easeInOutCubic(t) {
+src/state.js:554:export const BASELINE = {
+src/state.js:565:export function resetToBaseline() {
+src/state.js:596:export function getEffectiveAudio() {
+src/hud.js.bak:2:// Absolute circular-import safety
+src/hud.js.bak:4:// ✅ Phase 13.1c — HUD callback sanity and ESM-safe exports
+src/hud.js.bak:9:export const hudCallbacks = window.hudCallbacks;
+src/hud.js.bak:11:export function notifyHUDUpdate() {
+src/hud.js.bak:24:export function onHUDUpdate(callback) {
+src/hud.js.bak:27:    import('./hudRouter.js').then(() => {
+src/hud.js.bak:36:import { state } from './state.js';
+src/hud.js.bak:37:import { createMorphHudSection } from './hudMorph.js'; // Phase 11.7.51: Modular Morph HUD
+src/hud.js.bak:38:import { createMandalaHudSection } from './hudMandala.js'; // Phase 11.7.50: Modular Mandala HUD
+src/hud.js.bak:39:import { createParticlesHudSection } from './hudParticles.js'; // Phase 11.7.50: Modular Particles HUD
+src/hud.js.bak:40:import { createBackgroundHudSection } from './hudBackground.js'; // Phase 11.7.50: Modular Background HUD
+src/hud.js.bak:41:import { createShadowsHudSection } from './hudShadows.js'; // Phase 11.7.50: Modular Shadows HUD
+src/hud.js.bak:42:import { createVesselHudSection } from './hudVessel.js'; // Phase 11.7.50: Modular Vessel HUD
+src/hud.js.bak:43:import { createAudioHudSection } from './hudAudio.js'; // Phase 11.7.50: Modular Audio HUD
+src/hud.js.bak:44:import { createMidiHudSection } from './hudMidi.js'; // Phase 11.7.50: Modular MIDI HUD
+src/hud.js.bak:45:import { createTelemetryHudSection } from './hudTelemetry.js'; // Phase 11.7.50: Modular Telemetry HUD
+src/hud.js.bak:46:import { createPresetsHudSection } from './hudPresets.js'; // Phase 12: Modular Presets HUD
+src/hud.js.bak:47:import { createGeometryHudSection } from './hudGeometry.js'; // Phase 12.0: Modular Geometry HUD
+src/hud.js.bak:51:export function initHUD() {
+src/hud.js.bak:237:      const { getParticleSystemInstance } = await import('./particles.js');
+src/hud.js.bak:238:      const { scene } = await import('./geometry.js');
+src/hud.js.bak:247:        const { EmojiParticles } = await import('./particles.js');
+src/hud.js.bak:255:      const { getParticleSystemInstance } = await import('./particles.js');
+src/hud.js.bak:256:      const { scene } = await import('./geometry.js');
+src/hud.js.bak:295:      const { scene } = await import('./geometry.js');
+src/hud.js.bak:297:      const { EmojiParticles } = await import('./particles.js');
+src/hud.js.bak:1222:    const { centerCameraAndMorph } = await import('./geometry.js');
+src/hud.js.bak:1593:export function updatePresetList(presets) {
+src/hud.js.bak:1619:      import('./presets.js').then(({ getPresetData }) => {
+src/hud.js.bak:1650:    import('./presets.js').then(({ getPresetData }) => {
+src/hud.js.bak:1769:export function updatePerformanceHUD(fps, drawCalls) {
+src/hud.js.bak:1776:import { AudioEngine } from "./audio.js";
+src/hud.js.bak:1777:import { audioState } from "./audioRouter.js";
+src/vessel.js.phase13.31.bak:1:import * as THREE from 'three';
+src/vessel.js.phase13.31.bak:2:import { state, blendColors, getEffectiveAudio } from './state.js'; // Phase 11.4.3: Import stable audio gate
+src/vessel.js.phase13.31.bak:3:import { morphMesh } from './geometry.js';
+src/vessel.js.phase13.31.bak:4:import { SHADOW_LAYER } from './constants.js'; // Phase 2.3.3
+src/vessel.js.phase13.31.bak:146:export function initVessel(scene, renderer, camera) {
+src/vessel.js.phase13.31.bak:266:export function renderShadowProjection() {
+src/vessel.js.phase13.31.bak:272:export function updateVessel() {
+src/vessel.js.phase13.31.bak:332:export function cycleLayout(scene) {
+src/vessel.js.phase13.31.bak:342:export function reinitVessel(scene, renderer, camera) {
+src/vessel.js.phase13.31.bak:366:export function getVesselGroup() {
+src/vessel.js.phase13.31.bak:371:export function setVesselVisible(visible) {
+src/particles.js.backup_phase4:2:import * as THREE from 'three';
+src/particles.js.backup_phase4:3:import { state } from './state.js';
+src/particles.js.backup_phase4:61:export function initParticles(scene, count = 1000) {
+src/particles.js.backup_phase4:128:export function updateParticles(audioReactive, time) {
+src/particles.js.backup_phase4:276:export function reinitParticles(scene) {
+src/particles.js.backup_phase4:289:export function destroyParticles(scene) {
+src/presetRouter.js:1:import { onHUDUpdate } from './hud.js';
+src/presetRouter.js:2:import { state, setMorphWeights, setColor, setHue, lerp, lerpColor, lerpArray, easeInOutCubic, morphChain, resetToBaseline } from './state.js';
+src/presetRouter.js:3:import { savePreset, loadPreset, deletePreset, listPresets, getPresetData } from './presets.js';
+src/presetRouter.js:4:import { applyDirectUpdate } from './controlBindings.js'; // Phase 11.2.3+
+src/presetRouter.js:10:export function stopInterpolation() {
+src/presetRouter.js:21:export function resetChain() {
+src/presetRouter.js:104:    // Phase 11.4.0: Chain export/import
+src/presetRouter.js:105:    if (update.presetAction === 'chain:export') {
+src/presetRouter.js:106:      exportChains();
+src/presetRouter.js:109:    if (update.presetAction === 'chain:import') {
+src/presetRouter.js:111:        importChains(update.file);
+src/presetRouter.js:147:  if (!presetName && action !== 'export' && action !== 'import') {
+src/presetRouter.js:198:        import('./hud.js').then(({ updatePresetList }) => {
+src/presetRouter.js:199:          import('./presets.js').then(({ listPresets }) => {
+src/presetRouter.js:355:        import('./hud.js').then(({ updatePresetList }) => {
+src/presetRouter.js:356:          import('./presets.js').then(({ listPresets }) => {
+src/presetRouter.js:370:        import('./hud.js').then(({ updatePresetList }) => {
+src/presetRouter.js:371:          import('./presets.js').then(({ listPresets }) => {
+src/presetRouter.js:378:    case 'export':
+src/presetRouter.js:380:      exportPresets();
+src/presetRouter.js:383:    case 'import':
+src/presetRouter.js:386:        importPresets(update.file);
+src/presetRouter.js:398:function exportPresets() {
+src/presetRouter.js:436:function importPresets(file) {
+src/presetRouter.js:441:      const importedPresets = JSON.parse(e.target.result);
+src/presetRouter.js:442:      let importCount = 0;
+src/presetRouter.js:445:      Object.keys(importedPresets).forEach(name => {
+src/presetRouter.js:446:        const presetData = importedPresets[name];
+src/presetRouter.js:452:          importCount++;
+src/presetRouter.js:476:        // Phase 11.2.6: Extract category and tags from imported preset
+src/presetRouter.js:477:        const importCategory = presetData.category || 'Uncategorized';
+src/presetRouter.js:478:        const importTags = Array.isArray(presetData.tags) ? presetData.tags : [];
+src/presetRouter.js:480:        savePreset(name, stateToSave, importCategory, importTags);
+src/presetRouter.js:483:      console.log(`💾 ✅ Imported ${importCount + overwriteCount} presets (${importCount} new, ${overwriteCount} overwritten) from ${file.name}`);
+src/presetRouter.js:486:      import('./hud.js').then(({ updatePresetList }) => {
+src/presetRouter.js:495:            totalCount: importCount + overwriteCount,
+src/presetRouter.js:496:            newCount: importCount,
+src/presetRouter.js:505:      console.error(`💾 ❌ Failed to import presets from ${file.name}:`, error);
+src/presetRouter.js:506:      alert(`Failed to import presets: ${error.message}`);
+src/presetRouter.js:520:export function startInterpolation(targetPresetName) {
+src/presetRouter.js:577:export function updateInterpolation() {
+src/presetRouter.js:653:export function isInterpolating() {
+src/presetRouter.js:659:export function startChain(presetNames = [], durationMs = 2000, options = {}) {
+src/presetRouter.js:718:export function stopChain() {
+src/presetRouter.js:759:export function pauseChain() {
+src/presetRouter.js:796:export function resumeChain() {
+src/presetRouter.js:833:export function skipNext() {
+src/presetRouter.js:874:export function skipPrev() {
+src/presetRouter.js:923:export function updateChain() {
+src/presetRouter.js:1039:export function saveChain(name, presets, duration, loop, shuffle) {
+src/presetRouter.js:1075:export function loadChain(name) {
+src/presetRouter.js:1094:export function deleteChain(name) {
+src/presetRouter.js:1116:export function listChains() {
+src/presetRouter.js:1121:export function getChainData(name) {
+src/presetRouter.js:1154:export function getChainTimeRemaining() {
+src/presetRouter.js:1170:export function getChainProgress() {
+src/presetRouter.js:1199:export function exportChains() {
+src/presetRouter.js:1204:    console.warn("💾 No chains to export");
+src/presetRouter.js:1221:  console.log(`💾 Chains exported: ${a.download} (${chainNames.length} chains)`);
+src/presetRouter.js:1231:export function importChains(file) {
+src/presetRouter.js:1236:      const importedChains = JSON.parse(e.target.result);
+src/presetRouter.js:1237:      let importCount = 0;
+src/presetRouter.js:1241:      if (typeof importedChains !== 'object' || importedChains === null) {
+src/presetRouter.js:1245:      Object.keys(importedChains).forEach(name => {
+src/presetRouter.js:1246:        const chainData = importedChains[name];
+src/presetRouter.js:1259:          importCount++;
+src/presetRouter.js:1272:      console.log(`📂 Chains imported: ${importCount + overwriteCount} chains loaded (${importCount} new, ${overwriteCount} overwritten) from ${file.name}`);
+src/presetRouter.js:1275:      import('./hud.js').then(({ updateChainList }) => {
+src/presetRouter.js:1286:            totalCount: importCount + overwriteCount,
+src/presetRouter.js:1287:            newCount: importCount,
+src/presetRouter.js:1294:      console.error(`💾 ❌ Failed to import chains from ${file.name}:`, error);
+src/presetRouter.js:1295:      alert(`Failed to import chains: ${error.message}`);
+src/hudMidi.js:19:import { getMIDIDeviceCount } from './midi.js';
+src/hudMidi.js:53:export function createMidiHudSection(parentContainer, notifyHUDUpdate) {
+src/hud.js.backup:1:import { state } from './state.js';
+src/hud.js.backup:2:import { createMorphHudSection } from './hudMorph.js'; // Phase 11.7.51: Modular Morph HUD
+src/hud.js.backup:3:import { createMandalaHudSection } from './hudMandala.js'; // Phase 11.7.50: Modular Mandala HUD
+src/hud.js.backup:4:import { createParticlesHudSection } from './hudParticles.js'; // Phase 11.7.50: Modular Particles HUD
+src/hud.js.backup:5:import { createBackgroundHudSection } from './hudBackground.js'; // Phase 11.7.50: Modular Background HUD
+src/hud.js.backup:6:import { createShadowsHudSection } from './hudShadows.js'; // Phase 11.7.50: Modular Shadows HUD
+src/hud.js.backup:7:import { createVesselHudSection } from './hudVessel.js'; // Phase 11.7.50: Modular Vessel HUD
+src/hud.js.backup:8:import { createAudioHudSection } from './hudAudio.js'; // Phase 11.7.50: Modular Audio HUD
+src/hud.js.backup:9:import { createMidiHudSection } from './hudMidi.js'; // Phase 11.7.50: Modular MIDI HUD
+src/hud.js.backup:10:import { createTelemetryHudSection } from './hudTelemetry.js'; // Phase 11.7.50: Modular Telemetry HUD
+src/hud.js.backup:11:import { createPresetsHudSection } from './hudPresets.js'; // Phase 12: Modular Presets HUD
+src/hud.js.backup:17:export function initHUD() {
+src/hud.js.backup:23:export function onHUDUpdate(callback) {
+src/hud.js.backup:614:  const exportChainsBtn = document.createElement("button");
+src/hud.js.backup:615:  exportChainsBtn.id = "exportChainsBtn";
+src/hud.js.backup:616:  exportChainsBtn.textContent = "💾";
+src/hud.js.backup:617:  exportChainsBtn.title = "Export chains";
+src/hud.js.backup:618:  exportChainsBtn.style.cssText = 'padding: 2px 6px; background: #4CAF50; color: white; border: none; cursor: pointer; font-size: 10px; border-radius: 3px;';
+src/hud.js.backup:620:  const importChainsBtn = document.createElement("button");
+src/hud.js.backup:621:  importChainsBtn.id = "importChainsBtn";
+src/hud.js.backup:622:  importChainsBtn.textContent = "📂";
+src/hud.js.backup:623:  importChainsBtn.title = "Import chains";
+src/hud.js.backup:624:  importChainsBtn.style.cssText = 'padding: 2px 6px; background: #2196F3; color: white; border: none; cursor: pointer; font-size: 10px; border-radius: 3px;';
+src/hud.js.backup:626:  const importChainsInput = document.createElement("input");
+src/hud.js.backup:627:  importChainsInput.type = "file";
+src/hud.js.backup:628:  importChainsInput.id = "importChainsInput";
+src/hud.js.backup:629:  importChainsInput.accept = ".json";
+src/hud.js.backup:630:  importChainsInput.style.display = "none";
+src/hud.js.backup:632:  chainIORow.appendChild(exportChainsBtn);
+src/hud.js.backup:633:  chainIORow.appendChild(importChainsBtn);
+src/hud.js.backup:634:  chainIORow.appendChild(importChainsInput);
+src/hud.js.backup:688:    import('./presetRouter.js').then(({ listChains, getChainData }) => {
+src/hud.js.backup:790:  exportChainsBtn.addEventListener("click", () => {
+src/hud.js.backup:791:    console.log("💾 HUD export chains");
+src/hud.js.backup:792:    notifyHUDUpdate({ presetAction: "chain:export" });
+src/hud.js.backup:795:  importChainsBtn.addEventListener("click", () => {
+src/hud.js.backup:796:    importChainsInput.click();
+src/hud.js.backup:799:  importChainsInput.addEventListener("change", (e) => {
+src/hud.js.backup:802:      console.log("📂 HUD import chains:", file.name);
+src/hud.js.backup:803:      notifyHUDUpdate({ presetAction: "chain:import", file });
+src/hud.js.backup:804:      // Reset input so same file can be imported again
+src/hud.js.backup:805:      importChainsInput.value = "";
+src/hud.js.backup:1127:      import('./presetRouter.js').then(({ getChainProgress }) => {
+src/hud.js.backup:1182:  const importExportContainer = document.createElement('div');
+src/hud.js.backup:1183:  importExportContainer.style.cssText = 'display: flex; gap: 5px; margin-bottom: 10px;';
+src/hud.js.backup:1185:  const exportButton = document.createElement('button');
+src/hud.js.backup:1186:  exportButton.textContent = '📥 Export';
+src/hud.js.backup:1187:  exportButton.style.cssText = 'flex: 1; padding: 6px; background: #00aa00; color: white; border: none; cursor: pointer; border-radius: 3px; font-size: 11px;';
+src/hud.js.backup:1188:  exportButton.title = 'Export all presets as JSON file';
+src/hud.js.backup:1190:  const importButton = document.createElement('button');
+src/hud.js.backup:1191:  importButton.textContent = '📤 Import';
+src/hud.js.backup:1192:  importButton.style.cssText = 'flex: 1; padding: 6px; background: #aa00aa; color: white; border: none; cursor: pointer; border-radius: 3px; font-size: 11px;';
+src/hud.js.backup:1193:  importButton.title = 'Import presets from JSON file';
+src/hud.js.backup:1195:  // Hidden file input for import
+src/hud.js.backup:1201:  exportButton.addEventListener('click', () => {
+src/hud.js.backup:1202:    notifyHUDUpdate({ presetAction: 'export' });
+src/hud.js.backup:1205:  importButton.addEventListener('click', () => {
+src/hud.js.backup:1212:      notifyHUDUpdate({ presetAction: 'import', file: file });
+src/hud.js.backup:1217:  importExportContainer.appendChild(exportButton);
+src/hud.js.backup:1218:  importExportContainer.appendChild(importButton);
+src/hud.js.backup:1219:  tabContainers['Advanced'].appendChild(importExportContainer);
+src/hud.js.backup:1240:    import('./presets.js').then(({ listPresets }) => {
+src/hud.js.backup:1246:    import('./presets.js').then(({ listPresets }) => {
+src/hud.js.backup:1253:    import('./presets.js').then(({ listPresets }) => {
+src/hud.js.backup:1286:      const { getParticleSystemInstance } = await import('./particles.js');
+src/hud.js.backup:1287:      const { scene } = await import('./geometry.js');
+src/hud.js.backup:1296:        const { EmojiParticles } = await import('./particles.js');
+src/hud.js.backup:1304:      const { getParticleSystemInstance } = await import('./particles.js');
+src/hud.js.backup:1305:      const { scene } = await import('./geometry.js');
+src/hud.js.backup:1344:      const { scene } = await import('./geometry.js');
+src/hud.js.backup:1346:      const { EmojiParticles } = await import('./particles.js');
+src/hud.js.backup:2628:export function updatePresetList(presets) {
+src/hud.js.backup:2654:      import('./presets.js').then(({ getPresetData }) => {
+src/hud.js.backup:2685:    import('./presets.js').then(({ getPresetData }) => {
+src/hud.js.backup:2801:export function updatePerformanceHUD(fps, drawCalls) {
+src/controlBindings.js:5:import { state } from './state.js';
+src/controlBindings.js:64:export function applyBinding(category, property, value, source = "HUD") {
+src/controlBindings.js:130:export function getBindingForCC(cc) {
+src/controlBindings.js:141:export function applyMIDIBinding(cc, value, mapper = (v) => v / 127) {
+src/controlBindings.js:156:export function updateControl(controlId, value) {
+src/controlBindings.js:174:export function registerBinding(category, property, bindingConfig) {
+src/controlBindings.js:199:export function applyDirectUpdate(statePath, value, source = "Preset") {
+src/controlBindings.js:218:export function getBindings() {
+src/controlBindings.js:225:export function initDefaultBindings() {
+src/controlBindings.js:237:export default {
+src/hudTelemetry.js:43:export function createTelemetryHudSection(parentContainer, notifyHUDUpdate) {
+src/shadows.js:2:import * as THREE from 'three';
+src/shadows.js:3:import { state, blendColors, getEffectiveAudio } from './state.js'; // Phase 11.4.3: Import stable audio gate
+src/shadows.js:11:export function initShadows(scene) {
+src/shadows.js:40:export function updateShadows(audioReactive) {
+src/shadows.js:94:export function getShadowElements() {
+src/mandalaController.js:5:import * as THREE from 'three';
+src/mandalaController.js:6:import { state } from './state.js';
+src/mandalaController.js:27:export class MandalaController {
+src/hudMorph.js:92:export function createMorphHudSection(parentContainer, notifyHUDUpdate) {
+src/particles.js:5:import * as THREE from 'three';
+src/particles.js:6:import { SHADOW_LAYER } from './constants.js'; // Phase 2.3.3
+src/particles.js:7:import { getEffectiveAudio, state } from './state.js'; // Phase 11.4.3: Stable audio gate + Phase 11.7: state access
+src/particles.js:24:export class ParticleSystem {
+src/particles.js:660:export function initParticles(scene, count = 5000) {
+src/particles.js:668:export function updateParticles(audioReactive, time) {
+src/particles.js:674:export function destroyParticles(scene) {
+src/particles.js:681:export function getParticleSystemInstance() {
+src/particles.js:698:export class EmojiParticles {
+src/particles.js:2023:export class EmojiStreamManager {
+src/particles.js:2174:export class EmojiSequencer {
+src/particles.js:2333:export class EmojiPatternBankManager {
+src/hudBackground.js:4:import * as THREE from 'three';
+src/hudBackground.js:5:import { state } from './state.js';
+src/hudBackground.js:6:import { setBackgroundScale } from './visual.js';
+src/hudBackground.js:14:export function createBackgroundHudSection(container) {
+src/hud.js:18:// Absolute circular-import safety
+src/hud.js:24:export const HUD = {
+src/hud.js:37:export function notifyHUDUpdate(update) {
+src/hud.js:56:export function registerHUDCallback(_section, fn) { HUD.subscribe(fn); }
+src/hud.js:66:export const hudCallbacks = window.hudCallbacks;
+src/hud.js:70:export function onHUDUpdate(callback) {
+src/hud.js:83:import { state } from './state.js';
+src/hud.js:84:import { createMorphHudSection } from './hudMorph.js'; // Phase 11.7.51: Modular Morph HUD
+src/hud.js:85:import { createMandalaHudSection, refreshMandalaHUD } from './hudMandala.js'; // Phase 11.7.50: Modular Mandala HUD
+src/hud.js:86:import { createParticlesHudSection, refreshParticlesHUD } from './hudParticles.js'; // Phase 11.7.50: Modular Particles HUD
+src/hud.js:87:import { createBackgroundHudSection } from './hudBackground.js'; // Phase 11.7.50: Modular Background HUD
+src/hud.js:88:import { createShadowsHudSection } from './hudShadows.js'; // Phase 11.7.50: Modular Shadows HUD
+src/hud.js:89:import { createVesselHudSection } from './hudVessel.js'; // Phase 11.7.50: Modular Vessel HUD
+src/hud.js:90:import { createAudioHudSection, refreshAudioHUD } from './hudAudio.js'; // Phase 11.7.50: Modular Audio HUD
+src/hud.js:91:import { createMidiHudSection } from './hudMidi.js'; // Phase 11.7.50: Modular MIDI HUD
+src/hud.js:92:import { createTelemetryHudSection } from './hudTelemetry.js'; // Phase 11.7.50: Modular Telemetry HUD
+src/hud.js:93:import { createPresetsHudSection } from './hudPresets.js'; // Phase 12: Modular Presets HUD
+src/hud.js:94:import { createGeometryHudSection } from './hudGeometry.js'; // Phase 12.0: Modular Geometry HUD
+src/hud.js:96:// Phase 13.4.2: Register refresh callbacks for modules that export them
+src/hud.js:104:export function initHUD() {
+src/hud.js:282:      const { getParticleSystemInstance } = await import('./particles.js');
+src/hud.js:283:      const { scene } = await import('./geometry.js');
+src/hud.js:292:        const { EmojiParticles } = await import('./particles.js');
+src/hud.js:300:      const { getParticleSystemInstance } = await import('./particles.js');
+src/hud.js:301:      const { scene } = await import('./geometry.js');
+src/hud.js:340:      const { scene } = await import('./geometry.js');
+src/hud.js:342:      const { EmojiParticles } = await import('./particles.js');
+src/hud.js:1267:    const { centerCameraAndMorph } = await import('./geometry.js');
+src/hud.js:1638:export function updatePresetList(presets) {
+src/hud.js:1664:      import('./presets.js').then(({ getPresetData }) => {
+src/hud.js:1695:    import('./presets.js').then(({ getPresetData }) => {
+src/hud.js:1804:export function updatePerformanceHUD(fps, drawCalls) {
+src/hud.js:1811:import { AudioEngine } from "./audio.js";
+src/hud.js:1812:import { audioState } from "./audioRouter.js";
+src/hud.js:1813:import { state as appState } from "./state.js";
+src/audioRouter.js:4:import { AudioEngine } from "./audio.js";
+src/audioRouter.js:5:import { notifyHUDUpdate } from "./hud.js";
+src/audioRouter.js:6:import { applyAudioBandsToSprites } from "./sprites.js";
+src/audioRouter.js:7:import { state } from "./state.js";
+src/audioRouter.js:92:export function initAudioRouter() {
+src/audioRouter.js:147:export { audioState };
+src/visual.js:2:import * as THREE from 'three';
+src/visual.js:6:export function ensureConflat(scene, { color = '#000000', opacity = 0.0 } = {}) {
+src/visual.js:28:export function setConflatVisible(on=true){ if (__conflat) __conflat.visible = !!on; }
+src/visual.js:29:export function setConflat(color, opacity){ if (__conflat){ __conflat.material.color.set(color); __conflat.material.opacity = opacity; } }
+src/visual.js:30:export function getConflat(){ return __conflat; }
+src/visual.js:34:export function getBackgroundMesh(){ return __bgMesh; }
+src/visual.js:35:export function setBackgroundScale(scale){ if (__bgMesh) __bgMesh.scale.set(scale, scale, 1); }
+src/visual.js:36:export function initVisual(scene){
+src/visual.js:45:export function updateVisual(){
+src/geometry.js:1:import * as THREE from 'three';
+src/geometry.js:2:import { state, blendColors, getEffectiveAudio } from './state.js'; // Phase 11.4.3: Import stable audio gate
+src/geometry.js:3:import { updateShadows } from './shadows.js';
+src/geometry.js:4:import { updateSprites } from './sprites.js';
+src/geometry.js:5:import { updateParticles } from './particles.js';
+src/geometry.js:6:import { updateAudio } from './audio.js'; // Audio system
+src/geometry.js:7:import { updateVessel, renderShadowProjection } from './vessel.js';
+src/geometry.js:8:import { getShadowBox } from './main.js'; // Phase 2.3.3
+src/geometry.js:9:import { createPostProcessing } from './postprocessing.js'; // Dual Trail System
+src/geometry.js:10:import { updateInterpolation, updateChain } from './presetRouter.js'; // Phase 11.2.8, 11.3.0
+src/geometry.js:11:import { updateVisual } from './visual.js'; // Phase 11.6.0
+src/geometry.js:26:export function getHUDIdleSpin() {
+src/geometry.js:31:export const scene = new THREE.Scene();
+src/geometry.js:32:export const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+src/geometry.js:33:export const renderer = new THREE.WebGLRenderer({ canvas });
+src/geometry.js:196:export function initMorphShape(targetScene) {
+src/geometry.js:206:export { faceMaterials };
+src/geometry.js:401:export function setFaceTexture(faceIndex, texture) {
+src/geometry.js:414:export function clearFaceTexture(faceIndex) {
+src/geometry.js:425:export function setWireframeMode(enabled) {
+src/geometry.js:436:export function setSkyboxMode(enabled) {
+src/geometry.js:446:export function centerCameraAndMorph(controls) {
+src/geometry.js:474:export function setMorphAmount(t /* 0..1 */) {
+src/geometry.js:481:export function getVisualData() {
+src/geometry.js:490:export function getMorphState() {
+src/geometry.js:501:export { morphMesh };

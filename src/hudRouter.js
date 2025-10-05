@@ -85,7 +85,9 @@ onHUDUpdate((update) => {
 
     if (update.audioEnabled) {
       // Initialize microphone when first enabled
+      console.log("🔍 Phase 13.1a: Calling enableAudio() from hudRouter");
       import('./audio.js').then(({ enableAudio }) => {
+        console.log("🔍 Phase 13.1a: audio.js imported, invoking enableAudio()");
         enableAudio();
       });
     } else {
@@ -97,6 +99,10 @@ onHUDUpdate((update) => {
   }
   if (update.audioSensitivity !== undefined) {
     state.audio.sensitivity = update.audioSensitivity;
+  }
+  // Phase 13.30: Master reactivity gain
+  if (update.audioGain !== undefined) {
+    state.audio.audioGain = Number(update.audioGain) || 1;
   }
   if (update.ambientIntensity !== undefined) {
     state.lighting.ambientIntensity = update.ambientIntensity;
@@ -502,6 +508,11 @@ onHUDUpdate((update) => {
   if (update.vesselMode !== undefined) {
     state.vessel.mode = update.vesselMode;
     console.log(`🚢 Vessel mode: ${update.vesselMode}`);
+  }
+  // Phase 12.0: Compass rings visibility toggle
+  if (update.vesselVisible !== undefined) {
+    state.vessel.visible = update.vesselVisible;
+    console.log(`🧭 Compass rings visible: ${update.vesselVisible}`);
     // Phase 2.2.0: Reinitialize vessel with new mode (pass renderer/camera)
     import('./vessel.js').then(({ reinitVessel }) => {
       reinitVessel(scene, renderer, camera);

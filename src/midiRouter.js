@@ -4,6 +4,46 @@ import { applyMIDIBinding } from './controlBindings.js';
 
 console.log("🎹 midiRouter.js loaded");
 
+// Phase 13.16 — MIDI Learn capture (prints mapping snippet)
+const _MidiLearn = (function() {
+  function _normToRange(val01, min, max) {
+    const v = Math.max(0, Math.min(1, val01));
+    return min + (max - min) * v;
+  }
+  function _makeSnippet({ cc, channel = 0, path, min, max }) {
+    const nice = `// CC${cc} → ${path} (${min}..${max})
+{ cc: ${cc}, ch: ${channel}, apply: (value01) => {
+  const v = ${min} + (${max} - ${min}) * value01;
+  // Example HUD update; replace with your central binding call if different:
+  window.onHUDUpdate?.({ "${path}": v });
+}}`;
+    return nice;
+  }
+
+  function handleCC({ cc, value, channel = 0 }) {
+    const l = window.MidiLearn;
+    if (!l?.active || !l?.target) return;
+    const { path, min = 0, max = 1, label = path } = l.target;
+    const value01 = Math.max(0, Math.min(1, value / 127));
+    const preview = _normToRange(value01, min, max);
+
+    console.log(`✅ MIDI Learn: CC${cc} captured for "${label}" → path="${path}", range=[${min}, ${max}]`);
+    console.log("📋 Paste this into your mapping (e.g., controlBindings):\n" + _makeSnippet({ cc, channel, path, min, max }));
+
+    // store lightweight binding suggestion in localStorage (non-executing)
+    try {
+      const prev = JSON.parse(localStorage.getItem("midiLearnSuggestions") || "[]");
+      prev.push({ ts: Date.now(), cc, channel, path, min, max, label });
+      localStorage.setItem("midiLearnSuggestions", JSON.stringify(prev));
+    } catch {}
+
+    // auto-exit learn to avoid accidental rebinds
+    l.setActive(false);
+  }
+
+  return { handleCC };
+})();
+
 // Phase 11.7.24: Import mandala controller getter
 let getMandalaController;
 setTimeout(() => {
@@ -31,8 +71,11 @@ window.emojiBankMIDI = {
 // so they remain as special cases with direct state manipulation + morphBaseWeights sync.
 
 // MIDI CC to state routing
-onCC(({ cc, value, device }) => {
+onCC(({ cc, value, device, channel = 0 }) => {
   console.log(`🎹 CC${cc} from ${device}: ${value}`);
+
+  // Phase 13.16: MIDI Learn capture (early exit if captured)
+  _MidiLearn.handleCC({ cc, value, channel });
 
   // Phase 11.7.28: Mandala MIDI bindings (CC20-24) - priority when mandala enabled
   if (state.emojiMandala?.enabled) {

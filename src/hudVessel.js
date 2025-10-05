@@ -186,6 +186,13 @@ export function createVesselHudSection(parentContainer, notifyHUDUpdate) {
   });
   parentContainer.appendChild(hueShiftControl);
 
+  // Phase 12.0: Compass Rings Visibility toggle (hidden by default)
+  const compassRingsControl = createToggleControl('Show Compass Rings', false, (value) => {
+    notifyHUDUpdate({ vesselVisible: value });
+  });
+  compassRingsControl.title = 'Show/hide 6 color-coded compass rings (N/S/E/W/Up/Down)';
+  parentContainer.appendChild(compassRingsControl);
+
   // Vessel debug display
   const debugDiv = document.createElement('div');
   debugDiv.style.cssText = 'margin-top: 15px; font-size: 12px; color: #888;';
@@ -194,3 +201,5 @@ export function createVesselHudSection(parentContainer, notifyHUDUpdate) {
 
   console.log("🚢 Vessel HUD section created");
 }
+
+// Phase 13.4.2: Removed registerHUDCallback to fix circular dependency

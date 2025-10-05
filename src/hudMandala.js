@@ -3,6 +3,7 @@
 
 import { state } from './state.js';
 import { mountMandalaUploadAfter } from './mandalaUpload.js';
+import { notifyHUDUpdate, registerHUDCallback } from "./hud.js";
 
 console.log("🌀 hudMandala.js loaded");
 
@@ -385,4 +386,10 @@ export function createMandalaHudSection(container, notifyHUDUpdate, createToggle
   container.appendChild(scaleSeqInput);
 
   console.log("🌀 Mandala HUD section created");
+}
+
+// Phase 13.4.2: Export refresh callback for manual registration
+// (Called from hud.js after all modules loaded to avoid circular dependency)
+export function refreshMandalaHUD() {
+  console.log("🌀 HUD(Mandala): refresh");
 }

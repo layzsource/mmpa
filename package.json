@@ -1,15 +1,35 @@
 {
   "name": "morphing-interface-baseline",
-  "version": "0.1.0",
+  "version": "13.0.0",
+  "main": "main.js",
+  "private": true,
   "scripts": {
-    "dev": "vite --port 3001",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev:web": "vite",
+    "build:web": "vite build",
+    "prestart": "node scripts/check-dist.js || (echo '\\n❌ dist is stale. Run: npm run build:web\\n' && exit 1)",
+    "start": "electron .",
+    "build:electron": "vite build && electron-builder",
+    "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
     "three": "^0.165.0"
   },
   "devDependencies": {
-    "vite": "^5.0.0"
+    "electron": "^31.3.0",
+    "electron-builder": "^24.9.1",
+    "vite": "^5.4.0"
+  },
+  "build": {
+    "appId": "com.tice.morphinginterface",
+    "productName": "Morphing Interface",
+    "files": [
+      "dist/**/*",
+      "main.js",
+      "preload.js",
+      "package.json"
+    ],
+    "mac": { "target": ["dmg", "zip"] },
+    "win": { "target": ["nsis", "zip"] },
+    "linux": { "target": ["AppImage", "deb", "zip"] }
   }
 }

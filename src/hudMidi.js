@@ -1,5 +1,13 @@
 console.log("🎹 hudMidi.js loaded");
 
+// Phase 13.16 — MIDI Learn bridge
+window.MidiLearn = window.MidiLearn || {
+  active: false,
+  target: null, // { label, path, min, max }
+  setTarget(t) { this.target = t; console.log("🎓 MIDI Learn target:", t); },
+  setActive(v) { this.active = !!v; console.log(`🎓 MIDI Learn: ${this.active ? "ON" : "OFF"}`); }
+};
+
 /**
  * Phase 11.7.50: Modular MIDI HUD Section
  * Extracted from hud.js to reduce monolithic HUD file
@@ -87,5 +95,56 @@ export function createMidiHudSection(parentContainer, notifyHUDUpdate) {
   `;
   parentContainer.appendChild(infoDiv);
 
+  // ——— Phase 13.16: MIDI Learn (micro) ———
+  (function addMidiLearnUI() {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'margin-top:12px;padding-top:8px;border-top:1px solid #333;';
+    wrap.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button id="ml-toggle" style="padding:6px 10px;">🎓 MIDI Learn: OFF</button>
+        <span style="opacity:.8">Pick a target, toggle Learn, then twist a knob.</span>
+      </div>
+
+      <div style="margin-top:10px;display:grid;grid-template-columns:1fr auto;gap:6px;">
+        <div>Audio Intensity (0..1)</div>
+        <button id="ml-bind-audio" style="padding:4px 8px;">Bind</button>
+
+        <div>Particles → Hue Shift (−180..+180)</div>
+        <button id="ml-bind-hue" style="padding:4px 8px;">Bind</button>
+
+        <div>Mandala → Rings (1..8)</div>
+        <button id="ml-bind-rings" style="padding:4px 8px;">Bind</button>
+      </div>
+    `;
+    parentContainer.appendChild(wrap);
+
+    const $ = (id) => wrap.querySelector(id);
+    const btn = $('#ml-toggle');
+
+    const updateToggle = () => {
+      btn.textContent = `🎓 MIDI Learn: ${window.MidiLearn.active ? "ON" : "OFF"}`;
+      btn.style.background = window.MidiLearn.active ? "#225522" : "";
+    };
+
+    btn.addEventListener('click', () => {
+      window.MidiLearn.setActive(!window.MidiLearn.active);
+      updateToggle();
+    });
+    updateToggle();
+
+    // Predefined quick targets (safe examples)
+    $('#ml-bind-audio').addEventListener('click', () => {
+      window.MidiLearn.setTarget({ label: "Audio Intensity", path: "geometry.audioIntensity", min: 0, max: 1 });
+    });
+    $('#ml-bind-hue').addEventListener('click', () => {
+      window.MidiLearn.setTarget({ label: "Particles Hue Shift", path: "particles.hueShift", min: -180, max: 180 });
+    });
+    $('#ml-bind-rings').addEventListener('click', () => {
+      window.MidiLearn.setTarget({ label: "Mandala Rings", path: "mandala.rings", min: 1, max: 8 });
+    });
+  })();
+
   console.log("🎹 MIDI HUD section created");
 }
+
+// Phase 13.4.2: Removed registerHUDCallback to fix circular dependency
