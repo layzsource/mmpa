@@ -1,0 +1,570 @@
+// src/mythExamples.js
+// Example Myth Library - Predefined myths for the system
+// Includes Hero's Journey, creation myths, seasonal cycles
+
+import { Myth, MythNode, Archetype } from './mythCore.js';
+
+console.log("🌟 mythExamples.js loaded");
+
+/**
+ * Create Hero's Journey myth (Campbell's Monomyth)
+ */
+export function createHerosJourney() {
+  const myth = new Myth({
+    name: "The Hero's Journey",
+    description: "Joseph Campbell's monomyth - the universal narrative pattern found across cultures",
+    author: "Joseph Campbell",
+    category: "hero",
+    culture: "universal",
+    tags: ['monomyth', 'transformation', 'initiation', 'journey']
+  });
+
+  // ===  ARCHETYPES ===
+
+  const hero = new Archetype({
+    id: 'hero',
+    name: 'Hero',
+    category: 'hero',
+    description: 'The protagonist who undergoes transformation',
+    color: '#FFD700',
+    glyph: '⚔️',
+    geometry: 'sphere',
+    qualities: ['courage', 'transformation', 'journey'],
+    narrativeFunction: 'protagonist'
+  });
+
+  const mentor = new Archetype({
+    id: 'mentor',
+    name: 'Mentor',
+    category: 'sage',
+    description: 'The wise guide who provides knowledge',
+    color: '#9370DB',
+    glyph: '🧙',
+    geometry: 'octahedron',
+    qualities: ['wisdom', 'guidance', 'teaching'],
+    narrativeFunction: 'helper'
+  });
+
+  const threshold = new Archetype({
+    id: 'threshold_guardian',
+    name: 'Threshold Guardian',
+    category: 'threshold',
+    description: 'The obstacle that tests readiness',
+    color: '#DC143C',
+    glyph: '🚪',
+    geometry: 'cube',
+    qualities: ['challenge', 'test', 'initiation'],
+    narrativeFunction: 'threshold'
+  });
+
+  const shadow = new Archetype({
+    id: 'shadow',
+    name: 'Shadow',
+    category: 'shadow',
+    description: 'The antagonist or dark reflection',
+    color: '#2F4F4F',
+    glyph: '👤',
+    geometry: 'dodecahedron',
+    qualities: ['darkness', 'mirror', 'adversary'],
+    narrativeFunction: 'antagonist'
+  });
+
+  const ally = new Archetype({
+    id: 'ally',
+    name: 'Ally',
+    category: 'companion',
+    description: 'The companion on the journey',
+    color: '#32CD32',
+    glyph: '🤝',
+    geometry: 'tetrahedron',
+    qualities: ['support', 'friendship', 'loyalty'],
+    narrativeFunction: 'helper'
+  });
+
+  myth.addArchetype(hero);
+  myth.addArchetype(mentor);
+  myth.addArchetype(threshold);
+  myth.addArchetype(shadow);
+  myth.addArchetype(ally);
+
+  // === NODES (Stages of the Journey) ===
+
+  // 1. Ordinary World
+  const ordinaryWorld = new MythNode({
+    id: 'ordinary_world',
+    name: 'Ordinary World',
+    description: 'The hero in their familiar, mundane existence',
+    archetypeId: 'hero',
+    narrativeStage: 'departure',
+    mytheme: 'normalcy',
+    transformation: 'establishing baseline',
+    glyph: '🏠',
+    glyphPosition: 'center',
+    nextNodes: ['call_to_adventure']
+  });
+
+  // 2. Call to Adventure
+  const callToAdventure = new MythNode({
+    id: 'call_to_adventure',
+    name: 'Call to Adventure',
+    description: 'The disruption that initiates the journey',
+    archetypeId: 'hero',
+    narrativeStage: 'departure',
+    mytheme: 'disruption',
+    transformation: 'awakening purpose',
+    glyph: '📯',
+    glyphPosition: 'top',
+    previousNodes: ['ordinary_world'],
+    nextNodes: ['refusal_of_call', 'meeting_mentor']
+  });
+
+  // 3. Refusal of the Call
+  const refusalOfCall = new MythNode({
+    id: 'refusal_of_call',
+    name: 'Refusal of the Call',
+    description: 'The hero hesitates or resists the journey',
+    archetypeId: 'hero',
+    narrativeStage: 'departure',
+    mytheme: 'doubt',
+    transformation: 'confronting fear',
+    glyph: '❌',
+    glyphPosition: 'center',
+    previousNodes: ['call_to_adventure'],
+    nextNodes: ['meeting_mentor']
+  });
+
+  // 4. Meeting the Mentor
+  const meetingMentor = new MythNode({
+    id: 'meeting_mentor',
+    name: 'Meeting the Mentor',
+    description: 'Encountering the wise guide',
+    archetypeId: 'mentor',
+    narrativeStage: 'departure',
+    mytheme: 'guidance',
+    transformation: 'receiving wisdom',
+    glyph: '🧙',
+    glyphPosition: 'top',
+    previousNodes: ['call_to_adventure', 'refusal_of_call'],
+    nextNodes: ['crossing_threshold']
+  });
+
+  // 5. Crossing the Threshold
+  const crossingThreshold = new MythNode({
+    id: 'crossing_threshold',
+    name: 'Crossing the Threshold',
+    description: 'Leaving the known world behind',
+    archetypeId: 'threshold_guardian',
+    narrativeStage: 'departure',
+    mytheme: 'commitment',
+    transformation: 'entering unknown',
+    glyph: '🚪',
+    glyphPosition: 'center',
+    previousNodes: ['meeting_mentor'],
+    nextNodes: ['tests_allies_enemies']
+  });
+
+  // 6. Tests, Allies, and Enemies
+  const testsAlliesEnemies = new MythNode({
+    id: 'tests_allies_enemies',
+    name: 'Tests, Allies & Enemies',
+    description: 'Learning the rules of the special world',
+    archetypeId: 'ally',
+    narrativeStage: 'initiation',
+    mytheme: 'learning',
+    transformation: 'building capability',
+    glyph: '⚔️',
+    glyphPosition: 'center',
+    previousNodes: ['crossing_threshold'],
+    nextNodes: ['approach_inmost_cave']
+  });
+
+  // 7. Approach to the Inmost Cave
+  const approachInmostCave = new MythNode({
+    id: 'approach_inmost_cave',
+    name: 'Approach to the Inmost Cave',
+    description: 'Preparing for the central ordeal',
+    archetypeId: 'hero',
+    narrativeStage: 'initiation',
+    mytheme: 'preparation',
+    transformation: 'gathering strength',
+    glyph: '🗻',
+    glyphPosition: 'center',
+    previousNodes: ['tests_allies_enemies'],
+    nextNodes: ['ordeal']
+  });
+
+  // 8. The Ordeal
+  const ordeal = new MythNode({
+    id: 'ordeal',
+    name: 'The Ordeal',
+    description: 'The central crisis - death and rebirth',
+    archetypeId: 'shadow',
+    narrativeStage: 'initiation',
+    mytheme: 'death_rebirth',
+    transformation: 'confronting shadow',
+    glyph: '💀',
+    glyphPosition: 'center',
+    previousNodes: ['approach_inmost_cave'],
+    nextNodes: ['reward']
+  });
+
+  // 9. Reward (Seizing the Sword)
+  const reward = new MythNode({
+    id: 'reward',
+    name: 'Reward',
+    description: 'Claiming the treasure or elixir',
+    archetypeId: 'hero',
+    narrativeStage: 'initiation',
+    mytheme: 'attainment',
+    transformation: 'receiving power',
+    glyph: '👑',
+    glyphPosition: 'center',
+    previousNodes: ['ordeal'],
+    nextNodes: ['road_back']
+  });
+
+  // 10. The Road Back
+  const roadBack = new MythNode({
+    id: 'road_back',
+    name: 'The Road Back',
+    description: 'Returning to the ordinary world',
+    archetypeId: 'hero',
+    narrativeStage: 'return',
+    mytheme: 'return',
+    transformation: 'choosing to return',
+    glyph: '🏃',
+    glyphPosition: 'center',
+    previousNodes: ['reward'],
+    nextNodes: ['resurrection']
+  });
+
+  // 11. Resurrection
+  const resurrection = new MythNode({
+    id: 'resurrection',
+    name: 'Resurrection',
+    description: 'Final test - applying lessons learned',
+    archetypeId: 'hero',
+    narrativeStage: 'return',
+    mytheme: 'purification',
+    transformation: 'final transformation',
+    glyph: '🔥',
+    glyphPosition: 'center',
+    previousNodes: ['road_back'],
+    nextNodes: ['return_with_elixir']
+  });
+
+  // 12. Return with the Elixir
+  const returnWithElixir = new MythNode({
+    id: 'return_with_elixir',
+    name: 'Return with the Elixir',
+    description: 'Bringing the boon back to the community',
+    archetypeId: 'hero',
+    narrativeStage: 'return',
+    mytheme: 'completion',
+    transformation: 'sharing wisdom',
+    glyph: '⭐',
+    glyphPosition: 'center',
+    previousNodes: ['resurrection'],
+    nextNodes: []
+  });
+
+  // Add all nodes
+  myth.addNode(ordinaryWorld);
+  myth.addNode(callToAdventure);
+  myth.addNode(refusalOfCall);
+  myth.addNode(meetingMentor);
+  myth.addNode(crossingThreshold);
+  myth.addNode(testsAlliesEnemies);
+  myth.addNode(approachInmostCave);
+  myth.addNode(ordeal);
+  myth.addNode(reward);
+  myth.addNode(roadBack);
+  myth.addNode(resurrection);
+  myth.addNode(returnWithElixir);
+
+  // Set start and end
+  myth.startNodeId = 'ordinary_world';
+  myth.endNodeId = 'return_with_elixir';
+
+  console.log("🌟 Created Hero's Journey myth");
+  return myth;
+}
+
+/**
+ * Create Creation Myth (Universal cosmogony pattern)
+ */
+export function createCreationMyth() {
+  const myth = new Myth({
+    name: "The Creation",
+    description: "Universal creation myth - from void to manifestation",
+    author: "Universal",
+    category: "creation",
+    culture: "universal",
+    tags: ['cosmogony', 'origin', 'genesis', 'emergence']
+  });
+
+  // Archetypes
+  const voidArchetype = new Archetype({
+    id: 'void',
+    name: 'The Void',
+    category: 'primordial',
+    description: 'The formless potential before creation',
+    color: '#000000',
+    glyph: '∅',
+    geometry: 'sphere',
+    qualities: ['potential', 'emptiness', 'infinite'],
+    narrativeFunction: 'origin'
+  });
+
+  const creator = new Archetype({
+    id: 'creator',
+    name: 'The Creator',
+    category: 'demiurge',
+    description: 'The divine force that shapes reality',
+    color: '#FFD700',
+    glyph: '✨',
+    geometry: 'octahedron',
+    qualities: ['will', 'consciousness', 'manifestation'],
+    narrativeFunction: 'protagonist'
+  });
+
+  const cosmos = new Archetype({
+    id: 'cosmos',
+    name: 'The Cosmos',
+    category: 'order',
+    description: 'The ordered universe emerging from chaos',
+    color: '#4169E1',
+    glyph: '🌌',
+    geometry: 'icosahedron',
+    qualities: ['order', 'harmony', 'structure'],
+    narrativeFunction: 'resolution'
+  });
+
+  myth.addArchetype(voidArchetype);
+  myth.addArchetype(creator);
+  myth.addArchetype(cosmos);
+
+  // Nodes
+  const primordialVoid = new MythNode({
+    id: 'primordial_void',
+    name: 'Primordial Void',
+    description: 'Before time, before space, before being',
+    archetypeId: 'void',
+    mytheme: 'nothingness',
+    glyph: '∅',
+    nextNodes: ['first_thought']
+  });
+
+  const firstThought = new MythNode({
+    id: 'first_thought',
+    name: 'The First Thought',
+    description: 'Consciousness awakens in the void',
+    archetypeId: 'creator',
+    mytheme: 'awakening',
+    glyph: '💭',
+    previousNodes: ['primordial_void'],
+    nextNodes: ['word']
+  });
+
+  const word = new MythNode({
+    id: 'word',
+    name: 'The Word',
+    description: 'The creative utterance that initiates being',
+    archetypeId: 'creator',
+    mytheme: 'manifestation',
+    glyph: '🗣️',
+    previousNodes: ['first_thought'],
+    nextNodes: ['separation']
+  });
+
+  const separation = new MythNode({
+    id: 'separation',
+    name: 'Separation',
+    description: 'Light from dark, heaven from earth',
+    archetypeId: 'creator',
+    mytheme: 'duality',
+    glyph: '⚖️',
+    previousNodes: ['word'],
+    nextNodes: ['elements']
+  });
+
+  const elements = new MythNode({
+    id: 'elements',
+    name: 'The Elements',
+    description: 'Earth, water, air, fire emerge',
+    archetypeId: 'cosmos',
+    mytheme: 'substance',
+    glyph: '🜃',
+    previousNodes: ['separation'],
+    nextNodes: ['life']
+  });
+
+  const life = new MythNode({
+    id: 'life',
+    name: 'Life',
+    description: 'The spark of animation enters matter',
+    archetypeId: 'cosmos',
+    mytheme: 'vitality',
+    glyph: '🌱',
+    previousNodes: ['elements'],
+    nextNodes: ['consciousness']
+  });
+
+  const consciousness = new MythNode({
+    id: 'consciousness',
+    name: 'Consciousness Returns',
+    description: 'The creator recognizes itself in creation',
+    archetypeId: 'cosmos',
+    mytheme: 'reflection',
+    glyph: '👁️',
+    previousNodes: ['life'],
+    nextNodes: []
+  });
+
+  myth.addNode(primordialVoid);
+  myth.addNode(firstThought);
+  myth.addNode(word);
+  myth.addNode(separation);
+  myth.addNode(elements);
+  myth.addNode(life);
+  myth.addNode(consciousness);
+
+  myth.startNodeId = 'primordial_void';
+  myth.endNodeId = 'consciousness';
+
+  console.log("🌟 Created Creation Myth");
+  return myth;
+}
+
+/**
+ * Create Elemental Cycle myth
+ */
+export function createElementalCycle() {
+  const myth = new Myth({
+    name: "Elemental Cycle",
+    description: "Journey through the four classical elements",
+    author: "Traditional",
+    category: "elemental",
+    culture: "universal",
+    tags: ['elements', 'alchemy', 'transformation', 'cycle']
+  });
+
+  // Archetypes
+  const fire = new Archetype({
+    id: 'fire',
+    name: 'Fire',
+    description: 'Energy, transformation, will',
+    color: '#FF4500',
+    glyph: '🔥',
+    geometry: 'tetrahedron',
+    qualities: ['energy', 'passion', 'transformation'],
+    associations: { direction: 'south', season: 'summer' }
+  });
+
+  const water = new Archetype({
+    id: 'water',
+    name: 'Water',
+    description: 'Emotion, flow, intuition',
+    color: '#1E90FF',
+    glyph: '💧',
+    geometry: 'icosahedron',
+    qualities: ['emotion', 'intuition', 'flow'],
+    associations: { direction: 'west', season: 'autumn' }
+  });
+
+  const air = new Archetype({
+    id: 'air',
+    name: 'Air',
+    description: 'Thought, communication, intellect',
+    color: '#87CEEB',
+    glyph: '🌬️',
+    geometry: 'octahedron',
+    qualities: ['thought', 'communication', 'clarity'],
+    associations: { direction: 'east', season: 'spring' }
+  });
+
+  const earth = new Archetype({
+    id: 'earth',
+    name: 'Earth',
+    description: 'Stability, manifestation, grounding',
+    color: '#8B4513',
+    glyph: '⛰️',
+    geometry: 'cube',
+    qualities: ['stability', 'manifestation', 'grounding'],
+    associations: { direction: 'north', season: 'winter' }
+  });
+
+  myth.addArchetype(fire);
+  myth.addArchetype(water);
+  myth.addArchetype(air);
+  myth.addArchetype(earth);
+
+  // Nodes (circular)
+  const fireNode = new MythNode({
+    id: 'fire_node',
+    name: 'Fire',
+    description: 'The initiating spark of will',
+    archetypeId: 'fire',
+    mytheme: 'initiation',
+    glyph: '🔥',
+    nextNodes: ['water_node'],
+    previousNodes: ['earth_node']
+  });
+
+  const waterNode = new MythNode({
+    id: 'water_node',
+    name: 'Water',
+    description: 'The receptive depths of emotion',
+    archetypeId: 'water',
+    mytheme: 'reception',
+    glyph: '💧',
+    nextNodes: ['air_node'],
+    previousNodes: ['fire_node']
+  });
+
+  const airNode = new MythNode({
+    id: 'air_node',
+    name: 'Air',
+    description: 'The clarifying breath of intellect',
+    archetypeId: 'air',
+    mytheme: 'clarification',
+    glyph: '🌬️',
+    nextNodes: ['earth_node'],
+    previousNodes: ['water_node']
+  });
+
+  const earthNode = new MythNode({
+    id: 'earth_node',
+    name: 'Earth',
+    description: 'The grounding force of manifestation',
+    archetypeId: 'earth',
+    mytheme: 'manifestation',
+    glyph: '⛰️',
+    nextNodes: ['fire_node'],
+    previousNodes: ['air_node']
+  });
+
+  myth.addNode(fireNode);
+  myth.addNode(waterNode);
+  myth.addNode(airNode);
+  myth.addNode(earthNode);
+
+  myth.startNodeId = 'fire_node';
+  // Note: No end node - this is a cycle
+
+  console.log("🌟 Created Elemental Cycle myth");
+  return myth;
+}
+
+/**
+ * Get all example myths
+ */
+export function getAllExampleMyths() {
+  return [
+    createHerosJourney(),
+    createCreationMyth(),
+    createElementalCycle()
+  ];
+}
+
+console.log("🌟 Example myth library ready");

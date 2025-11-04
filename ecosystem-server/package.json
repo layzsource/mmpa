@@ -1,0 +1,19 @@
+{
+  "name": "mmpa-ecosystem-server",
+  "version": "1.0.0",
+  "description": "MMPA Ecosystem Backend - Community anchor sharing server",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": ["mmpa", "ecosystem", "phenomenology", "anchors"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "better-sqlite3": "^9.2.2"
+  }
+}

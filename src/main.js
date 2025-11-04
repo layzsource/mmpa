@@ -121,21 +121,86 @@ let emojiBankManager = null;
 // Phase 11.7.24: Mandala controller global reference
 let mandalaController = null;
 
+// VCN Phase 1: Global references for navigation system
+let destinationManager = null;
+let fieldNavigationSystem = null;
+let firstPersonControls = null;
+let vcnPanel = null;
+
+// Skybox Destination Authoring: Global references
+let destinationAuthoring = null;
+let destinationNavigator = null;
+
+// Stage 2: Game Mode global reference
+let gameMode = null;
+
 import * as THREE from 'three';
 import { initHUD, updatePresetList } from './hud.js';
 import { initMIDI, getMIDIDeviceCount } from './midi.js';
-import { getHUDIdleSpin, getVisualData, getMorphState, scene, renderer, camera, initMorphShape } from './geometry.js'; // Phase 12.1: added initMorphShape
+import { initMIDI as initMMPAMIDI } from './midiController.js'; // MMPA MIDI Controller
+import { getHUDIdleSpin, getVisualData, getMorphState, scene, renderer, camera, initMorphShape, composer } from './geometry.js'; // Phase 12.1: added initMorphShape, Phase 13.8: added composer
 import { initShadows } from './shadows.js';
 import { initSprites } from './sprites.js';
 import { initParticles, getParticleSystemInstance, EmojiParticles, EmojiStreamManager, EmojiSequencer, EmojiPatternBankManager } from './particles.js'; // Phase 11.7.1, 11.7.15, 11.7.16, 11.7.17
 import { MandalaController } from './mandalaController.js'; // Phase 11.7.24
 import { initVessel, updateVessel, getVesselGroup } from './vessel.js'; // Phase 13.1.0: Restored vessel system
 import { initVisual, updateVisual } from './visual.js'; // Phase 13.1.0: Restored visual system
+import { initVoxelFloor, updateVoxelFloor } from './voxelFloor.js'; // Phase 13.7.3: 64×64 voxel floor
+import { initVoxelMist } from './voxelMist.js'; // Phase 13.7.3: Volumetric mist
 import { initTelemetry } from './telemetry.js';
 import { initPresets, createDefaultPresets, listPresets, getCurrentPresetName } from './presets.js';
 import { initAudio, getAudioValues, AudioEngine } from './audio.js';
 import { state } from './state.js';
 import { SHADOW_LAYER } from './constants.js'; // Phase 2.3.3
+
+// VCN Phase 1: Vessel Compass Navigator imports
+import { DestinationManager } from './destinations.js';
+import { ExpandedFieldNavigationSystem } from './fieldNavigation.js';
+import { FirstPersonControls } from './cameraControls.js';
+import { VCNPanel } from './vcnPanel.js';
+
+// Skybox Destination Authoring imports
+import { DestinationAuthoringSystem } from './destinationAuthoring.js';
+import { DestinationNavigator } from './destinationNavigation.js';
+
+// Signal Multimodality imports
+import { signalRouter } from './signalRouter.js';
+
+// Myth Layer Compiler imports
+import { MythCompiler } from './mythCompiler.js';
+import { GlyphRenderer } from './mythGlyphs.js';
+
+// Pedagogical Mode imports
+import { PedagogicalSystem } from './pedagogicalCore.js';
+
+// AI Co-Agent Integration imports
+import { AICoAgent, ClaudeProvider, OpenAIProvider, GeminiProvider } from './aiCoAgent.js';
+
+// AI State Snapshot System imports
+import { stateSnapshotCapturer, SceneStateSnapshot } from './ai/stateSnapshot.js';
+
+// AI Provider System imports
+import { providerManager } from './ai/providers.js';
+
+// Camera Signal System imports
+import { CameraSignalProvider, OSCSignalAdapter, BiosignalAdapter } from './cameraSignalProvider.js';
+import { CameraSignalRouter } from './cameraSignalRouter.js';
+
+// Portal Builder imports
+import { PortalManager } from './portalBuilder/portalManager.js';
+import { SkyboxEditor } from './portalBuilder/skyboxEditor.js';
+import { GeometryFieldBuilder } from './portalBuilder/geometryBuilder.js';
+import { WaveformFieldEditor } from './portalBuilder/waveformEditor.js';
+import { PortalMapUI } from './portalBuilder/portalMapUI.js';
+
+// Text/NLP Signal Layer imports
+import { TextSignalProvider, TextSignalBindings } from './textSignalProvider.js';
+
+// Stage 2: Game Mode import
+import { GameMode } from './gameMode.js';
+
+// Humanoid dancer import
+import { initHumanoid, updateHumanoid, setHumanoidVisible } from './humanoid.js';
 
 // In secondary renderers, politely disable engine starts without breaking UI
 if (!IS_PRIMARY && AudioEngine?.start) {
@@ -172,44 +237,27 @@ initDefaultBindings();
 
 console.log("🔄 Build timestamp:", new Date().toISOString());
 
-// Phase 2.3.3R: Shadow Box failsafe fallback (disabled rendering, app stability restored)
-class ShadowBox {
-  constructor(scene, renderer) {
-    console.log("⚠️ ShadowBox initialized in FAILSAFE mode (Phase 2.3.3R) - rendering disabled");
-    this.renderer = renderer;
-    this.plane = null; // nothing added to scene
-  }
+// Phase 2.3.3R: Import real ShadowBox from vessel.js (no longer using failsafe)
+import { ShadowBox } from './vessel.js';
+import { initRecorder } from './hudRecorder.js';
+import { getAudioContext } from './audio.js';
 
-  render(scene) {
-    // Do nothing — avoid crashes
-    // Uncomment for debugging: console.log("📦 ShadowBox render tick (failsafe)");
-  }
-
-  setThreshold(value) {
-    console.log(`📦 ShadowBox threshold set: ${value.toFixed(2)} (failsafe mode)`);
-  }
-
-  setGain(value) {
-    console.log(`📦 ShadowBox gain set: ${value.toFixed(1)} (failsafe mode)`);
-  }
-
-  setColors(bgColor, fgColor) {
-    console.log(`📦 ShadowBox colors set: bg=${bgColor}, fg=${fgColor} (failsafe mode)`);
-  }
-
-  setPalette(name) {
-    console.log(`📦 ShadowBox palette set: ${name} (failsafe mode)`);
-  }
-
-  setShadowGain(g) {
-    console.log(`📦 ShadowBox gain (legacy) set: ${g.toFixed(1)} (failsafe mode)`);
-  }
-}
+// Phase 13.27: Financial Data Pipeline HUD
+import './hudFinancial.js';
 
 initHUD();
 
 initMIDI(() => {
   console.log("🎹 MIDI ready");
+});
+
+// Initialize MMPA MIDI Controller
+initMMPAMIDI().then(success => {
+  if (success) {
+    console.log("🎹 MMPA MIDI Controller ready");
+  } else {
+    console.log("🎹 MMPA MIDI Controller not available (Web MIDI API not supported)");
+  }
 });
 
 initPresets();
@@ -230,6 +278,17 @@ initAudio();
 // Phase 13.4: Initialize audio router event relay
 initAudioRouter();
 
+// Initialize video recorder with canvas and audio context
+// Get renderer canvas (renderer is globally available from geometry.js)
+const recorderCanvas = window.renderer?.domElement || document.querySelector('#app');
+const recorderAudioCtx = getAudioContext();
+if (recorderCanvas) {
+  initRecorder(recorderCanvas, recorderAudioCtx);
+  console.log('🎥 Video recorder initialized');
+} else {
+  console.warn('🎥 Recorder initialization delayed: canvas not ready');
+}
+
 initShadows(scene);
 
 initSprites(scene);
@@ -239,11 +298,33 @@ const morphShape = initMorphShape(scene);
 window.morphShape = morphShape; // expose for debugging
 console.log("🔺 Morph Shape initialized and exposed globally");
 
+// Initialize humanoid dancer at morph shape position
+try {
+  console.log("🕺 About to initialize humanoid...");
+  initHumanoid(scene);
+  console.log("🕺 Humanoid initialization complete");
+} catch (error) {
+  console.error("🕺 Humanoid initialization FAILED:", error);
+}
+
 // Phase 13.1.0: Initialize visual/background system
 initVisual(scene);
 
 // Phase 13.1.0: Initialize vessel system with Conflat 6 support
 initVessel(scene, renderer, camera);
+
+// Phase 13.7.3: Initialize 64×64 voxel floor
+initVoxelFloor(scene);
+
+// Phase 13.7.3: Initialize volumetric mist particle system
+initVoxelMist(scene);
+
+// Phase 13.8: Initialize shadow layer (split-screen mode)
+import { initShadowLayer, renderShadowLayer, isShadowLayerOpen } from './shadowLayer.js';
+initShadowLayer(scene, camera, renderer, composer);
+window.renderShadowLayer = renderShadowLayer;
+window.isShadowLayerActive = isShadowLayerOpen; // Expose for resize handler coordination
+console.log("🌓 Shadow layer initialized");
 
 // Phase 13.32: Dev helpers (console)
 window.Vessel = {
@@ -274,9 +355,9 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
-// Phase 2.3.3SS: Overwrite stub with real ShadowBox instance (currently failsafe/disabled)
-shadowBox = new ShadowBox(scene, renderer);
-console.log("📦 ShadowBox stub replaced with failsafe instance");
+// Phase 2.3.3SS: Initialize real ShadowBox with vessel shadow projection
+shadowBox = new ShadowBox(scene, renderer, camera);
+console.log("📦 ShadowBox initialized with vessel projection rendering");
 
 if (state.particlesEnabled) {
   initParticles(scene, state.particlesCount);
@@ -316,6 +397,259 @@ console.log("🎛️ MandalaController initialized and exposed globally");
 const mandalaState = mandalaController.getState();
 console.log(`🔗 Mandala bound to HUD + MIDI (rings=${mandalaState.rings}, symmetry=${mandalaState.symmetry}, scale=${mandalaState.scale}, mode=${mandalaState.mode})`);
 console.log(`🔗 Mandala → Animation Loop: ✅ | HUD Routing: ✅ | MIDI Routing: ✅`);
+
+// VCN Phase 1: Initialize Vessel Compass Navigator system
+destinationManager = new DestinationManager();
+window.destinationManager = destinationManager;
+console.log("🧭 DestinationManager initialized");
+
+// Initialize field navigation with all component references
+fieldNavigationSystem = new ExpandedFieldNavigationSystem(scene, {
+  morphMesh: morphShape,
+  mandalaController: mandalaController,
+  vesselGroup: getVesselGroup(),
+  particleSystem: getParticleSystemInstance(),
+  spriteGroup: window.spriteGroup
+});
+window.fieldNavigationSystem = fieldNavigationSystem;
+console.log("🌐 ExpandedFieldNavigationSystem initialized with 9 analyzers");
+
+// Initialize first-person camera controls
+firstPersonControls = new FirstPersonControls(camera, renderer.domElement);
+window.fpControls = firstPersonControls;
+console.log("🎮 FirstPersonControls initialized (click canvas to enable)");
+
+// Initialize VCN compass panel
+vcnPanel = new VCNPanel(destinationManager);
+window.vcnPanel = vcnPanel;
+console.log("🧭 VCNPanel initialized");
+
+console.log("✅ VCN Phase 1 systems initialized — Ready for signal-space navigation");
+
+// Skybox Destination Authoring: Initialize authoring and navigation systems
+destinationAuthoring = new DestinationAuthoringSystem(destinationManager, scene, camera);
+window.destinationAuthoring = destinationAuthoring;
+console.log("🎨 DestinationAuthoringSystem initialized");
+
+destinationNavigator = new DestinationNavigator(camera, destinationAuthoring);
+window.destinationNavigator = destinationNavigator;
+console.log("🚀 DestinationNavigator initialized");
+
+console.log("✅ Skybox Destination Authoring systems ready");
+
+// Signal Multimodality: Initialize signal router (async)
+(async () => {
+  try {
+    await signalRouter.init();
+    signalRouter.start();
+    window.signalRouter = signalRouter;
+    console.log("📡 SignalRouter initialized and started");
+    console.log("✅ Signal Multimodality systems ready");
+  } catch (err) {
+    console.error("📡 Signal router initialization error:", err);
+  }
+})();
+
+// Myth Layer Compiler: Initialize myth compiler and glyph renderer
+const mythCompiler = new MythCompiler(scene, camera);
+mythCompiler.setDestinationSystem(destinationAuthoring);
+mythCompiler.setSignalRouter(signalRouter);
+window.mythCompiler = mythCompiler;
+console.log("🌟 MythCompiler initialized");
+
+const glyphRenderer = new GlyphRenderer(scene, camera, renderer);
+window.glyphRenderer = glyphRenderer;
+console.log("🌟 GlyphRenderer initialized");
+
+// Load myth library from storage
+mythCompiler.loadLibrary();
+console.log("✅ Myth Layer Compiler systems ready");
+
+// Pedagogical Mode: Initialize pedagogical system
+const pedagogicalSystem = new PedagogicalSystem(scene, camera);
+pedagogicalSystem.setDestinationSystem(destinationAuthoring);
+pedagogicalSystem.setMythCompiler(mythCompiler);
+pedagogicalSystem.setSignalRouter(signalRouter);
+window.pedagogicalSystem = pedagogicalSystem;
+console.log("📚 PedagogicalSystem initialized");
+
+// Load pedagogical library from storage
+pedagogicalSystem.loadLibrary();
+console.log("✅ Pedagogical Mode systems ready");
+
+// AI Co-Agent Integration: Initialize AI co-agent system
+const aiCoAgent = new AICoAgent();
+aiCoAgent.setDestinationSystem(destinationAuthoring);
+aiCoAgent.setMythCompiler(mythCompiler);
+aiCoAgent.setPedagogicalSystem(pedagogicalSystem);
+window.aiCoAgent = aiCoAgent;
+
+// Expose AI provider classes for console configuration
+window.ClaudeProvider = ClaudeProvider;
+window.OpenAIProvider = OpenAIProvider;
+window.GeminiProvider = GeminiProvider;
+
+console.log("🤖 AICoAgent initialized");
+
+// Load AI settings from storage
+aiCoAgent.loadSettings();
+console.log("✅ AI Co-Agent Integration systems ready");
+
+// AI State Snapshot System: Initialize state capturer (already created globally)
+// Expose class for creating custom snapshots
+window.SceneStateSnapshot = SceneStateSnapshot;
+console.log("🧠 State Snapshot System initialized");
+console.log("💡 Tip: Use stateSnapshotCapturer.captureState() to capture current scene state");
+console.log("💡 Tip: Use snapshot.getDetailedDescription() for AI-ready prompts");
+console.log("✅ AI State Snapshot System ready");
+
+// AI Provider System: Initialize provider manager (already created globally)
+// Provider manager automatically loads saved config from localStorage
+console.log("🤖 AI Provider System initialized");
+console.log("💡 Tip: Use providerManager.setProvider('claude', 'your-api-key') or providerManager.setProvider('openai', 'your-api-key')");
+console.log("💡 Tip: Configure providers via the AI Assistant HUD interface");
+console.log("✅ AI Provider System ready");
+
+// Camera Signal System: Initialize camera provider and routing
+(async () => {
+  try {
+    const cameraSignalProvider = new CameraSignalProvider();
+    await cameraSignalProvider.init();
+    window.cameraSignalProvider = cameraSignalProvider;
+    console.log("📷 CameraSignalProvider initialized");
+
+    const oscAdapter = new OSCSignalAdapter();
+    window.oscAdapter = oscAdapter;
+    console.log("📡 OSCSignalAdapter initialized");
+
+    const biosignalAdapter = new BiosignalAdapter();
+    window.biosignalAdapter = biosignalAdapter;
+    console.log("📟 BiosignalAdapter initialized");
+
+    const cameraSignalRouter = new CameraSignalRouter();
+    cameraSignalRouter.setCameraProvider(cameraSignalProvider);
+    cameraSignalRouter.setOSCAdapter(oscAdapter);
+    cameraSignalRouter.setBiosignalAdapter(biosignalAdapter);
+    cameraSignalRouter.setSignalRouter(signalRouter);
+    cameraSignalRouter.start();
+    window.cameraSignalRouter = cameraSignalRouter;
+    console.log("📷 CameraSignalRouter initialized and started");
+    console.log("✅ Camera Signal System ready");
+  } catch (err) {
+    console.error("📷 Camera signal system initialization error:", err);
+  }
+})();
+
+// Portal Builder: Initialize portal management and editing systems
+const portalManager = new PortalManager();
+portalManager.setScene(scene, camera);
+portalManager.setDestinationSystem(destinationAuthoring);
+portalManager.setMythCompiler(mythCompiler);
+portalManager.setPresetManager(window.presets);
+portalManager.setDestinationNavigator(destinationNavigator);
+window.portalManager = portalManager;
+console.log("🚪 PortalManager initialized");
+console.log("🔗 PortalManager synced with DestinationNavigator");
+
+const skyboxEditor = new SkyboxEditor(scene, camera);
+window.skyboxEditor = skyboxEditor;
+console.log("🌌 SkyboxEditor initialized");
+
+const geometryBuilder = new GeometryFieldBuilder(scene, camera);
+geometryBuilder.setGlyphRenderer(glyphRenderer);
+window.geometryBuilder = geometryBuilder;
+console.log("🔺 GeometryFieldBuilder initialized");
+
+const waveformEditor = new WaveformFieldEditor(scene, camera);
+window.waveformEditor = waveformEditor;
+console.log("🌊 WaveformFieldEditor initialized");
+
+const portalMapUI = new PortalMapUI(portalManager);
+window.portalMapUI = portalMapUI;
+console.log("🗺️ PortalMapUI initialized");
+
+// Load portal library from storage
+portalManager.loadLibrary();
+
+console.log("✅ Portal Builder systems ready");
+console.log("💡 Tip: Create a portal to start building, or use Destinations tab to explore");
+
+// Text/NLP Signal Layer: Initialize text signal provider and bindings
+const textSignalProvider = new TextSignalProvider();
+window.textSignalProvider = textSignalProvider;
+console.log("📝 TextSignalProvider initialized");
+
+const textSignalBindings = new TextSignalBindings(textSignalProvider);
+window.textSignalBindings = textSignalBindings;
+
+// Setup text signal bindings
+textSignalBindings.bindSentimentToVessel(window.vessel || getVesselGroup());
+textSignalBindings.bindToneToGlyphs(glyphRenderer);
+textSignalBindings.bindRhythmToParticles(getParticleSystemInstance());
+
+// Bind mythic keywords to myth state transitions
+if (mythCompiler) {
+  textSignalBindings.bindMythicToStateTransitions(mythCompiler);
+}
+
+console.log("📝 Text signal bindings established:");
+console.log("  • Sentiment → Vessel morph");
+console.log("  • Tone → Glyph states");
+console.log("  • Rhythm → Particle behavior");
+console.log("  • Mythic keywords → Myth transitions");
+console.log("✅ Text/NLP Signal Layer ready");
+
+// Phase 1.5 — Pilot State: Perception + Gamepad Integration
+import { PerceptionState } from './perceptionState.js';
+import { GamepadManager } from './gamepadManager.js';
+
+let perceptionState = null;
+let gamepadManager = null;
+
+// Initialize perception state system
+perceptionState = new PerceptionState();
+window.perceptionState = perceptionState;
+console.log("🌀 PerceptionState initialized (wave mode)");
+
+// Initialize gamepad manager
+gamepadManager = new GamepadManager();
+window.gamepadManager = gamepadManager;
+console.log("🎮 GamepadManager initialized");
+
+// Wire perception state and gamepad to first-person controls
+firstPersonControls.perceptionState = perceptionState;
+firstPersonControls.gamepadManager = gamepadManager;
+console.log("🔗 Phase 1.5 systems linked to FirstPersonControls");
+
+// Wire perception state to VCN panel
+vcnPanel.perceptionState = perceptionState;
+console.log("🔗 PerceptionState linked to VCN compass");
+
+// Optional: Add visual/audio feedback on perception toggle
+perceptionState.onToggle = (newMode, oldMode) => {
+  console.log(`🧬 Perception mode changed: ${oldMode} → ${newMode}`);
+  // Future: Play audio cue, flash screen, pulse VCN, etc.
+};
+
+console.log("✅ Phase 1.5 Pilot State initialized — Wave ↔ Particle perception ready");
+
+// Stage 2: Initialize Game Mode system
+gameMode = new GameMode(scene, camera);
+window.gameMode = gameMode;
+console.log("🎮 GameMode initialized");
+
+// Add click listener for firing projectiles
+renderer.domElement.addEventListener('click', (e) => {
+  console.log("🖱️ Click detected on canvas", { enabled: gameMode?.enabled, gameMode: !!gameMode });
+  if (gameMode && gameMode.enabled) {
+    console.log("🎮 Attempting to fire projectile...");
+    gameMode.fireProjectile();
+  } else {
+    console.log("🎮 Game mode not enabled or not initialized");
+  }
+});
+
+console.log("✅ Stage 2: Game Mode initialized — Ready for deer hunting");
 
 // Phase 11.7.18: Mouse interaction for emoji swirl forces
 let isMouseDown = false;
@@ -408,6 +742,11 @@ export function getShadowBox() {
 // Phase 11.7.24: Export mandalaController for router access
 export function getMandalaController() {
   return mandalaController;
+}
+
+// Stage 2: Export gameMode for HUD access
+export function getGameModeInstance() {
+  return gameMode;
 }
 
 // 🔎 Debug: list all objects in the scene

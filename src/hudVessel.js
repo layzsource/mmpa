@@ -129,13 +129,21 @@ export function createVesselHudSection(parentContainer, notifyHUDUpdate) {
   });
   parentContainer.appendChild(enableControl);
 
-  // Vessel mode dropdown (Phase 2.x)
+  // Vessel mode dropdown (Phase 2.x / 13.7.1)
   const modeControl = createDropdownControl('Vessel Mode', 'gyre',
-    ['gyre', 'conflat6'], (value) => {
+    ['gyre', 'conflat6', 'conflat6cube', 'conflat6hdr'], (value) => {
     notifyHUDUpdate({ vesselMode: value });
   });
-  modeControl.title = 'Switch between Gyre (torus rings) and Conflat 6 (cube-sphere circles)';
+  modeControl.title = 'Switch between Gyre (torus rings), Conflat 6 (circular panels), Conflat 6 Cube (square panels), and Conflat-6 HDR (raymarched volumetric with PBR lighting)';
   parentContainer.appendChild(modeControl);
+
+  // Phase 13.7.2: Conflat-6 HDR Texture Selection
+  const textureControl = createDropdownControl('HDR Texture', 'none',
+    ['none', 'metallic', 'custom'], (value) => {
+    notifyHUDUpdate({ vesselHDRTexture: value });
+  });
+  textureControl.title = 'Select texture for Conflat-6 HDR mode (metallic = voxel cube style)';
+  parentContainer.appendChild(textureControl);
 
   // Vessel opacity slider
   const opacityControl = createSliderControl('Vessel Opacity', 0.5, 0.0, 1.0, 0.01, (value) => {
@@ -161,11 +169,21 @@ export function createVesselHudSection(parentContainer, notifyHUDUpdate) {
   });
   parentContainer.appendChild(spinControl);
 
-  // Vessel spin speed slider
-  const spinSpeedControl = createSliderControl('Spin Speed', 0.0035, 0, 0.02, 0.0005, (value) => {
-    notifyHUDUpdate({ vesselSpinSpeed: value });
+  // Vessel spin speed sliders (X, Y, Z axes)
+  const spinSpeedXControl = createSliderControl('Spin Speed X', 0.0, -0.02, 0.02, 0.0005, (value) => {
+    notifyHUDUpdate({ vesselSpinSpeedX: value });
   });
-  parentContainer.appendChild(spinSpeedControl);
+  parentContainer.appendChild(spinSpeedXControl);
+
+  const spinSpeedYControl = createSliderControl('Spin Speed Y', 0.0, -0.02, 0.02, 0.0005, (value) => {
+    notifyHUDUpdate({ vesselSpinSpeedY: value });
+  });
+  parentContainer.appendChild(spinSpeedYControl);
+
+  const spinSpeedZControl = createSliderControl('Spin Speed Z', 0.0, -0.02, 0.02, 0.0005, (value) => {
+    notifyHUDUpdate({ vesselSpinSpeedZ: value });
+  });
+  parentContainer.appendChild(spinSpeedZControl);
 
   // Vessel layout dropdown
   const layoutControl = createDropdownControl('Vessel Layout', 'lattice',
@@ -192,6 +210,63 @@ export function createVesselHudSection(parentContainer, notifyHUDUpdate) {
   });
   compassRingsControl.title = 'Show/hide 6 color-coded compass rings (N/S/E/W/Up/Down)';
   parentContainer.appendChild(compassRingsControl);
+
+  // Phase 13.2.0: Panel Audio Reactivity toggle
+  const panelAudioControl = createToggleControl('Panel Audio Reactive', false, (value) => {
+    notifyHUDUpdate({ vesselPanelAudioReactive: value });
+  });
+  panelAudioControl.title = 'Make panels pulse/scale with audio (conflat6/conflat6cube only)';
+  parentContainer.appendChild(panelAudioControl);
+
+  // Conflat 6 Panel Upload Section
+  const conflat6Section = document.createElement('div');
+  conflat6Section.id = 'conflat6-panel-uploads';
+  conflat6Section.style.cssText = 'margin-top: 15px; padding: 10px; background: rgba(0,100,100,0.1); border: 1px solid #0ff; border-radius: 4px;';
+
+  const conflat6Title = document.createElement('h5');
+  conflat6Title.textContent = '📦 Conflat 6 Panel Media';
+  conflat6Title.style.cssText = 'margin: 0 0 10px 0; color: #0ff; font-size: 11px;';
+  conflat6Section.appendChild(conflat6Title);
+
+  const directions = ['North', 'South', 'East', 'West', 'Up', 'Down'];
+  const colors = ['#00ffff', '#ff00ff', '#ff0000', '#00ff00', '#0000ff', '#ffff00'];
+
+  directions.forEach((dir, idx) => {
+    const panelControl = document.createElement('div');
+    panelControl.style.cssText = 'margin-bottom: 8px; padding: 5px; background: rgba(0,0,0,0.3); border-radius: 3px;';
+
+    const panelLabel = document.createElement('div');
+    panelLabel.textContent = `${dir}`;
+    panelLabel.style.cssText = `color: ${colors[idx]}; font-weight: bold; margin-bottom: 3px; font-size: 10px;`;
+
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*,video/*';
+    fileInput.style.cssText = 'font-size: 9px; width: 100%;';
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const { uploadPanelMedia } = await import('./vessel.js');
+        uploadPanelMedia(dir, file);
+      }
+    });
+
+    const clearBtn = document.createElement('button');
+    clearBtn.textContent = 'Clear';
+    clearBtn.style.cssText = 'margin-top: 3px; padding: 2px 8px; font-size: 9px; background: #333; color: #ff5555; border: 1px solid #555; cursor: pointer;';
+    clearBtn.addEventListener('click', async () => {
+      const { clearPanelMedia } = await import('./vessel.js');
+      clearPanelMedia(dir);
+      fileInput.value = '';
+    });
+
+    panelControl.appendChild(panelLabel);
+    panelControl.appendChild(fileInput);
+    panelControl.appendChild(clearBtn);
+    conflat6Section.appendChild(panelControl);
+  });
+
+  parentContainer.appendChild(conflat6Section);
 
   // Vessel debug display
   const debugDiv = document.createElement('div');

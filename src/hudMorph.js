@@ -5,6 +5,9 @@ console.log("🌀 hudMorph.js loaded");
  * Extracted from hud.js to complete HUD modularization
  */
 
+import { morphMesh } from './geometry.js';
+import { setHumanoidVisible } from './humanoid.js';
+
 // Helper to create a control with consistent styling
 function createControl(labelText) {
   const container = document.createElement('div');
@@ -91,6 +94,24 @@ function createDropdownControl(labelText, defaultValue, options, onChange) {
  */
 export function createMorphHudSection(parentContainer, notifyHUDUpdate) {
   console.log("🌀 Creating Morph HUD section");
+
+  // Show/Hide Morph Shape toggle
+  const showMorphControl = createToggleControl('Show Morph Shape', true, (value) => {
+    if (morphMesh) {
+      morphMesh.visible = value;
+      console.log(`🔺 Morph shape visibility: ${value ? 'ON' : 'OFF'}`);
+    }
+  });
+  showMorphControl.style.cssText = 'margin-bottom: 12px; padding: 8px; background: #2a2a2a; border-radius: 4px;';
+  parentContainer.appendChild(showMorphControl);
+
+  // Show/Hide Dancing Humanoid toggle
+  const showHumanoidControl = createToggleControl('Show Dancing Humanoid', false, (value) => {
+    setHumanoidVisible(value);
+    console.log(`🕺 Humanoid visibility: ${value ? 'ON' : 'OFF'}`);
+  });
+  showHumanoidControl.style.cssText = 'margin-bottom: 12px; padding: 8px; background: #2a2a2a; border-radius: 4px;';
+  parentContainer.appendChild(showHumanoidControl);
 
   // Idle spin toggle
   const idleSpinControl = createToggleControl('Idle Spin', true, (value) => {

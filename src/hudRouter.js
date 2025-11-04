@@ -123,6 +123,8 @@ onHUDUpdate((update) => {
     console.log(`🎨 Color updated: ${update.color} (vessel + particles)`);
   }
   if (update.particlesEnabled !== undefined) {
+    console.log(`🚨 particlesEnabled changing: ${state.particlesEnabled} → ${update.particlesEnabled}`);
+    console.trace('  ↳ Stack trace:');
     state.particlesEnabled = update.particlesEnabled;
     if (update.particlesEnabled) {
       initParticles(scene, state.particlesCount);
@@ -505,9 +507,27 @@ onHUDUpdate((update) => {
     state.vessel.spinSpeed = update.vesselSpinSpeed;
     console.log(`🚢 Vessel spin speed: ${update.vesselSpinSpeed}`);
   }
+  if (update.vesselSpinSpeedX !== undefined) {
+    state.vessel.spinSpeedX = update.vesselSpinSpeedX;
+    console.log(`🚢 Vessel spin speed X: ${update.vesselSpinSpeedX}`);
+  }
+  if (update.vesselSpinSpeedY !== undefined) {
+    state.vessel.spinSpeedY = update.vesselSpinSpeedY;
+    console.log(`🚢 Vessel spin speed Y: ${update.vesselSpinSpeedY}`);
+  }
+  if (update.vesselSpinSpeedZ !== undefined) {
+    state.vessel.spinSpeedZ = update.vesselSpinSpeedZ;
+    console.log(`🚢 Vessel spin speed Z: ${update.vesselSpinSpeedZ}`);
+  }
   if (update.vesselMode !== undefined) {
     state.vessel.mode = update.vesselMode;
     console.log(`🚢 Vessel mode: ${update.vesselMode}`);
+    // Phase 13.1.0: Reinitialize vessel when mode changes
+    import('./vessel.js').then(({ reinitVessel }) => {
+      import('./geometry.js').then(({ scene, renderer, camera }) => {
+        reinitVessel(scene, renderer, camera);
+      });
+    });
   }
   // Phase 12.0: Compass rings visibility toggle
   if (update.vesselVisible !== undefined) {
@@ -517,6 +537,11 @@ onHUDUpdate((update) => {
     import('./vessel.js').then(({ reinitVessel }) => {
       reinitVessel(scene, renderer, camera);
     });
+  }
+  // Phase 13.2.0: Panel audio reactivity toggle
+  if (update.vesselPanelAudioReactive !== undefined) {
+    state.vessel.panelAudioReactive = update.vesselPanelAudioReactive;
+    console.log(`🚢 Panel audio reactivity: ${update.vesselPanelAudioReactive ? 'ON' : 'OFF'}`);
   }
   if (update.vesselLayout !== undefined) {
     state.vessel.layout = update.vesselLayout;

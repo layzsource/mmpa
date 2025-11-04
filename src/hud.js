@@ -90,8 +90,39 @@ import { createVesselHudSection } from './hudVessel.js'; // Phase 11.7.50: Modul
 import { createAudioHudSection, refreshAudioHUD } from './hudAudio.js'; // Phase 11.7.50: Modular Audio HUD
 import { createMidiHudSection } from './hudMidi.js'; // Phase 11.7.50: Modular MIDI HUD
 import { createTelemetryHudSection } from './hudTelemetry.js'; // Phase 11.7.50: Modular Telemetry HUD
+import { createMMPAHudSection } from './hudMMPA.js'; // Phase 13.30: MMPA V2.0 HUD
 import { createPresetsHudSection } from './hudPresets.js'; // Phase 12: Modular Presets HUD
 import { createGeometryHudSection } from './hudGeometry.js'; // Phase 12.0: Modular Geometry HUD
+import { createAcidEmpireHudSection } from './hudAcidEmpire.js'; // Phase 13.6.0: Modular Acid Empire HUD
+import { createHyperbolicTilingHudSection } from './hudHyperbolicTiling.js'; // Phase 13.29: Modular Hyperbolic Tiling HUD
+import { createVoxelWaveHudSection } from './hudVoxelWave.js'; // Phase 13.7.0: Modular Voxel Wave HUD
+import { createFeaturesHudSection } from './hudFeatures.js'; // MMPA Features (Ratio Engine)
+import { createAnchorsHudSection } from './hudAnchors.js'; // MMPA Anchors (Memory)
+import { createCommunityHudSection } from './hudCommunity.js'; // MMPA Community (Ecosystem)
+import { createSequencesHudSection } from './hudSequences.js'; // MMPA Sequences (Composition)
+import { createTheoryHudSection } from './hudTheory.js'; // MMPA Unified Theory (Heart/Vortex/Archetype)
+import { initAnchors } from './anchorSystem.js'; // MMPA Anchor System
+import { enterPerformanceMode } from './performanceMode.js'; // MMPA Performance Mode
+import { createLuminousTessellationHudSection } from './hudLuminousTessellation.js'; // Luminous Tessellation HUD
+import { createSacredGeometryHudSection } from './hudSacredGeometry.js'; // Sacred Geometry HUD
+import { createRayMarchingHudSection } from './hudRayMarching.js'; // Ray Marching HUD
+import { createLiquidSimHudSection } from './hudLiquidSim.js'; // Liquid Simulation HUD
+import { createKaleidoscopeHudSection } from './hudKaleidoscope.js'; // Kaleidoscope HUD
+import { createCellularAutomataHudSection } from './hudCellularAutomata.js'; // Cellular Automata HUD
+import { createFlowFieldHudSection } from './hudFlowField.js'; // Flow Field HUD
+import { createMandelbulbHudSection } from './hudMandelbulb.js'; // Mandelbulb Voxel Core HUD
+import { createVCNHudSection } from './hudVCN.js'; // VCN Phase 1: Navigation HUD
+import { createDestinationHUD } from './hudDestinations.js'; // Skybox Destination Authoring
+import { createSignalHUD } from './hudSignals.js'; // Signal Multimodality
+import { createMythHUD } from './hudMyth.js'; // Myth Layer Compiler
+import { createPedagogicalHUD } from './hudPedagogical.js'; // Pedagogical Mode
+import { createAIHUD } from './hudAI.js'; // AI Co-Agent Integration
+import { createAIAssistantHUD } from './hudAIAssistant.js'; // AI Assistant - State-aware suggestions
+import { createCameraHUD } from './hudCamera.js'; // Camera & Biosignal Inputs
+import { createPortalHUD } from './hudPortal.js'; // Portal Builder
+import { createTextSignalHUD } from './hudText.js'; // Text/NLP Signals
+import { createRecorderHudSection } from './hudRecorder.js'; // Video Recording
+import { createFinancialHUD } from './hudFinancial.js'; // Phase 13.27: Financial Data Pipeline
 
 // Phase 13.4.2: Register refresh callbacks for modules that export them
 // (Most modules removed registerHUDCallback to avoid circular dependencies)
@@ -101,73 +132,56 @@ if (typeof refreshMandalaHUD === 'function') registerHUDCallback("mandala", refr
 
 console.log("📟 hud.js loaded");
 
+// Import Rams-inspired CSS
+const hudCSSLink = document.createElement('link');
+hudCSSLink.rel = 'stylesheet';
+hudCSSLink.href = new URL('./hud-rams.css', import.meta.url).href;
+document.head.appendChild(hudCSSLink);
+
 export function initHUD() {
+  // Initialize MMPA Anchor System
+  initAnchors();
+
   const hudPanel = createHUDPanel();
   document.body.appendChild(hudPanel);
 
-  console.log("📟 HUD initialized");
+  console.log("📟 HUD initialized with Rams design system");
 }
 
 function createHUDPanel() {
   const panel = document.createElement('div');
   panel.id = 'hud-panel';
-  panel.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 20px;
-    border-radius: 8px;
-    font-family: monospace;
-    font-size: 14px;
-    z-index: 1000;
-    min-width: 200px;
-    max-height: 90vh;
-    overflow-y: auto;
-    scrollbar-width: thin;
-  `;
-
-  // Add webkit scrollbar styling
-  const style = document.createElement('style');
-  style.textContent = `
-    #hud-panel::-webkit-scrollbar {
-      width: 6px;
-    }
-    #hud-panel::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.3);
-      border-radius: 3px;
-    }
-    #hud-panel::-webkit-scrollbar-track {
-      background: transparent;
-    }
-  `;
-  document.head.appendChild(style);
+  // No inline styles - all handled by hud-rams.css
 
   // Phase 11.5.0: HUD collapse state
   let hudCollapsed = false;
 
-  // Header container with title + collapse button
+  // Header container with title + buttons
   const header = document.createElement('div');
-  header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;';
+  header.className = 'hud-header';
 
   const title = document.createElement('h3');
-  title.textContent = '🔺 Geometry Controls';
-  title.style.cssText = 'margin: 0; color: #00ff00;';
+  title.className = 'hud-title';
+  title.textContent = 'Controls';
 
-  // Phase 11.5.0: Collapse/Expand toggle button
+  // Button group
+  const btnGroup = document.createElement('div');
+  btnGroup.style.cssText = 'display: flex; gap: 8px; align-items: center;';
+
+  // Performance Mode button
+  const perfModeBtn = document.createElement('button');
+  perfModeBtn.className = 'hud-header-btn';
+  perfModeBtn.textContent = 'Performance';
+  perfModeBtn.title = 'Enter Performance Mode';
+  perfModeBtn.addEventListener('click', () => {
+    enterPerformanceMode();
+  });
+
+  // Collapse/Expand toggle button
   const collapseBtn = document.createElement('button');
+  collapseBtn.className = 'hud-header-btn';
   collapseBtn.textContent = '−';
-  collapseBtn.style.cssText = `
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: white;
-    padding: 2px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 18px;
-    font-weight: bold;
-  `;
+  collapseBtn.title = 'Collapse HUD';
 
   // Container for all controls (will be hidden when collapsed)
   const controlsContainer = document.createElement('div');
@@ -178,50 +192,43 @@ function createHUDPanel() {
     if (hudCollapsed) {
       controlsContainer.style.display = 'none';
       collapseBtn.textContent = '+';
+      collapseBtn.title = 'Expand HUD';
       console.log("📟 HUD collapsed (minimal mode)");
     } else {
       controlsContainer.style.display = 'block';
       collapseBtn.textContent = '−';
+      collapseBtn.title = 'Collapse HUD';
       console.log("📟 HUD expanded (full mode)");
     }
   });
 
+  btnGroup.appendChild(perfModeBtn);
+  btnGroup.appendChild(collapseBtn);
   header.appendChild(title);
-  header.appendChild(collapseBtn);
+  header.appendChild(btnGroup);
   panel.appendChild(header);
 
   // Phase 11.5.0: Tab navigation
   const tabNav = document.createElement('div');
-  tabNav.style.cssText = `
-    display: flex;
-    gap: 5px;
-    margin-bottom: 10px;
-    border-bottom: 2px solid #333;
-    padding-bottom: 5px;
-  `;
+  tabNav.className = 'hud-tabs';
 
-  const tabs = ['Morph', 'Presets', 'Audio', 'Visual', 'Advanced', 'MIDI'];
+  const tabs = ['Morph', 'Presets', 'Audio', 'Visual', 'Advanced', 'MIDI', 'VCN', 'Destinations', 'Signals', 'Myth', 'Learn', 'AI', 'Camera', 'Portal', 'Text'];
   let activeTab = 'Morph';
   const tabButtons = {};
   const tabContainers = {};
 
   tabs.forEach(tabName => {
     const btn = document.createElement('button');
+    btn.className = 'hud-tab';
     btn.textContent = tabName;
-    btn.style.cssText = `
-      background: #222;
-      color: #aaa;
-      border: 1px solid #444;
-      padding: 5px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 11px;
-    `;
     btn.addEventListener('click', () => {
       activeTab = tabName;
       tabs.forEach(t => {
-        tabButtons[t].style.background = t === tabName ? '#555' : '#222';
-        tabButtons[t].style.color = t === tabName ? 'white' : '#aaa';
+        if (t === tabName) {
+          tabButtons[t].classList.add('active');
+        } else {
+          tabButtons[t].classList.remove('active');
+        }
         tabContainers[t].style.display = t === tabName ? 'block' : 'none';
       });
       console.log(`📟 Tab switched to: ${tabName}`);
@@ -230,6 +237,7 @@ function createHUDPanel() {
     tabButtons[tabName] = btn;
 
     const container = document.createElement('div');
+    container.className = 'hud-content';
     container.id = `tab-${tabName.toLowerCase()}`;
     container.style.display = tabName === 'Morph' ? 'block' : 'none';
     controlsContainer.appendChild(container);
@@ -237,8 +245,7 @@ function createHUDPanel() {
   });
 
   // Set initial active state
-  tabButtons['Morph'].style.background = '#555';
-  tabButtons['Morph'].style.color = 'white';
+  tabButtons['Morph'].classList.add('active');
 
   controlsContainer.insertBefore(tabNav, controlsContainer.firstChild);
 
@@ -253,6 +260,28 @@ function createHUDPanel() {
 
   // Phase 11.7.50: Modular Audio HUD section
   createAudioHudSection(tabContainers['Audio'], notifyHUDUpdate);
+
+  // Video Recording HUD section
+  createRecorderHudSection(tabContainers['Audio']);
+
+  // Phase 13.27: Financial Data Pipeline HUD section
+  const financialSection = createFinancialHUD();
+  tabContainers['Audio'].appendChild(financialSection);
+
+  // === MMPA Features - The Ratio Engine ===
+  createFeaturesHudSection(tabContainers['Audio']);
+
+  // === MMPA Anchors - Memory System ===
+  createAnchorsHudSection(tabContainers['Audio']);
+
+  // === MMPA Community - Ecosystem ===
+  createCommunityHudSection(tabContainers['Audio']);
+
+  // === MMPA Sequences - Composition ===
+  createSequencesHudSection(tabContainers['Audio']);
+
+  // === MMPA Unified Theory - Heart/Vortex/Archetype ===
+  createTheoryHudSection(tabContainers['Audio']);
 
   // === Phase 4.8.1/11.7.50: Particles (Modular) ===
   createParticlesHudSection(tabContainers['Visual'], notifyHUDUpdate, createToggleControl, createSliderControl);
@@ -1283,6 +1312,68 @@ function createHUDPanel() {
   // === Phase 11.6.0/11.7.50: Background Image (Modular) ===
   createBackgroundHudSection(tabContainers['Visual']);
 
+  // === Phase 13.6.0: Acid Empire (Modular) ===
+  createAcidEmpireHudSection(tabContainers['Visual']);
+
+  // === Phase 13.29: Hyperbolic Tiling (Modular) ===
+  createHyperbolicTilingHudSection(tabContainers['Visual']);
+
+  // === Phase 13.30: Skybox Render Mode (Global Setting) ===
+  const skyboxRenderModeLabel = document.createElement('label');
+  skyboxRenderModeLabel.textContent = "🌐 Skybox Render Mode";
+  skyboxRenderModeLabel.style.cssText = 'display: block; margin: 15px 0 5px 0; color: #00ffff; font-size: 11px; font-weight: bold;';
+  tabContainers['Visual'].appendChild(skyboxRenderModeLabel);
+
+  const skyboxRenderModeDropdown = document.createElement("select");
+  skyboxRenderModeDropdown.style.cssText = 'width: 100%; padding: 4px; background: #111; color: #0ff; border: 1px solid #0ff; margin-bottom: 10px;';
+
+  const mode360Option = document.createElement("option");
+  mode360Option.value = "360";
+  mode360Option.textContent = "360° Panorama (Seamless)";
+  skyboxRenderModeDropdown.appendChild(mode360Option);
+
+  const modePerPanelOption = document.createElement("option");
+  modePerPanelOption.value = "per-panel";
+  modePerPanelOption.textContent = "Per-Panel (6 Faces)";
+  skyboxRenderModeDropdown.appendChild(modePerPanelOption);
+
+  skyboxRenderModeDropdown.value = state.skyboxRenderMode || '360';
+
+  skyboxRenderModeDropdown.addEventListener("change", () => {
+    state.skyboxRenderMode = skyboxRenderModeDropdown.value;
+    console.log(`🌐 Skybox render mode: ${state.skyboxRenderMode}`);
+  });
+
+  skyboxRenderModeDropdown.title = '360° creates seamless equirectangular panorama. Per-Panel renders each cube face independently.';
+  tabContainers['Visual'].appendChild(skyboxRenderModeDropdown);
+
+  // === Phase 13.7.0: Voxel Wave (Modular) ===
+  createVoxelWaveHudSection(tabContainers['Visual']);
+
+  // === Luminous Tessellation (Modular) ===
+  createLuminousTessellationHudSection(tabContainers['Visual']);
+
+  // === Sacred Geometry (Modular) ===
+  createSacredGeometryHudSection(tabContainers['Visual']);
+
+  // === Ray Marching (Modular) ===
+  createRayMarchingHudSection(tabContainers['Visual']);
+
+  // === Liquid Simulation (Modular) ===
+  createLiquidSimHudSection(tabContainers['Visual']);
+
+  // === Kaleidoscope (Modular) ===
+  createKaleidoscopeHudSection(tabContainers['Visual']);
+
+  // === Cellular Automata (Modular) ===
+  createCellularAutomataHudSection(tabContainers['Visual']);
+
+  // === Flow Field (Modular) ===
+  createFlowFieldHudSection(tabContainers['Visual']);
+
+  // === Mandelbulb Voxel Core (Modular) ===
+  createMandelbulbHudSection(tabContainers['Visual']);
+
   // Ambient light intensity
   const ambientLightControl = createSliderControl('Ambient Intensity', 0.4, 0.0, 2.0, 0.1, (value) => {
     notifyHUDUpdate({ ambientIntensity: value });
@@ -1466,6 +1557,66 @@ function createHUDPanel() {
   shadowFgColorControl.title = 'Color for pixels above threshold';
   tabContainers['Visual'].appendChild(shadowFgColorControl);
 
+  // Phase 13.8: Shadow Layer pop-up window toggle
+  const shadowLayerSeparator = document.createElement('hr');
+  shadowLayerSeparator.style.cssText = 'border: 1px solid #555; margin: 15px 0;';
+  tabContainers['Visual'].appendChild(shadowLayerSeparator);
+
+  const shadowLayerTitle = document.createElement('h4');
+  shadowLayerTitle.textContent = '🌓 Shadow Layer (Interpretive Dimension)';
+  shadowLayerTitle.style.cssText = 'margin: 0 0 10px 0; color: #9966ff; font-size: 12px;';
+  tabContainers['Visual'].appendChild(shadowLayerTitle);
+
+  // Shadow Layer toggle button
+  const shadowLayerBtn = document.createElement('button');
+  shadowLayerBtn.textContent = 'Open Shadow Layer Window';
+  shadowLayerBtn.style.cssText = `
+    width: 100%;
+    padding: 10px;
+    background: linear-gradient(135deg, #2a1a4a, #4a2a6a);
+    color: #fff;
+    border: 1px solid #6644aa;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-bottom: 10px;
+    transition: all 0.2s;
+  `;
+  shadowLayerBtn.addEventListener('mouseenter', () => {
+    shadowLayerBtn.style.background = 'linear-gradient(135deg, #3a2a5a, #5a3a7a)';
+  });
+  shadowLayerBtn.addEventListener('mouseleave', () => {
+    shadowLayerBtn.style.background = 'linear-gradient(135deg, #2a1a4a, #4a2a6a)';
+  });
+  shadowLayerBtn.addEventListener('click', () => {
+    // Import and toggle shadow layer
+    import('./shadowLayer.js').then(({ toggleShadowLayer, isShadowLayerOpen }) => {
+      toggleShadowLayer();
+      // Update button text
+      setTimeout(() => {
+        shadowLayerBtn.textContent = isShadowLayerOpen()
+          ? 'Close Shadow Layer Window'
+          : 'Open Shadow Layer Window';
+      }, 100);
+    }).catch(err => {
+      console.error("Failed to load shadowLayer.js:", err);
+    });
+  });
+  shadowLayerBtn.title = 'Opens a separate window with phase-offset echo visualization for comparative analysis';
+  tabContainers['Visual'].appendChild(shadowLayerBtn);
+
+  const shadowLayerInfo = document.createElement('div');
+  shadowLayerInfo.style.cssText = 'font-size: 10px; color: #888; margin-bottom: 10px; line-height: 1.4;';
+  shadowLayerInfo.innerHTML = `
+    The Shadow Layer is a separate rendering window that shows an<br>
+    interpretive echo of the main visualization with:<br>
+    • Phase offset (30% delay)<br>
+    • Echo decay (85% intensity)<br>
+    • Color shift (+30° hue)<br>
+    Perfect for comparative analysis and visual depth.
+  `;
+  tabContainers['Visual'].appendChild(shadowLayerInfo);
+
   // === Shadows (Modular) ===
   createShadowsHudSection(tabContainers['Visual'], notifyHUDUpdate, createToggleControl, createSliderControl, createColorPickerControl);
 
@@ -1494,8 +1645,41 @@ function createHUDPanel() {
   // Phase 11.7.50: Modular Telemetry/Debug HUD section
   createTelemetryHudSection(tabContainers['Advanced'], notifyHUDUpdate);
 
+  // Phase 13.30: MMPA V2.0 Predictions HUD section
+  createMMPAHudSection(tabContainers['Advanced'], notifyHUDUpdate);
+
   // Phase 11.7.50: Modular MIDI HUD section
   createMidiHudSection(tabContainers['MIDI'], notifyHUDUpdate);
+
+  // VCN Phase 1: Vessel Compass Navigator HUD section
+  createVCNHudSection(tabContainers['VCN'], notifyHUDUpdate);
+
+  // Skybox Destination Authoring: Destination authoring HUD section
+  createDestinationHUD(tabContainers['Destinations']);
+
+  // Signal Multimodality: Signal sources HUD section
+  createSignalHUD(tabContainers['Signals']);
+
+  // Myth Layer Compiler: Myth HUD section
+  createMythHUD(tabContainers['Myth']);
+
+  // Pedagogical Mode: Learning HUD section
+  createPedagogicalHUD(tabContainers['Learn']);
+
+  // AI Co-Agent Integration: AI generation HUD section
+  createAIHUD(tabContainers['AI']);
+
+  // AI Assistant: State-aware suggestions
+  createAIAssistantHUD(tabContainers['AI']);
+
+  // Camera & Biosignals: Camera HUD section
+  createCameraHUD(tabContainers['Camera']);
+
+  // Portal Builder: Portal HUD section
+  createPortalHUD(tabContainers['Portal']);
+
+  // Text/NLP Signals: Text Signal HUD section
+  createTextSignalHUD(tabContainers['Text']);
 
   // Phase 11.5.0: Attach controls container to panel
   panel.appendChild(controlsContainer);

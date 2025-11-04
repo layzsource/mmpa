@@ -66,6 +66,62 @@ export class ParticleSystem {
     this.currentLayout = 'orbit';
     this.vesselGroup   = null; // Phase 2.3.1: Reference to Vessel for coupled rotation
 
+    // Phase 13.4: Chladni & Moiré pattern modes
+    this.chladniEnabled = false;
+    this.moireEnabled = false;
+    this.chladniM = 3;
+    this.chladniN = 4;
+    this.chladniFrequency = 1.0;
+    this.chladniPhase = 0;
+    this.moireScale = 1.0;
+    this.moireRotation = 0;
+    this.moireSpeed = 0.01;
+
+    // Phase 13.6: Advanced cymatic modes
+    this.spectrogramEnabled = false;
+    this.spectrogramBands = 32;          // Number of frequency bands
+    this.spectrogramRadius = 8;          // Radius of mandala
+    this.spectrogramRotation = 0;
+    this.spectrogramSpeed = 0.01;
+
+    this.phaseShiftEnabled = false;
+    this.phaseShiftLayers = 3;           // Number of interference layers
+    this.phaseShiftSpeed = 0.02;
+    this.phaseShiftPhase = 0;
+    this.phaseShiftDepth = 1.0;          // Holographic depth
+
+    this.diffractionEnabled = false;
+    this.diffractionIntensity = 1.0;     // Color intensity
+    this.diffractionAngle = 0;           // Prism angle
+    this.diffractionSpeed = 0.01;
+
+    // MMPA Phase 3: Dynamic particle density control
+    this.maxParticleCount = count;       // Maximum allocated particles
+    this.targetDensity = 1.0;            // Target density (0.0 - 1.0)
+    this.currentDensity = 1.0;           // Current density (smoothly interpolated)
+    this.densitySmoothing = 0.05;        // Smoothing factor for density transitions
+
+    // MMPA Phase 3: Dynamic animation speed control (TRANSFORMATION mapping)
+    this.mmpaSpeedMultiplier = 1.0;      // Animation speed multiplier from features
+    this.targetSpeedMultiplier = 1.0;    // Target speed (smoothly interpolated)
+    this.speedSmoothing = 0.03;          // Smoothing for speed transitions
+
+    // MMPA Phase 3: Dynamic stability control (ALIGNMENT mapping)
+    this.baseSmoothing = 0.5;            // Base smoothness value (from constructor)
+    this.targetSmoothing = 0.5;          // Target smoothness from features
+    this.baseOrganicStrength = 0.2;      // Base organic strength (from constructor)
+    this.targetOrganicStrength = 0.2;    // Target organic strength from features
+    this.stabilitySmoothing = 0.02;      // Smoothing for stability transitions
+
+    // MMPA Phase 3: Geometric harmony control (RELATIONSHIP mapping)
+    this.symmetryOrder = 6;              // Current symmetry order (3-12 fold)
+    this.targetSymmetryOrder = 6;        // Target symmetry order from consonance
+    this.geometricSubdivision = 1.0;     // Geometric detail level (0.5 - 2.0)
+    this.targetGeometricSubdivision = 1.0; // Target subdivision from complexity
+    this.harmonicProportions = 1.0;      // Scale proportion multiplier (0.8 - 1.2)
+    this.targetHarmonicProportions = 1.0; // Target proportions from harmonic order
+    this.harmonySmoothing = 0.015;       // Smoothing for harmony transitions (slowest)
+
     // Phase 2.3.2A/C/D: Particle trails (LineSegments)
     this.trailEnabled         = false;
     this.trailLength          = 0;     // default off (0-10 frames)
@@ -244,6 +300,43 @@ export class ParticleSystem {
     this.currentLayout = layout;
   }
 
+  // MMPA Phase 3: Set target particle density (0.0 - 1.0)
+  setDensityMultiplier(multiplier) {
+    this.targetDensity = Math.max(0.0, Math.min(1.0, multiplier));
+  }
+
+  // MMPA Phase 3: Set animation speed multiplier (0.5x - 2.0x)
+  setAnimationSpeed(multiplier) {
+    this.targetSpeedMultiplier = Math.max(0.1, Math.min(3.0, multiplier));
+  }
+
+  // MMPA Phase 3: Set form stability from alignment features
+  setFormStability(stability) {
+    // High stability (alignment) → High smoothness (0.2 - 0.9 range)
+    this.targetSmoothing = 0.2 + (stability * 0.7);
+    // High stability (alignment) → Low organic strength (0.05 - 0.4 range, inverted)
+    this.targetOrganicStrength = 0.4 - (stability * 0.35);
+  }
+
+  // MMPA Phase 3: Set geometric harmony from relationship features
+  setGeometricHarmony(consonance, complexity, harmonicOrder) {
+    // consonance (0-1) → symmetryOrder (3-12 fold)
+    // Perfect consonance = 12-fold (octaves, perfect fifths)
+    // Dissonance = 3-fold (tritones, "wolf" intervals)
+    this.targetSymmetryOrder = Math.round(3 + consonance * 9);
+
+    // complexity (0-10 normalized to 0-1) → geometricSubdivision (0.5-2.0)
+    // Simple intervals = sparse geometry
+    // Complex polyphony = dense geometry
+    const normalizedComplexity = Math.min(1.0, complexity / 10);
+    this.targetGeometricSubdivision = 0.5 + normalizedComplexity * 1.5;
+
+    // harmonicOrder (0-1) → harmonicProportions (0.8-1.2)
+    // Pure ratios = golden proportions
+    // Complex ratios = distorted proportions
+    this.targetHarmonicProportions = 0.8 + harmonicOrder * 0.4;
+  }
+
   updateLayoutVesselPlanes() {
     const radius = 2.0;
     for (let i = 0; i < this.count; i++) {
@@ -300,44 +393,103 @@ export class ParticleSystem {
     const a = getEffectiveAudio();
     const audioMix = this.audioReactive ? ((a.bass + a.mid + a.treble) / 3) * this.audioGain : 0.0;
 
+    // MMPA Phase 3: Smooth density interpolation
+    this.currentDensity += (this.targetDensity - this.currentDensity) * this.densitySmoothing;
+    const visibleCount = Math.floor(this.currentDensity * this.maxParticleCount);
+
+    // Update mesh count to control how many instances are rendered
+    if (this.mesh && this.mesh.count !== visibleCount) {
+      this.mesh.count = Math.max(1, visibleCount); // Ensure at least 1 particle
+    }
+
+    // MMPA Phase 3: Smooth animation speed interpolation
+    this.mmpaSpeedMultiplier += (this.targetSpeedMultiplier - this.mmpaSpeedMultiplier) * this.speedSmoothing;
+    const effectiveTime = t * this.mmpaSpeedMultiplier; // Apply speed to time itself
+
+    // MMPA Phase 3: Smooth stability interpolation (ALIGNMENT features)
+    this.smoothness += (this.targetSmoothing - this.smoothness) * this.stabilitySmoothing;
+    this.organicStrength += (this.targetOrganicStrength - this.organicStrength) * this.stabilitySmoothing;
+
+    // MMPA Phase 3: Smooth harmony interpolation (RELATIONSHIP features)
+    this.symmetryOrder += (this.targetSymmetryOrder - this.symmetryOrder) * this.harmonySmoothing;
+    this.geometricSubdivision += (this.targetGeometricSubdivision - this.geometricSubdivision) * this.harmonySmoothing;
+    this.harmonicProportions += (this.targetHarmonicProportions - this.harmonicProportions) * this.harmonySmoothing;
+
+    // Phase 13.6: Update cymatic animation phases (with MMPA speed)
+    this.spectrogramRotation += this.spectrogramSpeed * (1 + audioMix * 2);
+    this.phaseShiftPhase += this.phaseShiftSpeed * (1 + audioMix * 2);
+    this.diffractionAngle += this.diffractionSpeed * (1 + audioMix * 2);
+    this.chladniPhase += this.chladniFrequency * 0.05 * (1 + audioMix);
+    this.moireRotation += this.moireSpeed * (1 + audioMix);
+
     for (let i = 0; i < this.count; i++) {
       const ti = i * 3;
 
       switch (this.currentLayout) {
         case 'orbit': {
-          // Phase 4.8.1.7: Decoupled organic motion
-          // Base orbital rotation (controlled by orbitalSpeed)
-          this.angles[i] += this.orbitalSpeed * 0.01;
+          // Phase 4.8.1.7: Decoupled organic motion (MMPA Phase 3: with speed multiplier)
+          // Base orbital rotation (controlled by orbitalSpeed + MMPA speed)
+          this.angles[i] += this.orbitalSpeed * 0.01 * this.mmpaSpeedMultiplier;
 
-          // Organic wander (controlled by organicStrength)
-          const angleJitter  = this.organicStrength * 0.05 * Math.sin(t * 0.3 + i * 0.17);
-          const radiusJitter = this.organicStrength * Math.sin(t * 0.5 + i * 0.23);
+          // MMPA Phase 3: Apply harmonic geometry (RELATIONSHIP features)
+          // 1. Symmetry Order: Quantize angle to create n-fold radial symmetry
+          const symmetryAngleStep = (Math.PI * 2) / this.symmetryOrder;
+          const quantizedAngle = Math.round(this.angles[i] / symmetryAngleStep) * symmetryAngleStep;
 
-          // Final position with angular + radial jitter
-          this.targets[ti]     = Math.cos(this.angles[i] + angleJitter) * (this.radii[i] + radiusJitter);
-          this.targets[ti + 1] = Math.sin(this.angles[i] + angleJitter) * (this.radii[i] + radiusJitter);
+          // Blend between organic (free angle) and harmonic (quantized angle) based on consonance
+          // High consonance = strong quantization, low consonance = more organic
+          const consonanceBlend = Math.max(0, Math.min(1, (this.symmetryOrder - 3) / 9)); // 0-1 from symmetry order
+          const harmonicAngle = this.angles[i] * (1 - consonanceBlend) + quantizedAngle * consonanceBlend;
+
+          // 2. Geometric Subdivision: Create concentric rings based on complexity
+          const ringIndex = Math.floor((i / this.count) * this.geometricSubdivision * 3); // 0-3 rings
+          const ringRadius = 1.0 + ringIndex * 0.7; // Rings at 1.0, 1.7, 2.4, 3.1...
+
+          // 3. Harmonic Proportions: Scale overall radius by golden/simple ratios
+          const baseRadius = this.radii[i] * ringRadius * this.harmonicProportions;
+
+          // Organic wander (controlled by organicStrength + MMPA speed)
+          const angleJitter  = this.organicStrength * 0.05 * Math.sin(effectiveTime * 0.3 + i * 0.17);
+          const radiusJitter = this.organicStrength * Math.sin(effectiveTime * 0.5 + i * 0.23);
+
+          // Final position with harmonic structure + organic jitter
+          this.targets[ti]     = Math.cos(harmonicAngle + angleJitter) * (baseRadius + radiusJitter);
+          this.targets[ti + 1] = Math.sin(harmonicAngle + angleJitter) * (baseRadius + radiusJitter);
           this.targets[ti + 2] = radiusJitter * 0.5;
           break;
         }
         case 'sphere': {
-          // Phase 4.8.1.7: Decoupled organic motion
+          // Phase 4.8.1.7: Decoupled organic motion (MMPA Phase 3: with speed multiplier)
           const phi = (i % 180) * Math.PI / 180.0;
           const th  = (i % 360) * Math.PI / 180.0;
-          const r   = 2.5 + this.organicStrength * Math.sin(t * 0.8 + i * 0.19);
-          const angleJitter = this.organicStrength * 0.05 * Math.cos(t * 0.2 + i * 0.31);
 
-          this.targets[ti]     = r * Math.sin(phi) * Math.cos(th + angleJitter);
-          this.targets[ti + 1] = r * Math.sin(phi) * Math.sin(th + angleJitter);
+          // MMPA Phase 3: Apply harmonic geometry (RELATIONSHIP features)
+          // 1. Symmetry Order: Quantize theta angle for latitude bands
+          const symmetryAngleStep = (Math.PI * 2) / this.symmetryOrder;
+          const quantizedTheta = Math.round(th / symmetryAngleStep) * symmetryAngleStep;
+          const consonanceBlend = Math.max(0, Math.min(1, (this.symmetryOrder - 3) / 9));
+          const harmonicTheta = th * (1 - consonanceBlend) + quantizedTheta * consonanceBlend;
+
+          // 2. Geometric Subdivision: Layer the sphere radius based on complexity
+          const layerIndex = Math.floor((i / this.count) * this.geometricSubdivision * 2); // 0-2 layers
+          const layerRadius = 2.5 + layerIndex * 0.4; // Layers at 2.5, 2.9, 3.3...
+
+          // 3. Harmonic Proportions: Scale overall sphere
+          const r = layerRadius * this.harmonicProportions + this.organicStrength * Math.sin(effectiveTime * 0.8 + i * 0.19);
+          const angleJitter = this.organicStrength * 0.05 * Math.cos(effectiveTime * 0.2 + i * 0.31);
+
+          this.targets[ti]     = r * Math.sin(phi) * Math.cos(harmonicTheta + angleJitter);
+          this.targets[ti + 1] = r * Math.sin(phi) * Math.sin(harmonicTheta + angleJitter);
           this.targets[ti + 2] = r * Math.cos(phi);
           break;
         }
         case 'torus': {
-          // Phase 4.8.1.7: Decoupled organic motion
+          // Phase 4.8.1.7: Decoupled organic motion (MMPA Phase 3: with speed multiplier)
           const u = (i % 360) * Math.PI / 180.0;
           const v = (i % 360) * Math.PI / 180.0;
-          const R = 2.5 + this.organicStrength * Math.sin(t * 0.5 + i * 0.11);
-          const r = 1.0 + this.organicStrength * Math.cos(t * 0.7 + i * 0.17);
-          const angleJitter = this.organicStrength * 0.05 * Math.sin(t * 0.4 + i * 0.29);
+          const R = 2.5 + this.organicStrength * Math.sin(effectiveTime * 0.5 + i * 0.11);
+          const r = 1.0 + this.organicStrength * Math.cos(effectiveTime * 0.7 + i * 0.17);
+          const angleJitter = this.organicStrength * 0.05 * Math.sin(effectiveTime * 0.4 + i * 0.29);
 
           this.targets[ti]     = (R + r * Math.cos(v)) * Math.cos(u + angleJitter);
           this.targets[ti + 1] = (R + r * Math.cos(v)) * Math.sin(u + angleJitter);
@@ -345,17 +497,17 @@ export class ParticleSystem {
           break;
         }
         case 'cube': {
-          // Phase 4.8.1.7: Decoupled organic motion
+          // Phase 4.8.1.7: Decoupled organic motion (MMPA Phase 3: with speed multiplier)
           const s = 5;
-          // Base position jitter
-          const baseX = Math.sin(t * 0.1 + i * 0.37) * s;
-          const baseY = Math.cos(t * 0.15 + i * 0.41) * s;
-          const baseZ = Math.sin(t * 0.12 + i * 0.43) * s;
+          // Base position jitter (with MMPA speed)
+          const baseX = Math.sin(effectiveTime * 0.1 + i * 0.37) * s;
+          const baseY = Math.cos(effectiveTime * 0.15 + i * 0.41) * s;
+          const baseZ = Math.sin(effectiveTime * 0.12 + i * 0.43) * s;
 
-          // Organic wander
-          const wx = this.organicStrength * Math.sin(t * 0.6 + i * 0.23);
-          const wy = this.organicStrength * Math.cos(t * 0.7 + i * 0.29);
-          const wz = this.organicStrength * Math.sin(t * 0.5 + i * 0.31);
+          // Organic wander (with MMPA speed)
+          const wx = this.organicStrength * Math.sin(effectiveTime * 0.6 + i * 0.23);
+          const wy = this.organicStrength * Math.cos(effectiveTime * 0.7 + i * 0.29);
+          const wz = this.organicStrength * Math.sin(effectiveTime * 0.5 + i * 0.31);
 
           this.targets[ti]     = baseX + wx;
           this.targets[ti + 1] = baseY + wy;
@@ -437,6 +589,169 @@ export class ParticleSystem {
         tx += burstX;
         ty += burstY;
         tz += burstZ;
+      }
+
+      // Phase 13.4: Apply Chladni plate resonance pattern
+      if (this.chladniEnabled) {
+        const m = this.chladniM + Math.floor(a.bass * 3);
+        const n = this.chladniN + Math.floor(a.mid * 3);
+
+        const x = tx / 5;
+        const y = ty / 5;
+
+        const chladniValue = Math.cos(n * Math.PI * x) * Math.cos(m * Math.PI * y) +
+                            Math.cos(m * Math.PI * x) * Math.cos(n * Math.PI * y);
+
+        // Create wave-like displacement that moves particles to nodal lines
+        const wavePhase = chladniValue * 5 + this.chladniPhase;
+        const displacement = Math.sin(wavePhase) * 0.8 * (1 + audioMix);
+
+        // Apply displacement perpendicular to current position for visible wave effect
+        const angle = Math.atan2(ty, tx);
+        tx += Math.cos(angle + Math.PI/2) * displacement;
+        ty += Math.sin(angle + Math.PI/2) * displacement;
+        tz += displacement * 0.5;
+      }
+
+      // Phase 13.4: Apply Moiré interference pattern
+      if (this.moireEnabled) {
+        const freq1 = 2.0 * this.moireScale;
+        const pattern1 = Math.sin(tx * freq1) * Math.sin(ty * freq1);
+
+        const rotX = tx * Math.cos(this.moireRotation) - ty * Math.sin(this.moireRotation);
+        const rotY = tx * Math.sin(this.moireRotation) + ty * Math.cos(this.moireRotation);
+        const freq2 = 2.1 * this.moireScale;
+        const pattern2 = Math.sin(rotX * freq2) * Math.sin(rotY * freq2);
+
+        const interference = pattern1 * pattern2;
+
+        // Apply radial displacement based on interference
+        const radialDisplacement = interference * 1.2 * (1 + audioMix);
+        const angle = Math.atan2(ty, tx);
+        tx += Math.cos(angle) * radialDisplacement;
+        ty += Math.sin(angle) * radialDisplacement;
+
+        // Add vertical wave for visual depth
+        tz += interference * 0.5 * (1 + audioMix);
+      }
+
+      // Phase 13.6: Apply Spectrogram tessellations (FFT → radial mandala)
+      if (this.spectrogramEnabled) {
+        const radius = Math.sqrt(tx * tx + ty * ty);
+        const theta = Math.atan2(ty, tx) + this.spectrogramRotation;
+
+        // Map particle to frequency band based on angle
+        const normalizedAngle = (theta + Math.PI) / (2 * Math.PI);
+        const bandIndex = Math.floor(normalizedAngle * this.spectrogramBands) % this.spectrogramBands;
+        const bandAmplitude = (a.bass + a.mid + a.treble) / 3;
+
+        // Create radial rings and tessellation
+        const ringCount = 8;
+        const ringIndex = Math.floor((radius / this.spectrogramRadius) * ringCount) % ringCount;
+        const cellAngle = Math.floor(normalizedAngle * this.spectrogramBands * 2) / (this.spectrogramBands * 2) * Math.PI * 2;
+        const cellRadius = (ringIndex + 0.5) * (this.spectrogramRadius / ringCount);
+
+        const targetX = Math.cos(cellAngle - this.spectrogramRotation) * cellRadius;
+        const targetY = Math.sin(cellAngle - this.spectrogramRotation) * cellRadius;
+
+        // Attraction with audio modulation
+        const attractionStrength = 0.5 * (1 + bandAmplitude * 2);
+        tx += (targetX - tx) * attractionStrength * 0.02;
+        ty += (targetY - ty) * attractionStrength * 0.02;
+
+        // Radial pulsing
+        const ringPhase = ringIndex * Math.PI / ringCount + t;
+        const pulseDir = { x: tx / Math.max(radius, 0.1), y: ty / Math.max(radius, 0.1) };
+        const radialPulse = bandAmplitude * 2.0 * Math.sin(ringPhase * Math.PI);
+        tx += pulseDir.x * radialPulse;
+        ty += pulseDir.y * radialPulse;
+
+        // Vertical displacement
+        const verticalWave = Math.sin(theta * this.spectrogramBands + t * 2) * bandAmplitude;
+        tz += verticalWave * 2.0;
+      }
+
+      // Phase 13.6: Apply Phase-shift interference (holographic moiré)
+      if (this.phaseShiftEnabled) {
+        const radius = Math.sqrt(tx * tx + ty * ty);
+        let totalInterference = 0;
+
+        for (let layer = 0; layer < this.phaseShiftLayers; layer++) {
+          const layerPhase = this.phaseShiftPhase + layer * (Math.PI * 2 / this.phaseShiftLayers);
+          const layerFreq = 2.0 + layer * 0.5;
+          const layerAngle = (Math.PI * 2 / this.phaseShiftLayers) * layer;
+
+          // Rotate coordinate system for each layer
+          const rotX = tx * Math.cos(layerAngle) - ty * Math.sin(layerAngle);
+          const rotY = tx * Math.sin(layerAngle) + ty * Math.cos(layerAngle);
+
+          // Create wave pattern with audio modulation
+          const wave1 = Math.sin(rotX * layerFreq + layerPhase + a.bass * 3);
+          const wave2 = Math.sin(rotY * layerFreq - layerPhase + a.mid * 3);
+          const wave3 = Math.sin(tz * layerFreq * 0.5 + layerPhase * 1.5 + a.treble * 3);
+
+          const layerInterference = (wave1 + wave2 + wave3) / 3;
+          const layerWeight = 1.0 - Math.abs((layer / (this.phaseShiftLayers - 1)) - 0.5);
+          totalInterference += layerInterference * layerWeight;
+        }
+
+        totalInterference /= this.phaseShiftLayers;
+
+        // Holographic depth effect
+        const depthDisplacement = totalInterference * this.phaseShiftDepth * 2.0;
+        const depthDir = { x: tx / Math.max(radius, 0.1), y: ty / Math.max(radius, 0.1), z: tz / Math.max(Math.abs(tz), 0.1) };
+        tx += depthDir.x * depthDisplacement * (1 + audioMix);
+        ty += depthDir.y * depthDisplacement * (1 + audioMix);
+        tz += depthDir.z * depthDisplacement * (1 + audioMix);
+
+        // Tangential vortex flow
+        const angle = Math.atan2(ty, tx);
+        const flowStrength = totalInterference * 1.0 * (1 + a.mid * 0.5);
+        tx += Math.cos(angle + Math.PI / 2) * flowStrength;
+        ty += Math.sin(angle + Math.PI / 2) * flowStrength;
+      }
+
+      // Phase 13.6: Apply Spectral Diffraction (rainbow prismatic dispersion)
+      if (this.diffractionEnabled) {
+        const radius = Math.sqrt(tx * tx + ty * ty);
+        const theta = Math.atan2(ty, tx);
+
+        // Each particle gets a "wavelength" based on its index
+        const wavelength = (i % 360) / 360.0;
+
+        // Dispersion: different wavelengths refract at different angles
+        const dispersionAngle = this.diffractionAngle + wavelength * Math.PI * 0.5;
+        const refractionStrength = this.diffractionIntensity * 2.0 * (1 + audioMix);
+
+        // Chromatic displacement - particles spread in rainbow pattern
+        const disperseX = Math.cos(dispersionAngle) * refractionStrength;
+        const disperseY = Math.sin(dispersionAngle) * refractionStrength;
+        tx += disperseX * (1 + a.bass * 0.5);
+        ty += disperseY * (1 + a.mid * 0.5);
+
+        // Iridescent wave patterns (like soap bubbles)
+        const iridescencePhase = radius * 3.0 + theta * 2.0 - this.diffractionAngle * 2;
+        const iridescence = Math.sin(iridescencePhase + wavelength * Math.PI * 2) * 0.5 + 0.5;
+
+        // Thin-film interference
+        const interference = Math.cos(iridescencePhase * (1.0 + audioMix * 2) + wavelength * Math.PI * 4);
+        const interferenceStrength = interference * iridescence * 1.5;
+        const radialDir = { x: tx / Math.max(radius, 0.1), y: ty / Math.max(radius, 0.1) };
+        tx += radialDir.x * interferenceStrength * (1 + a.treble);
+        ty += radialDir.y * interferenceStrength * (1 + a.treble);
+
+        // Vertical rainbow stacking
+        const spectralHeight = (wavelength - 0.5) * this.diffractionIntensity * 3.0;
+        tz += spectralHeight * (1 + audioMix * 0.5);
+
+        // Diffraction grating effect
+        const gratingPeriod = 0.8;
+        const gratingPhase = (tx + ty) / gratingPeriod + this.diffractionAngle * 5;
+        const gratingPattern = Math.sin(gratingPhase * Math.PI * 2);
+        const fringeDir = { x: Math.cos(theta), y: Math.sin(theta) };
+        const fringeAttraction = gratingPattern * 1.0 * this.diffractionIntensity;
+        tx += fringeDir.x * fringeAttraction;
+        ty += fringeDir.y * fringeAttraction;
       }
 
       // Phase 2.3.1: Apply Vessel rotation to vesselPlanes layout
@@ -580,6 +895,14 @@ export class ParticleSystem {
     this.uniforms.uAudioLevel.value      = audioMix;
     this.uniforms.uBrightnessBoost.value = brightnessBoost;
 
+    // Phase 13.4: Update pattern animation phases
+    if (this.chladniEnabled) {
+      this.chladniPhase += this.chladniFrequency * (1 + audioMix * 2) * 0.02;
+    }
+    if (this.moireEnabled) {
+      this.moireRotation += this.moireSpeed * (1 + audioMix);
+    }
+
     // Debug log (Phase 2.3.2E: added trail performance status)
     if (Math.random() < 0.01) {
       const audioHue = audioMix * 360;
@@ -662,11 +985,32 @@ export function initParticles(scene, count = 5000) {
     destroyParticles(scene);
   }
   particleSystemInstance = new ParticleSystem(scene, count);
+  console.log(`✨ Particles initialized: count=${count}, instance=${!!particleSystemInstance}`);
   return particleSystemInstance;
 }
 
-export function updateParticles(audioReactive, time) {
+export function updateParticles(audioReactive, time, mmpaVisuals = null) {
   if (particleSystemInstance) {
+    // MMPA Phase 3: Apply particle density from COMPLEXITY features
+    if (mmpaVisuals && mmpaVisuals.particleDensity !== undefined && particleSystemInstance.setDensityMultiplier) {
+      particleSystemInstance.setDensityMultiplier(mmpaVisuals.particleDensity);
+    }
+    // MMPA Phase 3: Apply animation speed from TRANSFORMATION features
+    if (mmpaVisuals && mmpaVisuals.animationSpeed && particleSystemInstance.setAnimationSpeed) {
+      particleSystemInstance.setAnimationSpeed(mmpaVisuals.animationSpeed);
+    }
+    // MMPA Phase 3: Apply form stability from ALIGNMENT features
+    if (mmpaVisuals && mmpaVisuals.formStability !== undefined && particleSystemInstance.setFormStability) {
+      particleSystemInstance.setFormStability(mmpaVisuals.formStability);
+    }
+    // MMPA Phase 3: Apply geometric harmony from RELATIONSHIP features
+    if (mmpaVisuals && mmpaVisuals.geometricSymmetry !== undefined && particleSystemInstance.setGeometricHarmony) {
+      particleSystemInstance.setGeometricHarmony(
+        mmpaVisuals.geometricSymmetry,  // consonance (0-1)
+        mmpaVisuals.patternComplexity * 10,  // complexity (denormalized from 0-1 to 0-10)
+        mmpaVisuals.harmonicOrder  // harmonicOrder (0-1)
+      );
+    }
     particleSystemInstance.update();
   }
 }
@@ -756,6 +1100,35 @@ export class EmojiParticles {
     this.clusters = []; // Array of active clusters { particleIndices: [], position: Vector3, scale: float, opacity: float }
     this.particleToCluster = new Map(); // Maps particle index → cluster ID
     this.nextClusterId = 0; // Cluster ID counter
+
+    // Phase 13.4: Chladni & Moiré pattern modes
+    this.chladniEnabled = false; // Chladni plate resonance patterns
+    this.moireEnabled = false; // Moiré interference patterns
+    this.chladniM = 3; // Chladni mode number m (horizontal)
+    this.chladniN = 4; // Chladni mode number n (vertical)
+    this.chladniFrequency = 1.0; // Oscillation frequency
+    this.chladniPhase = 0; // Current phase for animation
+    this.moireScale = 1.0; // Scale of moiré pattern
+    this.moireRotation = 0; // Rotation angle for second pattern
+    this.moireSpeed = 0.01; // Rotation speed
+
+    // Phase 13.6: Advanced cymatic modes
+    this.spectrogramEnabled = false;
+    this.spectrogramBands = 32;          // Number of frequency bands
+    this.spectrogramRadius = 8;          // Radius of mandala
+    this.spectrogramRotation = 0;
+    this.spectrogramSpeed = 0.01;
+
+    this.phaseShiftEnabled = false;
+    this.phaseShiftLayers = 3;           // Number of interference layers
+    this.phaseShiftSpeed = 0.02;
+    this.phaseShiftPhase = 0;
+    this.phaseShiftDepth = 1.0;          // Holographic depth
+
+    this.diffractionEnabled = false;
+    this.diffractionIntensity = 1.0;     // Color intensity
+    this.diffractionAngle = 0;           // Prism angle
+    this.diffractionSpeed = 0.01;
 
     // Phase 11.7.50: Check for custom image, otherwise use emoji
     let texture;
@@ -949,11 +1322,10 @@ export class EmojiParticles {
     this.applyMandala();
 
     if (this.useInstancing && this.instancedMesh) {
-      // Phase 11.7.10: Instanced mesh update
+      // Phase 11.7.10: Instanced mesh update - FIRST PASS: Set base layout positions
       for (let i = 0; i < this.count; i++) {
         const pos = this.positions[i];
         const vel = this.velocities[i];
-        const baseScale = this.baseScales[i];
 
         // Apply velocity (drift)
         pos.add(vel);
@@ -980,7 +1352,7 @@ export class EmojiParticles {
         // Phase 11.7.11: Bass → radial expansion
         if (this.linkedToSignals && bass > 0.1) {
           const direction = pos.clone().normalize();
-          pos.add(direction.multiplyScalar(bass * 0.05 * reactivity));
+          pos.add(direction.multiplyScalar(bass * 0.2 * reactivity));
         }
 
         // Boundary bounce
@@ -997,13 +1369,37 @@ export class EmojiParticles {
           vel.z *= -1;
           pos.z = Math.sign(pos.z) * maxBound;
         }
+      }
+
+      // Phase 13.4 & 13.6: Apply cymatic patterns (AFTER layout positioning, BEFORE matrix updates)
+      this.applyChladni();
+      this.applyMoire();
+      this.applySpectrogram();
+      this.applyPhaseShift();
+      this.applyDiffraction();
+
+      // DEBUG: Force obvious displacement to test if this code path runs
+      if (this.spectrogramEnabled || this.phaseShiftEnabled || this.diffractionEnabled) {
+        if (!this._cymaticDebugLogged) {
+          console.log('🌌 CYMATIC METHODS CALLED - displacing first particle by 5 units');
+          this._cymaticDebugLogged = true;
+        }
+        // Displace first particle dramatically to test visibility
+        this.positions[0].x += 5;
+        this.positions[0].y += 5;
+      }
+
+      // SECOND PASS: Update all matrices with final positions
+      for (let i = 0; i < this.count; i++) {
+        const pos = this.positions[i];
+        const baseScale = this.baseScales[i];
 
         // Audio-reactive scale
-        let scale = baseScale + level * 1.5 * reactivity;
+        let scale = baseScale + level * 5.0 * reactivity;
 
         // Phase 11.7.13: Add beat pulse to scale
         if (this.pulseAmount > 0) {
-          scale += this.pulseAmount * 0.3;
+          scale += this.pulseAmount * 1.5;
         }
 
         // Phase 11.7.19: Apply cluster scale if particle is in a cluster
@@ -1016,10 +1412,10 @@ export class EmojiParticles {
         }
 
         // Phase 11.7.11: Mid → rotation speed boost
-        const rotationBoost = this.linkedToSignals ? mid * 0.1 : 0;
-        this.rotations[i] += (level * 0.05 + rotationBoost) * reactivity;
+        const rotationBoost = this.linkedToSignals ? mid * 0.3 : 0;
+        this.rotations[i] += (level * 0.15 + rotationBoost) * reactivity;
 
-        // Update instance matrix
+        // Update instance matrix with final position
         this.dummy.position.copy(pos);
         this.dummy.scale.set(scale, scale, scale);
         this.dummy.rotation.z = this.rotations[i];
@@ -1030,10 +1426,10 @@ export class EmojiParticles {
       // Phase 11.7.11/11.7.13: Treble sparkle + beat pulse opacity
       let opacity = 0.8;
       if (this.linkedToSignals && treble > 0.2) {
-        opacity = 0.7 + treble * 0.3;
+        opacity = 0.5 + treble * 0.5;
       }
       if (this.pulseAmount > 0) {
-        opacity = Math.min(1.0, opacity + this.pulseAmount * 0.2);
+        opacity = Math.min(1.0, opacity + this.pulseAmount * 0.4);
       }
       this.instancedMesh.material.opacity = opacity;
 
@@ -1695,6 +2091,430 @@ export class EmojiParticles {
     const baseRotSpeed = rotationSpeed ?? 0.02;
     const finalRotSpeed = audioModulation ? baseRotSpeed * (1 + audioLevel * 2) : baseRotSpeed;
     state.emojiMandala.rotation += finalRotSpeed;
+  }
+
+  // Phase 13.5: Enhanced 3D Chladni cymatic resonance patterns
+  applyChladni() {
+    if (!this.chladniEnabled) return;
+
+    const audioLevel = state?.audio?.level ?? 0;
+    const bass = state?.audio?.bass ?? 0;
+    const mid = state?.audio?.mid ?? 0;
+    const treble = state?.audio?.treble ?? 0;
+
+    // Audio-reactive mode numbers with wider range
+    const m = this.chladniM + Math.floor(bass * 5);
+    const n = this.chladniN + Math.floor(mid * 5);
+    const k = Math.floor(treble * 4) + 2; // Third dimension mode
+
+    // Advance phase for animation
+    this.chladniPhase += this.chladniFrequency * (1 + audioLevel * 3) * 0.015;
+
+    for (let i = 0; i < this.count; i++) {
+      const pos = this.positions[i];
+
+      // Normalize to [-1, 1] with tighter scaling for sharper patterns
+      const x = pos.x / 4;
+      const y = pos.y / 4;
+      const z = pos.z / 4;
+
+      // 3D Chladni equation - multiple resonance modes
+      const chladni1 = Math.cos(n * Math.PI * x) * Math.cos(m * Math.PI * y);
+      const chladni2 = Math.cos(m * Math.PI * x) * Math.cos(n * Math.PI * y);
+      const chladni3 = Math.cos(k * Math.PI * z) * Math.cos((m + n) * Math.PI * 0.5 * (x + y));
+
+      // Combine modes for complex 3D standing waves
+      const chladniValue = chladni1 + chladni2 + chladni3 * 0.5;
+
+      // Radial component for circular/spherical patterns
+      const radius = Math.sqrt(x * x + y * y + z * z);
+      const radialMode = Math.cos(m * Math.PI * radius) * Math.sin(n * Math.PI * radius);
+
+      // Combine Cartesian and radial modes
+      const combinedPattern = chladniValue * 0.7 + radialMode * 0.3;
+
+      // Time-based oscillation with audio modulation
+      const wavePhase = combinedPattern * 8 + this.chladniPhase;
+      const wave = Math.sin(wavePhase) * (0.4 + audioLevel * 0.6);
+
+      // Strong nodal line attraction (particles gather at zeros)
+      const nodalStrength = 1.0 / (Math.abs(combinedPattern) + 0.1);
+      const nodalPull = nodalStrength * wave * 0.15;
+
+      // 3D displacement - perpendicular to gradient for standing wave effect
+      const angle = Math.atan2(y, x);
+      const elevation = Math.atan2(z, Math.sqrt(x * x + y * y));
+
+      pos.x += Math.cos(angle) * Math.cos(elevation) * nodalPull;
+      pos.y += Math.sin(angle) * Math.cos(elevation) * nodalPull;
+      pos.z += Math.sin(elevation) * nodalPull + wave * 0.2;
+
+      // Audio burst creates dramatic pattern shifts
+      if (audioLevel > 0.7) {
+        const burst = (audioLevel - 0.7) * 3;
+        const spiralAngle = angle + radius * 2 + this.chladniPhase * 0.5;
+        pos.x += Math.cos(spiralAngle) * burst * 0.1;
+        pos.y += Math.sin(spiralAngle) * burst * 0.1;
+        pos.z += Math.sin(wavePhase) * burst * 0.15;
+      }
+    }
+  }
+
+  // Phase 13.5: Enhanced multi-layer Moiré interference with sacred geometry
+  applyMoire() {
+    if (!this.moireEnabled) return;
+
+    const audioLevel = state?.audio?.level ?? 0;
+    const bass = state?.audio?.bass ?? 0;
+    const mid = state?.audio?.mid ?? 0;
+    const treble = state?.audio?.treble ?? 0;
+
+    // Audio-reactive scale and speed (when audioReactive is enabled)
+    const effectiveScale = this.audioReactive
+      ? this.moireScale * (1.0 + audioLevel * 0.8 + treble * 0.5)
+      : this.moireScale;
+
+    const effectiveSpeed = this.audioReactive
+      ? this.moireSpeed * (1.0 + audioLevel * 2.5 + bass * 1.5)
+      : this.moireSpeed * (1 + audioLevel * 2);
+
+    // Rotate multiple pattern layers for complex moiré effect
+    this.moireRotation += effectiveSpeed;
+    const rot2 = this.moireRotation * 1.618; // Golden ratio rotation
+    const rot3 = this.moireRotation * 0.618;
+
+    for (let i = 0; i < this.count; i++) {
+      const pos = this.positions[i];
+
+      // Cartesian position
+      const x = pos.x;
+      const y = pos.y;
+      const z = pos.z;
+
+      // Polar coordinates for radial patterns
+      const radius = Math.sqrt(x * x + y * y);
+      const theta = Math.atan2(y, x);
+
+      // Layer 1: Square grid with audio-modulated frequency
+      const freq1 = (2.0 + bass * 2) * effectiveScale;
+      const pattern1 = Math.sin(x * freq1) * Math.sin(y * freq1) * Math.cos(z * freq1 * 0.5);
+
+      // Layer 2: Rotated hexagonal grid (sacred geometry)
+      const rotX = x * Math.cos(this.moireRotation) - y * Math.sin(this.moireRotation);
+      const rotY = x * Math.sin(this.moireRotation) + y * Math.cos(this.moireRotation);
+      const freq2 = (2.2 + mid * 1.5) * effectiveScale;
+      const hexPattern = Math.sin(rotX * freq2) * Math.sin(rotY * freq2) +
+                        Math.sin((rotX + rotY * Math.sqrt(3)) * freq2 * 0.5);
+
+      // Layer 3: Spiral/vortex pattern (Fibonacci-inspired)
+      const spiralFreq = 3.0 * effectiveScale;
+      const spiralPhase = radius * spiralFreq - theta * 5 - rot3;
+      const spiral = Math.sin(spiralPhase) * Math.cos(z * spiralFreq * 0.3);
+
+      // Layer 4: Concentric rings (Flower of Life inspired)
+      const ringFreq = (4.0 + treble * 3) * effectiveScale;
+      const rings = Math.sin(radius * ringFreq) * Math.cos(theta * 6 + rot2);
+
+      // Combine all layers with audio-reactive weighting
+      const combined = pattern1 * 0.3 +
+                      hexPattern * 0.25 +
+                      spiral * (0.2 + bass * 0.2) +
+                      rings * (0.25 + treble * 0.15);
+
+      // Interference creates regions of constructive/destructive waves
+      const interference = combined;
+
+      // Strong attraction to interference maxima (bright fringes)
+      const attractionStrength = Math.abs(interference) > 0.5 ? 0.3 : 0.1;
+      const direction = new THREE.Vector3(x, y, z).normalize();
+
+      // Radial push/pull based on interference
+      const radialForce = interference * attractionStrength * (1 + audioLevel * 1.5);
+      pos.x += direction.x * radialForce * 0.08;
+      pos.y += direction.y * radialForce * 0.08;
+      pos.z += direction.z * radialForce * 0.08;
+
+      // Tangential flow creating vortex effect
+      const tangentX = -y / (radius + 0.1);
+      const tangentY = x / (radius + 0.1);
+      const vortexStrength = spiral * 0.12 * (1 + mid * 0.5);
+      pos.x += tangentX * vortexStrength;
+      pos.y += tangentY * vortexStrength;
+
+      // Vertical displacement creates 3D relief
+      pos.z += interference * 0.3 * (1 + audioLevel);
+
+      // Audio peaks create explosive expansion
+      if (audioLevel > 0.75) {
+        const burst = (audioLevel - 0.75) * 4;
+        const burstAngle = theta + this.moireRotation;
+        pos.x += Math.cos(burstAngle) * burst * 0.15;
+        pos.y += Math.sin(burstAngle) * burst * 0.15;
+        pos.z += Math.sin(interference * 10) * burst * 0.2;
+      }
+    }
+  }
+
+  // Phase 13.6: Spectrogram tessellations - FFT frequency bins mapped to radial mandala
+  applySpectrogram() {
+    if (!this.spectrogramEnabled) return;
+
+    if (!this._spectrogramLoggedOnce) {
+      console.log('🌌 Spectrogram pattern ACTIVE');
+      this._spectrogramLoggedOnce = true;
+    }
+
+    const audioLevel = state?.audio?.level ?? 0;
+    const bass = state?.audio?.bass ?? 0;
+    const mid = state?.audio?.mid ?? 0;
+    const treble = state?.audio?.treble ?? 0;
+
+    // Get FFT data if available (simulated with audio bands for now)
+    const fftBands = this.spectrogramBands;
+    const fftData = [];
+
+    // Simulate FFT spectrum from bass/mid/treble
+    for (let b = 0; b < fftBands; b++) {
+      const binPos = b / fftBands; // 0 to 1
+      let amplitude = 0;
+
+      // Low frequencies (0-0.33) - bass dominant
+      if (binPos < 0.33) {
+        amplitude = bass * (1 - binPos * 3) + mid * (binPos * 3);
+      }
+      // Mid frequencies (0.33-0.66) - mid dominant
+      else if (binPos < 0.66) {
+        const midPos = (binPos - 0.33) * 3;
+        amplitude = mid * (1 - Math.abs(midPos - 0.5) * 2) + bass * (1 - midPos) + treble * midPos;
+      }
+      // High frequencies (0.66-1.0) - treble dominant
+      else {
+        const highPos = (binPos - 0.66) * 3;
+        amplitude = treble * highPos + mid * (1 - highPos);
+      }
+
+      // Add some variation and clamp
+      amplitude = Math.max(0, Math.min(1, amplitude + Math.sin(b * 0.5 + audioLevel * 10) * 0.1));
+      fftData.push(amplitude);
+    }
+
+    // Rotate the spectrogram mandala
+    this.spectrogramRotation += this.spectrogramSpeed * (1 + audioLevel * 2);
+
+    for (let i = 0; i < this.count; i++) {
+      const pos = this.positions[i];
+      const x = pos.x;
+      const y = pos.y;
+      const z = pos.z;
+
+      // Convert to polar coordinates
+      const radius = Math.sqrt(x * x + y * y);
+      const theta = Math.atan2(y, x) + this.spectrogramRotation;
+
+      // Map particle to frequency band based on angle
+      const normalizedAngle = (theta + Math.PI) / (2 * Math.PI); // 0 to 1
+      const bandIndex = Math.floor(normalizedAngle * fftBands) % fftBands;
+      const bandAmplitude = fftData[bandIndex];
+
+      // Create radial rings for each frequency band
+      const ringCount = 8;
+      const ringIndex = Math.floor((radius / this.spectrogramRadius) * ringCount) % ringCount;
+      const ringPhase = (radius / this.spectrogramRadius) * ringCount - ringIndex;
+
+      // Tessellation: particles organize into cellular structures
+      const cellAngle = Math.floor(normalizedAngle * fftBands * 2) / (fftBands * 2) * Math.PI * 2;
+      const cellRadius = (ringIndex + 0.5) * (this.spectrogramRadius / ringCount);
+
+      // Target position for this cell
+      const targetX = Math.cos(cellAngle - this.spectrogramRotation) * cellRadius;
+      const targetY = Math.sin(cellAngle - this.spectrogramRotation) * cellRadius;
+
+      // Attraction to tessellation grid with audio modulation (INCREASED STRENGTH)
+      const attractionStrength = 0.5 * (1 + bandAmplitude * 2);
+      pos.x += (targetX - x) * attractionStrength;
+      pos.y += (targetY - y) * attractionStrength;
+
+      // Radial pulsing based on frequency amplitude (INCREASED)
+      const radialPulse = bandAmplitude * 2.0 * Math.sin(ringPhase * Math.PI);
+      const pulseDir = new THREE.Vector3(x, y, 0).normalize();
+      pos.x += pulseDir.x * radialPulse;
+      pos.y += pulseDir.y * radialPulse;
+
+      // Vertical displacement creates 3D mandala effect (INCREASED)
+      const verticalWave = Math.sin(normalizedAngle * fftBands + audioLevel * 5) * bandAmplitude;
+      pos.z += verticalWave * 2.0;
+
+      // High frequency peaks create spiral arms (INCREASED)
+      if (bandAmplitude > 0.7) {
+        const spiralPhase = theta * 3 + radius * 0.5 + audioLevel * 5;
+        const spiralStrength = (bandAmplitude - 0.7) * 3;
+        pos.x += Math.cos(spiralPhase) * spiralStrength * 1.0;
+        pos.y += Math.sin(spiralPhase) * spiralStrength * 1.0;
+        pos.z += Math.sin(spiralPhase * 2) * spiralStrength * 1.5;
+      }
+    }
+  }
+
+  // Phase 13.6: Phase-shift interference - holographic moiré with depth
+  applyPhaseShift() {
+    if (!this.phaseShiftEnabled) return;
+
+    const audioLevel = state?.audio?.level ?? 0;
+    const bass = state?.audio?.bass ?? 0;
+    const mid = state?.audio?.mid ?? 0;
+    const treble = state?.audio?.treble ?? 0;
+
+    // Advance phase for animation
+    this.phaseShiftPhase += this.phaseShiftSpeed * (1 + audioLevel * 2);
+
+    for (let i = 0; i < this.count; i++) {
+      const pos = this.positions[i];
+      const x = pos.x;
+      const y = pos.y;
+      const z = pos.z;
+
+      const radius = Math.sqrt(x * x + y * y);
+      const theta = Math.atan2(y, x);
+
+      // Create multiple interference layers with phase offsets
+      let totalInterference = 0;
+
+      for (let layer = 0; layer < this.phaseShiftLayers; layer++) {
+        // Each layer has different frequency, phase, and orientation
+        const layerPhase = this.phaseShiftPhase + layer * (Math.PI * 2 / this.phaseShiftLayers);
+        const layerFreq = 2.0 + layer * 0.5;
+        const layerAngle = (Math.PI * 2 / this.phaseShiftLayers) * layer;
+
+        // Rotate coordinate system for each layer
+        const rotX = x * Math.cos(layerAngle) - y * Math.sin(layerAngle);
+        const rotY = x * Math.sin(layerAngle) + y * Math.cos(layerAngle);
+
+        // Create wave pattern with audio modulation
+        const wave1 = Math.sin(rotX * layerFreq + layerPhase + bass * 3);
+        const wave2 = Math.sin(rotY * layerFreq - layerPhase + mid * 3);
+        const wave3 = Math.sin(z * layerFreq * 0.5 + layerPhase * 1.5 + treble * 3);
+
+        // Combine waves for 3D interference
+        const layerInterference = (wave1 + wave2 + wave3) / 3;
+
+        // Weight layers (center layers stronger)
+        const layerWeight = 1.0 - Math.abs((layer / (this.phaseShiftLayers - 1)) - 0.5);
+        totalInterference += layerInterference * layerWeight;
+      }
+
+      // Normalize interference
+      totalInterference /= this.phaseShiftLayers;
+
+      // Holographic depth effect - particles move in/out of phase planes (INCREASED)
+      const depthDisplacement = totalInterference * this.phaseShiftDepth * 2.0;
+      const depthDir = new THREE.Vector3(x, y, z).normalize();
+      pos.x += depthDir.x * depthDisplacement * (1 + audioLevel);
+      pos.y += depthDir.y * depthDisplacement * (1 + audioLevel);
+      pos.z += depthDir.z * depthDisplacement * (1 + audioLevel);
+
+      // Tangential flow from interference gradients (creates vortex) (INCREASED)
+      const gradientAngle = theta + Math.PI / 2;
+      const flowStrength = totalInterference * 1.0 * (1 + mid * 0.5);
+      pos.x += Math.cos(gradientAngle) * flowStrength;
+      pos.y += Math.sin(gradientAngle) * flowStrength;
+
+      // Vertical oscillation with interference maxima (INCREASED)
+      const verticalOscillation = Math.abs(totalInterference) * 2.0;
+      pos.z += Math.sin(this.phaseShiftPhase * 2 + radius) * verticalOscillation;
+
+      // Strong audio creates destructive interference bursts (INCREASED)
+      if (audioLevel > 0.75) {
+        const burstStrength = (audioLevel - 0.75) * 4;
+        const burstPhase = totalInterference * 10 + this.phaseShiftPhase;
+        const burstX = Math.cos(burstPhase) * Math.cos(theta);
+        const burstY = Math.cos(burstPhase) * Math.sin(theta);
+        const burstZ = Math.sin(burstPhase);
+
+        pos.x += burstX * burstStrength * 0.8;
+        pos.y += burstY * burstStrength * 0.8;
+        pos.z += burstZ * burstStrength * 1.0;
+      }
+    }
+  }
+
+  // Phase 13.6: Color and light diffraction (particle displacement, color in shader)
+  applyDiffraction() {
+    if (!this.diffractionEnabled) return;
+
+    const audioLevel = state?.audio?.level ?? 0;
+    const bass = state?.audio?.bass ?? 0;
+    const mid = state?.audio?.mid ?? 0;
+    const treble = state?.audio?.treble ?? 0;
+
+    // Rotate the prism angle
+    this.diffractionAngle += this.diffractionSpeed * (1 + audioLevel * 2);
+
+    for (let i = 0; i < this.count; i++) {
+      const pos = this.positions[i];
+      const x = pos.x;
+      const y = pos.y;
+      const z = pos.z;
+
+      const radius = Math.sqrt(x * x + y * y);
+      const theta = Math.atan2(y, x);
+
+      // Simulate wavelength-dependent refraction (dispersion)
+      // Each particle gets a "wavelength" based on its index (hue in shader)
+      const wavelength = (i % 360) / 360.0; // 0 to 1 (will map to color in shader)
+
+      // Dispersion: different wavelengths refract at different angles (INCREASED)
+      const dispersionAngle = this.diffractionAngle + wavelength * Math.PI * 0.5;
+      const refractionStrength = this.diffractionIntensity * 2.0 * (1 + audioLevel);
+
+      // Chromatic displacement - particles spread in rainbow pattern (INCREASED)
+      const disperseX = Math.cos(dispersionAngle) * refractionStrength;
+      const disperseY = Math.sin(dispersionAngle) * refractionStrength;
+
+      pos.x += disperseX * (1 + bass * 0.5);
+      pos.y += disperseY * (1 + mid * 0.5);
+
+      // Iridescent wave patterns (like soap bubbles or oil slicks)
+      const iridescencePhase = radius * 3.0 + theta * 2.0 - this.diffractionAngle * 2;
+      const iridescence = Math.sin(iridescencePhase + wavelength * Math.PI * 2) * 0.5 + 0.5;
+
+      // Thin-film interference creates oscillating patterns
+      const filmThickness = 1.0 + audioLevel * 2;
+      const interference = Math.cos(iridescencePhase * filmThickness + wavelength * Math.PI * 4);
+
+      // Displacement based on interference (INCREASED)
+      const interferenceStrength = interference * iridescence * 1.5;
+      const radialDir = new THREE.Vector3(x, y, 0).normalize();
+      pos.x += radialDir.x * interferenceStrength * (1 + treble);
+      pos.y += radialDir.y * interferenceStrength * (1 + treble);
+
+      // Vertical rainbow stacking (spectral separation) (INCREASED)
+      const spectralHeight = (wavelength - 0.5) * this.diffractionIntensity * 3.0;
+      pos.z += spectralHeight * (1 + audioLevel * 0.5);
+
+      // Diffraction grating effect - periodic bright/dark fringes (INCREASED)
+      const gratingPeriod = 1.5;
+      const gratingPhase = (x * Math.cos(this.diffractionAngle) + y * Math.sin(this.diffractionAngle)) / gratingPeriod;
+      const gratingPattern = Math.sin(gratingPhase * Math.PI * 2 + wavelength * Math.PI * 8);
+
+      // Particles attracted to bright fringes (INCREASED)
+      const fringeAttraction = gratingPattern * 1.0 * this.diffractionIntensity;
+      const fringeDir = new THREE.Vector3(
+        -Math.sin(this.diffractionAngle),
+        Math.cos(this.diffractionAngle),
+        0
+      );
+      pos.x += fringeDir.x * fringeAttraction;
+      pos.y += fringeDir.y * fringeAttraction;
+
+      // High audio creates prismatic explosion (INCREASED)
+      if (audioLevel > 0.7) {
+        const prismBurst = (audioLevel - 0.7) * 3;
+        const burstAngle = wavelength * Math.PI * 2; // Rainbow radial burst
+        pos.x += Math.cos(burstAngle) * prismBurst * 1.5;
+        pos.y += Math.sin(burstAngle) * prismBurst * 1.5;
+        pos.z += Math.sin(wavelength * Math.PI * 4 + this.diffractionAngle * 5) * prismBurst * 2.0;
+      }
+    }
   }
 
   // Phase 11.7.5/11.7.10: Position instances or sprites based on current layout

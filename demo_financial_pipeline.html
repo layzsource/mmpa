@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Financial Data Pipeline - Live Demo</title>
+  <style>
+    body {
+      font-family: 'Monaco', 'Courier New', monospace;
+      background: #0a0a0a;
+      color: #00ff00;
+      padding: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #00ffff;
+      border-bottom: 2px solid #00ffff;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #ffff00;
+      margin-top: 30px;
+    }
+    .controls {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 5px;
+    }
+    button {
+      background: #00ffff;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      border-radius: 3px;
+      font-family: inherit;
+    }
+    button:hover {
+      background: #00cccc;
+    }
+    button:disabled {
+      background: #666;
+      cursor: not-allowed;
+    }
+    .panel {
+      background: #0f0f0f;
+      border: 1px solid #333;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 5px;
+    }
+    .panel h3 {
+      color: #ff00ff;
+      margin-top: 0;
+    }
+    .metric {
+      display: inline-block;
+      margin: 10px 20px 10px 0;
+    }
+    .metric-label {
+      color: #888;
+      font-size: 0.9em;
+    }
+    .metric-value {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #00ff00;
+    }
+    .metric-value.crisis {
+      color: #ff0000;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0.3; }
+    }
+    .chart {
+      background: #000;
+      border: 1px solid #333;
+      padding: 10px;
+      margin: 10px 0;
+      height: 200px;
+      position: relative;
+      overflow: hidden;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+    }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 20px 0;
+    }
+    .feature-card {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      padding: 15px;
+      border-radius: 5px;
+    }
+    .feature-card h4 {
+      margin: 0 0 10px 0;
+      color: #ffaa00;
+    }
+    .feature-bar {
+      background: #333;
+      height: 20px;
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 5px 0;
+    }
+    .feature-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #00ff00, #ffff00, #ff0000);
+      transition: width 0.3s ease;
+    }
+    .log {
+      background: #000;
+      border: 1px solid #333;
+      padding: 10px;
+      height: 150px;
+      overflow-y: auto;
+      font-size: 0.85em;
+    }
+    .log-entry {
+      margin: 2px 0;
+    }
+    .log-entry.warning {
+      color: #ffaa00;
+    }
+    .log-entry.error {
+      color: #ff0000;
+    }
+  </style>
+</head>
+<body>
+  <h1>💹 Financial Data Pipeline - Live Demo</h1>
+  <p>Real-time market simulation with Sigma_R stability analysis</p>
+
+  <div class="controls">
+    <h3>Pipeline Controls</h3>
+    <button id="btn-start">▶️ Start Pipeline</button>
+    <button id="btn-stop" disabled>⏸️ Stop Pipeline</button>
+    <button id="btn-reset">🔄 Reset Extractor</button>
+    <button id="btn-crisis">⚠️ Trigger Crisis</button>
+    <label style="margin-left: 20px;">
+      Symbol:
+      <select id="symbol-select">
+        <option value="SPY">SPY (S&P 500)</option>
+        <option value="QQQ">QQQ (NASDAQ)</option>
+        <option value="BTC">BTC (Bitcoin)</option>
+        <option value="TSLA">TSLA (Tesla)</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="panel">
+    <h3>📊 Live Market Data</h3>
+    <div class="metric">
+      <div class="metric-label">Price</div>
+      <div class="metric-value" id="price">---.--</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Change</div>
+      <div class="metric-value" id="change">--.--</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Volume</div>
+      <div class="metric-value" id="volume">---M</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Ticks</div>
+      <div class="metric-value" id="ticks">0</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Regime</div>
+      <div class="metric-value" id="regime">NORMAL</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>🎯 Sigma_R Stability Metrics</h3>
+    <div class="metric">
+      <div class="metric-label">Sigma_R (Final)</div>
+      <div class="metric-value" id="sigma-r">--.----</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Sigma_C (Core)</div>
+      <div class="metric-value" id="sigma-c">--.----</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Hurst (Memory)</div>
+      <div class="metric-value" id="hurst">--.----</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Data Points</div>
+      <div class="metric-value" id="data-points">0</div>
+    </div>
+  </div>
+
+  <h2>🔬 Six Forces Breakdown</h2>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <h4>1. Identity (Price Change)</h4>
+      <div class="feature-bar">
+        <div class="feature-bar-fill" id="bar-identity"></div>
+      </div>
+      <div id="val-identity">--.----</div>
+    </div>
+    <div class="feature-card">
+      <h4>2. Relationship (Volume)</h4>
+      <div class="feature-bar">
+        <div class="feature-bar-fill" id="bar-relationship"></div>
+      </div>
+      <div id="val-relationship">--.----</div>
+    </div>
+    <div class="feature-card">
+      <h4>3. Complexity (Hurst)</h4>
+      <div class="feature-bar">
+        <div class="feature-bar-fill" id="bar-complexity"></div>
+      </div>
+      <div id="val-complexity">--.----</div>
+    </div>
+    <div class="feature-card">
+      <h4>4. Transformation (Regime)</h4>
+      <div class="feature-bar">
+        <div class="feature-bar-fill" id="bar-transformation"></div>
+      </div>
+      <div id="val-transformation">--.----</div>
+    </div>
+    <div class="feature-card">
+      <h4>5. Alignment (Entropy)</h4>
+      <div class="feature-bar">
+        <div class="feature-bar-fill" id="bar-alignment"></div>
+      </div>
+      <div id="val-alignment">--.----</div>
+    </div>
+    <div class="feature-card">
+      <h4>6. Resolution (Tail Risk)</h4>
+      <div class="feature-bar">
+        <div class="feature-bar-fill" id="bar-resolution"></div>
+      </div>
+      <div id="val-resolution">--.----</div>
+    </div>
+  </div>
+
+  <h2>📈 Price History</h2>
+  <div class="chart">
+    <canvas id="price-chart"></canvas>
+  </div>
+
+  <h2>📉 Sigma_R History</h2>
+  <div class="chart">
+    <canvas id="sigma-chart"></canvas>
+  </div>
+
+  <h2>📋 Event Log</h2>
+  <div class="log" id="event-log"></div>
+
+  <script type="module">
+    import { FinancialDataPipeline, FinancialStatePersistence } from './src/financialDataPipeline.js';
+
+    let pipeline = null;
+    let persistence = new FinancialStatePersistence();
+
+    // History for charts
+    const priceHistory = [];
+    const sigmaHistory = [];
+    const maxHistory = 100;
+
+    // Initialize pipeline
+    function initPipeline() {
+      pipeline = new FinancialDataPipeline({
+        source: 'mock',
+        symbol: document.getElementById('symbol-select').value,
+        updateInterval: 1000,
+        autoStart: false
+      });
+
+      // Subscribe to tick events
+      pipeline.onTick((tick) => {
+        updateMarketData(tick);
+      });
+
+      // Subscribe to feature events
+      pipeline.onFeatures((features, tick) => {
+        updateFeatures(features);
+        updateCharts(tick.price, features.features.resolution.sigma_R);
+      });
+
+      log("Pipeline initialized");
+    }
+
+    // Update market data display
+    function updateMarketData(tick) {
+      const state = pipeline.dataSource.getState();
+
+      document.getElementById('price').textContent = tick.price.toFixed(2);
+      document.getElementById('volume').textContent = (tick.volume / 1e6).toFixed(1) + 'M';
+      document.getElementById('ticks').textContent = state.tickCount;
+
+      const regimeEl = document.getElementById('regime');
+      if (state.inCrisis) {
+        regimeEl.textContent = `CRISIS (${state.crisisCountdown})`;
+        regimeEl.classList.add('crisis');
+      } else {
+        regimeEl.textContent = 'NORMAL';
+        regimeEl.classList.remove('crisis');
+      }
+
+      // Calculate price change
+      if (priceHistory.length > 0) {
+        const prevPrice = priceHistory[priceHistory.length - 1];
+        const change = ((tick.price - prevPrice) / prevPrice * 100);
+        const changeEl = document.getElementById('change');
+        changeEl.textContent = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
+        changeEl.style.color = change >= 0 ? '#00ff00' : '#ff0000';
+      }
+    }
+
+    // Update feature display
+    function updateFeatures(features) {
+      const f = features.features;
+
+      // Main metrics
+      document.getElementById('sigma-r').textContent = f.resolution.sigma_R.toFixed(6);
+      document.getElementById('sigma-c').textContent = f.resolution.sigma_C.toFixed(6);
+      document.getElementById('hurst').textContent = f.complexity.brightness.toFixed(6);
+      document.getElementById('data-points').textContent = features.signal.dataPoints;
+
+      // Six forces
+      updateForce('identity', f.identity.strength);
+      updateForce('relationship', f.relationship.consonance);
+      updateForce('complexity', f.complexity.brightness);
+      updateForce('transformation', f.transformation.flux);
+      updateForce('alignment', f.alignment.coherence);
+      updateForce('resolution', 1 - f.resolution.sigma_R); // Inverse (risk)
+    }
+
+    // Update force display
+    function updateForce(name, value) {
+      const bar = document.getElementById(`bar-${name}`);
+      const val = document.getElementById(`val-${name}`);
+
+      bar.style.width = (value * 100) + '%';
+      val.textContent = value.toFixed(4);
+    }
+
+    // Update charts
+    function updateCharts(price, sigma_R) {
+      priceHistory.push(price);
+      sigmaHistory.push(sigma_R);
+
+      if (priceHistory.length > maxHistory) {
+        priceHistory.shift();
+        sigmaHistory.shift();
+      }
+
+      drawChart('price-chart', priceHistory, '#00ff00');
+      drawChart('sigma-chart', sigmaHistory, '#ff00ff');
+    }
+
+    // Simple chart drawing
+    function drawChart(canvasId, data, color) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext('2d');
+
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (data.length < 2) return;
+
+      const min = Math.min(...data);
+      const max = Math.max(...data);
+      const range = max - min || 1;
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+
+      for (let i = 0; i < data.length; i++) {
+        const x = (i / (data.length - 1)) * canvas.width;
+        const y = canvas.height - ((data[i] - min) / range) * canvas.height;
+
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+
+      ctx.stroke();
+    }
+
+    // Logging
+    function log(message, type = 'info') {
+      const logEl = document.getElementById('event-log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // Event handlers
+    document.getElementById('btn-start').addEventListener('click', () => {
+      if (!pipeline) initPipeline();
+      pipeline.start();
+      document.getElementById('btn-start').disabled = true;
+      document.getElementById('btn-stop').disabled = false;
+      log("Pipeline started");
+    });
+
+    document.getElementById('btn-stop').addEventListener('click', () => {
+      pipeline.stop();
+      document.getElementById('btn-start').disabled = false;
+      document.getElementById('btn-stop').disabled = true;
+      log("Pipeline stopped");
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      if (pipeline) {
+        pipeline.resetExtractor();
+        priceHistory.length = 0;
+        sigmaHistory.length = 0;
+        log("Extractor reset");
+      }
+    });
+
+    document.getElementById('btn-crisis').addEventListener('click', () => {
+      if (pipeline && pipeline.dataSource) {
+        pipeline.dataSource.state.inCrisis = true;
+        pipeline.dataSource.state.crisisCountdown = 30;
+        log("Manual crisis triggered!", "warning");
+      }
+    });
+
+    document.getElementById('symbol-select').addEventListener('change', (e) => {
+      if (pipeline) {
+        pipeline.setSymbol(e.target.value);
+        priceHistory.length = 0;
+        sigmaHistory.length = 0;
+        log(`Symbol changed to ${e.target.value}`);
+      }
+    });
+
+    // Auto-initialize
+    window.addEventListener('load', () => {
+      log("Demo page loaded - Click 'Start Pipeline' to begin");
+    });
+  </script>
+</body>
+</html>

@@ -1,5 +1,24 @@
 console.log("🎯 state.js loaded");
 
+// ============================================================================
+// GLOBAL CONSTANTS - MMPA Unified Theory
+// ============================================================================
+
+/**
+ * Universal constants for the MMPA system
+ * φ (Phi) serves as the non-arbitrary coherence threshold based on
+ * Dan Winter's Phase Conjugation theory
+ */
+export const GLOBAL_CONSTANTS = {
+  GOLDEN_RATIO_PHI: 1.61803398875,    // φ - The coherence threshold
+  INVERSE_PHI: 0.61803398875,         // 1/φ
+  ACTIVITY_FLOOR: 0.5                 // Minimum flux for active state evaluation
+};
+
+// ============================================================================
+// APPLICATION STATE
+// ============================================================================
+
 // Centralized application state for modular signal routing
 export const state = {
   // Geometry transformations
@@ -25,11 +44,19 @@ export const state = {
   hue: 120,          // Current hue in degrees (0-360)
   idleSpin: true,    // Enable/disable idle rotation
 
-  // Phase 11.6.0: Image texture system
-  texture: null,            // THREE.Texture loaded from image
+  // Phase 11.6.0: Image/Video texture system
+  texture: null,            // THREE.Texture or THREE.VideoTexture loaded from image/video
+  videoElement: null,       // Phase 13.6.1: Video element reference for cleanup
   useTextureOnMorph: false,  // Toggle to apply texture to morph shape
-  useBackgroundImage: false, // Phase 11.6.1: Toggle to show image as background
+  useBackgroundImage: false, // Phase 11.6.1: Toggle to show image/video as background
   backgroundScale: 1.0,      // Phase 11.7.50: Background image scale (0.5-2.0)
+
+  // Phase 13.6.2: Skybox system
+  useSkybox: false,         // Toggle skybox mode (6-panel cube vs flat background)
+  skyboxRenderMode: '360',  // Phase 13.30: Render mode: 'per-panel' (6 faces) or '360' (equirectangular panorama)
+  skyboxFaceIndex: 4,       // Selected face (0=right, 1=left, 2=top, 3=bottom, 4=front, 5=back)
+  skyboxTextures: [null, null, null, null, null, null], // Textures for each face [right, left, top, bottom, front, back]
+  skyboxVideoElements: [null, null, null, null, null, null], // Video elements for each face (for cleanup)
 
   // Phase 11.2.1: Per-layer color system (base + audio additive)
   colorLayers: {
@@ -74,6 +101,101 @@ export const state = {
   // Audio reactivity toggle
   audioReactive: false,
 
+  // Phase 13.5.2: Input source for modulation (audio or MIDI)
+  inputSource: 'audio',  // 'audio' | 'midi'
+
+  // Phase 13.6.0: Acid Empire background visual system
+  acidEmpire: {
+    enabled: false,           // Enable Acid Empire mode
+    scrollSpeedX: 0.0,        // Horizontal scroll speed
+    scrollSpeedY: 0.0,        // Vertical scroll speed
+    shapeMorph: 0.55,         // Shape complexity/scale
+    colorShift: 0.0,          // Hue shift (0-1)
+    colorDrive: 1.0,          // Color intensity
+    glitchIntensity: 0.0,     // VHS glitch amount
+    portalWarp: 0.0,          // Radial distortion
+    sphereScale: 1.0,         // Sphere shrink effect
+    bassIntensity: 1.0,       // Bass sensitivity multiplier
+    // Audio reactivity parameters
+    audioSphereEnabled: true,    // Enable audio-reactive sphere shrink
+    audioSphereAmount: 0.3,      // How much audio affects sphere (0-1)
+    audioSphereSmoothing: 0.7,   // Smoothing for sphere shrink (0-0.95)
+    audioColorAmount: 0.5,       // How much frequency affects color (0-2)
+    audioColorSmoothing: 0.85,   // Smoothing for color shift (0-0.95, high = melody tracking)
+  },
+
+  // Phase 13.29: Hyperbolic Tiling background visual system
+  hyperbolicTiling: {
+    enabled: false,           // Enable Hyperbolic Tiling mode
+    patternScale: 4.0,        // Pattern zoom/scale
+    panX: 0.0,                // Horizontal pan offset
+    panY: 0.0,                // Vertical pan offset
+    rotationSpeed: 0.1,       // Pattern rotation speed
+    iterations: 25,           // Detail level (5-50)
+    densityScale: 1.0,        // Density/complexity multiplier
+    colorHueShift: 0.0,       // Hue shift (0-1)
+    gridIntensity: 0.4,       // Grid line intensity (0-1)
+    audioReactivity: 1.0,     // Audio sensitivity multiplier
+  },
+
+  // Phase 13.7.0: Voxel Wave Floor system
+  voxelWave: {
+    enabled: false,           // Enable Voxel Wave mode
+    amplitude: 0.28,          // Wave height amplitude
+    frequency: 0.6,           // Wave frequency (spacing)
+    speed: 1.0,               // Animation speed
+    cellSize: 1.0,            // Voxel cell size
+    baseHeight: 0.35,         // Base voxel height
+    colorShift: 0.0,          // Hue shift (0-1)
+    mistEnabled: true,        // Enable mist/atmosphere effect (default ON)
+    mistDensity: 1.0,         // Mist particle density multiplier (0.1-3.0)
+    mistSpeed: 1.0,           // Mist motion speed multiplier (0.1-5.0)
+    mistRenderMode: 'particles', // Mist rendering mode: 'particles' | 'planes'
+    audioReactive: false,     // Enable audio reactivity for voxel wave
+  },
+
+  // Luminous Tessellation system - HDR Voronoi geometric patterns
+  luminousTessellation: {
+    enabled: false,           // Enable Luminous Tessellation mode
+    scale: 3.0,               // Pattern scale (1.0-10.0)
+    speed: 0.5,               // Animation speed (0.1-2.0)
+    complexity: 0.5,          // Pattern complexity/detail (0.0-1.0)
+    colorShift: 0.0,          // Hue shift (0.0-1.0)
+    luminosity: 1.5,          // HDR brightness (0.5-3.0)
+    contrast: 1.2,            // Color contrast (0.5-2.0)
+    audioIntensity: 1.0,      // Audio reactivity intensity (0.0-3.0)
+    waveAmplitude: 0.0,       // Wave depth/intensity (0.0-2.0)
+    waveFrequency: 2.0,       // Wave frequency/ripples (0.5-5.0)
+    morphIntensity: 0.0,      // Geometry morphing/mutation (0.0-1.0)
+  },
+
+  // Sacred Geometry system - Egyptian pyramids with parallax scrolling
+  sacredGeometry: {
+    enabled: false,           // Enable Sacred Geometry mode
+    scrollSpeed: 0.0,         // Parallax scroll speed (0.0-1.0) - default 0 for static scene
+    layerCount: 3.0,          // Number of parallax layers (1.0-4.0)
+    colorShift: 0.0,          // Hue shift (0.0-1.0)
+    symbolDensity: 0.5,       // Symbol density - pyramids/eyes/hieroglyphs (0.0-1.0)
+    glowIntensity: 1.0,       // Glow/bloom intensity (0.0-3.0)
+    pyramidScale: 2.0,        // Pyramid pattern scale (0.5-5.0)
+    audioIntensity: 1.0,      // Audio reactivity intensity (0.0-3.0)
+    dancingOutline: false,    // Audio-reactive dancing outline effect
+  },
+
+  // Fractal system - Mandelbrot/Julia sets
+  fractals: {
+    enabled: false,           // Enable Fractal mode
+    zoom: 2.5,                // Zoom level (0.1-10.0)
+    panX: 0.0,                // Pan X (-2.0 to 2.0)
+    panY: 0.0,                // Pan Y (-2.0 to 2.0)
+    maxIterations: 100,       // Detail/quality (10-200)
+    colorShift: 0.0,          // Color cycling (0.0-1.0)
+    juliaMode: false,         // Toggle Julia set mode
+    juliaCx: -0.7,            // Julia constant X (-2.0 to 2.0)
+    juliaCy: 0.27,            // Julia constant Y (-2.0 to 2.0)
+    audioIntensity: 1.0,      // Audio reactivity (0.0-3.0)
+  },
+
   // Vessel system
   vessel: {
     opacity: 0.5,
@@ -81,14 +203,20 @@ export const state = {
     color: "#00ff00",
     enabled: true,
     spinEnabled: false,     // NEW
-    spinSpeed: 0.0035,      // NEW (radians per frame approx; ~0.2°/frame @60fps)
+    spinSpeed: 0.0035,      // NEW (radians per frame approx; ~0.2°/frame @60fps) - legacy Y-axis
+    spinSpeedX: 0.0,        // NEW (X-axis spin speed)
+    spinSpeedY: 0.0,        // NEW (Y-axis spin speed)
+    spinSpeedZ: 0.0,        // NEW (Z-axis spin speed)
     scaleMultiplier: 1.2,   // NEW (adaptive scaling margin)
     layout: 'lattice',      // NEW (orbital layout: 'lattice' | 'hoops' | 'shells')
     layoutIndex: 0,         // NEW (layout index for MIDI cycling: 0=lattice, 1=hoops, 2=shells)
     audioSmoothing: 0.7,    // NEW (audio smoothing factor)
     hueShiftRange: 20,      // NEW (hue shift range in degrees)
     mode: 'gyre',           // Phase 2.x: Vessel mode ('gyre' | 'conflat6')
-    visible: false          // Phase 12.0: Compass rings visibility (hidden by default)
+    visible: false,         // Phase 12.0: Compass rings visibility (hidden by default)
+    panelAudioReactive: false,  // Phase 13.2.0: Panel audio reactivity toggle
+    hdrTexture: 'none',     // Phase 13.7.2: Conflat-6 HDR texture ('none' | 'metallic' | 'custom')
+    customTexture: null     // Phase 13.7.2: Custom uploaded texture for HDR mode
   },
 
   // Particle system
@@ -296,6 +424,10 @@ export const state = {
   geometry: {
     skyboxMode: false,
     wireframe: false,
+    platonicSolid: 'cube',      // Phase 13.5.1: Selected platonic solid
+    renderMode: 'solid',         // Phase 13.5.1: 'solid', 'wireframe', or 'both'
+    activeNotes: {},             // Phase 13.5.1: Active MIDI notes for morphing { noteId: { note, velocity } }
+    morphInput: 'audio',         // Phase 13.5.2: Morph input source ('audio' | 'midi')
     faceTextures: {
       front: null,
       back: null,
@@ -310,6 +442,55 @@ export const state = {
   debug: {
     showWireframe: false,
     showRibbon: false
+  },
+
+  // MMPA Feature Extractor - The Six Universal Features
+  // This is the empirical foundation - the "Ratio Engine"
+  mmpaFeatures: {
+    enabled: false,  // Toggle feature extraction system
+    source: 'dummy', // 'dummy', 'microphone', 'file', 'simulation'
+
+    // IDENTITY - "What is it?" (Frequency/pitch)
+    identity: {
+      fundamentalFreq: 440.0,      // Hz
+      harmonics: [440, 880, 1320], // Detected frequencies
+      strength: 0.85               // Pitch clarity (0-1)
+    },
+
+    // RELATIONSHIP - "How does it relate?" (Ratios/intervals)
+    relationship: {
+      ratios: ["2:1", "3:2", "4:3"], // Interval ratios
+      consonance: 0.72,               // "In-tune" measure (0-1)
+      complexity: 3                   // Number of simultaneous intervals
+    },
+
+    // COMPLEXITY - "How dense is it?" (Spectral centroid)
+    complexity: {
+      centroid: 1500.0,    // Hz - spectral center of mass
+      bandwidth: 2000.0,   // Hz - spread of energy
+      brightness: 0.68     // Normalized centroid (0-1)
+    },
+
+    // TRANSFORMATION - "How fast is it changing?" (Flux/velocity)
+    transformation: {
+      flux: 0.42,          // Rate of spectral change (0-1)
+      velocity: 0.15,      // Speed of change
+      acceleration: 0.03   // Rate of change of velocity
+    },
+
+    // ALIGNMENT - "How synchronized is it?" (Coherence/phase)
+    alignment: {
+      coherence: 0.78,     // Phase alignment (0-1)
+      stability: 0.65,     // Consistency over time (0-1)
+      synchrony: 0.82      // Temporal alignment (0-1)
+    },
+
+    // POTENTIAL - "How unpredictable is it?" (Entropy/freedom)
+    potential: {
+      entropy: 0.55,           // Spectral entropy (0-1)
+      unpredictability: 0.48,  // Deviation from patterns
+      freedom: 0.60            // Degrees of freedom
+    }
   },
 
   // Phase 11.2.8: Preset interpolation system

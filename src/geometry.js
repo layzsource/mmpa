@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { state, blendColors, getEffectiveAudio } from './state.js'; // Phase 11.4.3: Import stable audio gate
 import { updateShadows } from './shadows.js';
 import { updateSprites } from './sprites.js';
@@ -8,8 +9,13 @@ import { updateVessel, renderShadowProjection } from './vessel.js';
 import { getShadowBox } from './main.js'; // Phase 2.3.3
 import { createPostProcessing } from './postprocessing.js'; // Dual Trail System
 import { updateInterpolation, updateChain } from './presetRouter.js'; // Phase 11.2.8, 11.3.0
-import { updateVisual } from './visual.js'; // Phase 11.6.0
+import { updateVisual, updateCellularAutomata } from './visual.js'; // Phase 11.6.0
+import { updateVoxelFloor } from './voxelFloor.js'; // Phase 13.7.3: 64×64 voxel floor
+import { initVoxelMist, updateVoxelMist } from './voxelMist.js'; // Phase 13.7.3: Volumetric mist
+import { mapFeaturesToVisuals } from './mappingLayer.js'; // MMPA Phase 2: Feature-to-Visual translation
 import { initPeriaktos } from './periaktos.js'; // Phase 13.1.0: Periaktos mirror geometry
+import { updateHumanoid } from './humanoid.js'; // Humanoid dancer animation
+import { initArchetypeMorph, updateArchetypeMorph } from './archetypeMorph.js'; // Chestahedron ↔ Bell morph
 
 console.log("🔺 geometry.js loaded");
 
@@ -24,6 +30,9 @@ const __GEOM_LOG_EVERY = 300; // ~5s at ~60fps
 let ambientLight = null;
 let directionalLight = null;
 
+// Phase 13.5.1: Morph targets for platonic solid polymorphing (mergeddeep.html style)
+let platonicMorphTargets = [];
+
 export function getHUDIdleSpin() {
   return state.idleSpin;
 }
@@ -36,8 +45,14 @@ export const renderer = new THREE.WebGLRenderer({ canvas });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
+// Expose renderer globally for recording
+window.renderer = renderer;
+
 // Dual Trail System: Initialize postprocessing composer with AfterimagePass
 const { composer, afterimagePass } = createPostProcessing(renderer, scene, camera);
+
+// Phase 13.8: Export composer for shadow layer coordination
+export { composer };
 
 // Create consistent vertex correspondence system for morph targets
 function createMorphGeometry() {
@@ -198,9 +213,16 @@ export function initMorphShape(targetScene) {
   targetScene.add(morphMesh);
   console.log("🔺 Morph Shape added to scene (cube-sphere conflation)");
 
+  // Phase 13.5.1: Initialize platonic solid morph targets
+  setPlatonicSolid(state.geometry?.platonicSolid || 'cube');
+
   // Phase 13.1.0: Initialize Periaktos mirror geometry
   initPeriaktos();
   console.log("🌀 Periaktos initialized");
+
+  // MMPA Archetype Morph: Initialize Chestahedron ↔ Bell transformation
+  initArchetypeMorph(targetScene);
+  console.log("🔄 Archetype Morph System initialized");
 
   return morphMesh;
 }
@@ -220,15 +242,89 @@ const morphObjects = {
 // Setup lighting
 setupLighting();
 
+// MMPA Archetype Morph: Initialize Chestahedron ↔ Bell transformation
+initArchetypeMorph(scene);
+console.log("🔄 Archetype Morph System initialized (auto-init)");
+
+// Control visibility based on theory mode
+// Theory ON: show archetype morph (chestahedron/bell)
+// Theory OFF: show old morph mesh (cube/sphere/pyramid/torus)
+let lastMorphTheoryState = null;
+function updateMorphVisibility() {
+    const theoryEnabled = window.theoryRenderer?.isEnabled?.() ?? true;
+    morphMesh.visible = !theoryEnabled; // Show old morph when theory OFF
+
+    // Debug logging when state changes
+    if (lastMorphTheoryState !== theoryEnabled) {
+        console.log(`🔺 Morph visibility update - Theory: ${theoryEnabled ? 'ON' : 'OFF'}, morphMesh.visible: ${!theoryEnabled}`);
+        lastMorphTheoryState = theoryEnabled;
+    }
+}
+
+// Initial state: hide old morph, show archetype morph
+morphMesh.visible = false;
+console.log("🔺 Old morph mesh hidden - archetype morph system active");
+
+// Export the visibility controller
+export { updateMorphVisibility };
+
 // Position camera for centered view
 camera.position.set(0, 0, 5);
 camera.lookAt(0, 0, 0);
 
+// Mouse controls (OrbitControls) - DISABLED for first-person gamepad control
+export const orbitControls = new OrbitControls(camera, renderer.domElement);
+orbitControls.enabled = false;
+orbitControls.enableDamping = true;
+orbitControls.dampingFactor = 0.05;
+orbitControls.screenSpacePanning = false;
+orbitControls.minDistance = 1;
+orbitControls.maxDistance = 100;
+orbitControls.maxPolarAngle = Math.PI; // Allow full rotation
+
+// Toggle state for orbit controls
+let orbitControlsEnabled = false;
+
+// Functions to enable/disable mouse controls
+export function enableOrbitControls() {
+  orbitControls.enabled = true;
+  orbitControlsEnabled = true;
+  console.log('🖱️ Mouse controls ENABLED');
+}
+
+export function disableOrbitControls() {
+  orbitControls.enabled = false;
+  orbitControlsEnabled = false;
+  console.log('🖱️ Mouse controls DISABLED');
+}
+
+export function toggleOrbitControls() {
+  if (orbitControlsEnabled) {
+    disableOrbitControls();
+  } else {
+    enableOrbitControls();
+  }
+  return orbitControlsEnabled;
+}
+
+export function isOrbitControlsEnabled() {
+  return orbitControlsEnabled;
+}
+
+console.log('🖱️ Mouse controls initialized (Left-drag: Rotate, Right-drag: Pan, Scroll: Zoom)');
+
 // Handle window resize to maintain centering
 window.addEventListener('resize', () => {
+  // Phase 13.8: Don't resize if shadow layer is managing the split-screen
+  if (typeof window.isShadowLayerActive === 'function' && window.isShadowLayerActive()) {
+    // Shadow layer handles its own resizing
+    return;
+  }
+
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
 });
 
 // Clamp helper
@@ -355,9 +451,9 @@ function updateGeometryFromState() {
     }
   }
 
-  // Phase 11.6.0: Apply texture to morph if toggle ON
-  if (state.useTextureOnMorph && state.texture) {
-    material.map = state.texture;
+  // Phase 13.7: Apply texture to morph if toggle ON (use morphTexture or fallback to texture)
+  if (state.useTextureOnMorph && (state.morphTexture || state.texture)) {
+    material.map = state.morphTexture || state.texture;
     material.color.set(0xffffff); // ensures texture visible
     material.needsUpdate = true;
   } else {
@@ -459,12 +555,12 @@ export function centerCameraAndMorph(controls) {
   const size = box.getSize(new THREE.Vector3());
   const bounding = Math.max(size.x, size.y, size.z) || 10;
 
-  // Camera fit logic (perspective)
+  // Camera fit logic (perspective) - closer zoom for inside cube view
   const fov = (camera.fov || 75) * Math.PI / 180;
   const dist = (bounding * 0.5) / Math.tan(fov / 2);
 
-  // Aim camera
-  camera.position.set(0, 0, dist * 1.4);
+  // Aim camera - zoom in closer (0.6x instead of 1.4x) to view from inside cube
+  camera.position.set(0, 0, dist * 0.6);
   camera.lookAt(0, 0, 0);
   if (controls && typeof controls.update === 'function') controls.update();
 
@@ -473,7 +569,26 @@ export function centerCameraAndMorph(controls) {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight, false);
 
-  console.log("🎯 Camera and morph shape centered");
+  console.log("🎯 Camera centered - inside cube view");
+}
+
+// Phase 13.2.0: Reset camera to initialization view
+export function resetCameraView(controls) {
+  // Reset morph transform
+  morphMesh.position.set(0, 0, 0);
+  morphMesh.rotation.set(0, 0, 0);
+
+  // Reset camera to initial position
+  camera.position.set(0, 0, 5);
+  camera.lookAt(0, 0, 0);
+  if (controls && typeof controls.update === 'function') controls.update();
+
+  // Update renderer aspect
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight, false);
+
+  console.log("🎯 Camera reset to initialization view");
 }
 
 // Phase 12.0: Set morph amount (0=cube, 1=sphere conflation)
@@ -481,6 +596,174 @@ export function setMorphAmount(t /* 0..1 */) {
   if (morphMesh && morphMesh.morphTargetInfluences) {
     morphMesh.morphTargetInfluences[0] = THREE.MathUtils.clamp(t, 0, 1);
   }
+}
+
+// Phase 13.5.1: Set Platonic Solid (rebuild geometry with new solid)
+export function setPlatonicSolid(solidType) {
+  state.geometry.platonicSolid = solidType;
+
+  // Create new geometry based on solid type
+  let newGeometry;
+  const subdivisions = 2; // Detail level
+
+  switch (solidType) {
+    case 'tetrahedron':
+      newGeometry = new THREE.TetrahedronGeometry(1, subdivisions);
+      break;
+    case 'octahedron':
+      newGeometry = new THREE.OctahedronGeometry(1, subdivisions);
+      break;
+    case 'dodecahedron':
+      newGeometry = new THREE.DodecahedronGeometry(1, subdivisions);
+      break;
+    case 'icosahedron':
+      newGeometry = new THREE.IcosahedronGeometry(1, subdivisions);
+      break;
+    case 'cube':
+    default:
+      newGeometry = new THREE.BoxGeometry(2, 2, 2, 8, 8, 8);
+      break;
+  }
+
+  // Dispose old geometry
+  if (morphMesh && morphMesh.geometry) {
+    morphMesh.geometry.dispose();
+  }
+
+  // Apply new geometry
+  if (morphMesh) {
+    morphMesh.geometry = newGeometry.toNonIndexed();
+
+    // Phase 13.5.1: Initialize morph targets (mergeddeep.html style)
+    platonicMorphTargets = [];
+    const pos = morphMesh.geometry.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      platonicMorphTargets.push({
+        original: new THREE.Vector3(pos.getX(i), pos.getY(i), pos.getZ(i)),
+        current: new THREE.Vector3(pos.getX(i), pos.getY(i), pos.getZ(i))
+      });
+    }
+
+    console.log(`✨ Platonic Solid changed to: ${solidType} (${pos.count} vertices)`);
+  }
+}
+
+// Phase 13.5.1: Set Render Mode (solid, wireframe, or both)
+export function setRenderMode(mode) {
+  state.geometry.renderMode = mode;
+
+  if (!morphMesh) return;
+
+  switch (mode) {
+    case 'wireframe':
+      // Show only wireframe
+      if (Array.isArray(morphMesh.material)) {
+        morphMesh.material.forEach(mat => {
+          mat.wireframe = true;
+          mat.visible = true;
+        });
+      } else {
+        morphMesh.material.wireframe = true;
+        morphMesh.material.visible = true;
+      }
+      console.log('🔲 Render mode: Wireframe');
+      break;
+
+    case 'both':
+      // Show both solid and wireframe (via material settings)
+      if (Array.isArray(morphMesh.material)) {
+        morphMesh.material.forEach(mat => {
+          mat.wireframe = false;
+          mat.wireframeLinewidth = 2;
+          mat.visible = true;
+        });
+      } else {
+        morphMesh.material.wireframe = false;
+        morphMesh.material.wireframeLinewidth = 2;
+        morphMesh.material.visible = true;
+      }
+      // Note: THREE.js doesn't easily support both at once, so this sets solid with thick edges
+      console.log('🔲 Render mode: Both (solid with edges)');
+      break;
+
+    case 'solid':
+    default:
+      // Show only solid
+      if (Array.isArray(morphMesh.material)) {
+        morphMesh.material.forEach(mat => {
+          mat.wireframe = false;
+          mat.visible = true;
+        });
+      } else {
+        morphMesh.material.wireframe = false;
+        morphMesh.material.visible = true;
+      }
+      console.log('🔲 Render mode: Solid');
+      break;
+  }
+}
+
+// Phase 13.5.1/13.5.2: Update platonic solid morphing (mergeddeep.html style)
+// Supports both MIDI and audio input based on state.geometry.morphInput
+export function updatePlatonicMorph(activeNotes, deltaTime, morphAmount = 1.0) {
+  if (!morphMesh || platonicMorphTargets.length === 0) {
+    // Debug: Log why we're not morphing
+    if (Math.random() < 0.01) {
+      console.log(`🔍 Morph skip: morphMesh=${!!morphMesh}, targets=${platonicMorphTargets.length}`);
+    }
+    return;
+  }
+
+  const positions = morphMesh.geometry.attributes.position;
+  const morphInput = state.geometry?.morphInput || 'audio';
+
+  // Debug logging (1% of frames)
+  if (Math.random() < 0.01) {
+    console.log(`🎨 Morph input: ${morphInput}, activeNotes: ${Object.keys(activeNotes).length}, audio: ${state.audio?.level?.toFixed(2)}`);
+  }
+
+  for (let i = 0; i < platonicMorphTargets.length; i++) {
+    const v = platonicMorphTargets[i];
+    let totalOffset = 0;
+
+    if (morphInput === 'midi') {
+      // MIDI-based morphing (original mergeddeep.html style)
+      for (const noteId in activeNotes) {
+        const note = activeNotes[noteId];
+        const octave = Math.floor(note.note / 12) - 1;
+        const spatialFrequency = 1.0 + octave * 0.5;
+        const noteFrequency = note.note * 0.1;
+        const offset = Math.sin(noteFrequency + v.original.y * spatialFrequency) * note.velocity * morphAmount;
+        totalOffset += offset;
+      }
+    } else if (morphInput === 'audio') {
+      // Audio-based morphing (using audio level and frequencies)
+      const audioLevel = state.audio?.level || 0;
+      const bass = state.audio?.bass || 0;
+      const mid = state.audio?.mid || 0;
+      const treble = state.audio?.treble || 0;
+
+      // Create frequency-based spatial modulation similar to MIDI approach
+      const time = performance.now() * 0.001;
+      const bassOffset = Math.sin(time * 0.5 + v.original.y * 2.0) * bass * morphAmount;
+      const midOffset = Math.sin(time * 1.0 + v.original.x * 2.0) * mid * morphAmount;
+      const trebleOffset = Math.sin(time * 2.0 + v.original.z * 2.0) * treble * morphAmount;
+
+      totalOffset = (bassOffset + midOffset + trebleOffset) * audioLevel;
+    }
+
+    // Calculate target position
+    const targetPosition = v.original.clone().multiplyScalar(1 + totalOffset);
+
+    // Smoothly lerp to target
+    v.current.lerp(targetPosition, deltaTime * 10.0);
+
+    // Update geometry positions
+    positions.setXYZ(i, v.current.x, v.current.y, v.current.z);
+  }
+
+  positions.needsUpdate = true;
+  morphMesh.geometry.computeVertexNormals();
 }
 
 // Export functions for telemetry and other modules
@@ -510,9 +793,31 @@ export { morphMesh };
 let frameCount = 0;
 let lastFpsLog = performance.now();
 
+// Phase 13.5.1: Clock for platonic solid morphing deltaTime
+const morphClock = new THREE.Clock();
+
+// VCN Phase 1: Clock for first-person controls
+const fpClock = new THREE.Clock();
+
 // Main animation loop
 function animate() {
   requestAnimationFrame(animate);
+
+  // Phase 13.5.1: Get deltaTime for morphing
+  const deltaTime = morphClock.getDelta();
+
+  // VCN Phase 1: Get deltaTime for camera controls
+  const fpDelta = fpClock.getDelta();
+
+  // Mouse Controls: Update OrbitControls for smooth damping
+  
+  // Phase 1.5: Update gamepad state every frame
+  if (window.gamepadManager) {
+    window.gamepadManager.update();
+  }
+  if (orbitControls.enabled) {
+    orbitControls.update();
+  }
 
   // Phase 11.5.1: Log FPS every 5 seconds to detect degradation
   frameCount++;
@@ -531,9 +836,34 @@ function animate() {
   // Phase 11.3.0: Update morph chain (layers on top of interpolation)
   updateChain();
 
-  // Calculate rotation speeds from state
-  const rotX = (state.idleSpin ? 0.01 : 0) + state.rotationX;
-  const rotY = (state.idleSpin ? 0.01 : 0) + state.rotationY;
+  // MMPA Phase 2: Translate features to visual parameters
+  const mmpaVisuals = mapFeaturesToVisuals(state.mmpaFeatures);
+
+  // Debug: Track MMPA and particle state (log every 5 seconds)
+  if (!window._lastParticleDebugLog) window._lastParticleDebugLog = 0;
+  if (now - window._lastParticleDebugLog > 5000) {
+    console.log(`🔍 Geometry Loop - particlesEnabled: ${state.particlesEnabled}, mmpaFeatures.enabled: ${state.mmpaFeatures.enabled}, mmpaVisuals: ${!!mmpaVisuals}, density: ${mmpaVisuals?.particleDensity?.toFixed(3) || 'N/A'}`);
+    window._lastParticleDebugLog = now;
+  }
+
+  // Apply MMPA visuals when enabled
+  if (mmpaVisuals && ambientLight) {
+    // Apply Identity → Color mapping to ambient light
+    const [r, g, b] = mmpaVisuals.coreColor;
+    ambientLight.color.setRGB(r, g, b);
+
+    // Apply Potential → Randomness to rotation if enabled
+    if (state.mmpaFeatures.enabled) {
+      // Subtle rotation influence from entropy
+      const entropyInfluence = mmpaVisuals.particleRandomness * 0.01;
+      morphMesh.rotation.z += entropyInfluence * (Math.random() - 0.5);
+    }
+  }
+
+  // Calculate rotation speeds from state (MMPA Phase 3: apply animation speed)
+  const mmpaSpeed = mmpaVisuals?.animationSpeed || 1.0;
+  const rotX = ((state.idleSpin ? 0.01 : 0) + state.rotationX) * mmpaSpeed;
+  const rotY = ((state.idleSpin ? 0.01 : 0) + state.rotationY) * mmpaSpeed;
   const scale = state.scale;
 
   // Apply transformations to single morph mesh
@@ -547,19 +877,34 @@ function animate() {
   // Update geometry from current state
   updateGeometryFromState();
 
+  // Update visibility based on theory mode toggle
+  updateMorphVisibility();
+
+  // Phase 13.5.1: Update platonic solid morphing (mergeddeep.html style)
+  updatePlatonicMorph(state.geometry.activeNotes, deltaTime, 1.0);
+
   // Update shadows
   updateShadows(state.audioReactive);
 
-  // Update particles
+  // Update particles (MMPA Phase 2: pass visual parameters)
   if (state.particlesEnabled) {
-    updateParticles(state.audioReactive, performance.now() * 0.001);
+    updateParticles(state.audioReactive, performance.now() * 0.001, mmpaVisuals);
   }
 
   // Update sprites
   updateSprites();
 
-  // Phase 11.6.0: Update background visual
-  updateVisual();
+  // Phase 11.6.0: Update background visual (MMPA Phase 2: pass visual parameters)
+  updateVisual(camera, mmpaVisuals);
+
+  // Update Cellular Automata ping-pong rendering
+  updateCellularAutomata(renderer);
+
+  // Phase 13.7.3: Update 64×64 voxel floor
+  updateVoxelFloor(performance.now() * 0.001);
+
+  // Phase 13.7.3: Update shader-based volumetric mist with FBM noise
+  updateVoxelMist(performance.now() * 0.001, camera);
 
   // Phase 11.7.3: Update emoji particles (always update if present, safe audio fallback)
   if (window.emojiParticles) {
@@ -598,10 +943,68 @@ function animate() {
   }
 
   // Update vessel (uses getEffectiveAudio() internally)
-  updateVessel();
+  updateVessel(camera);
+
+  // Update humanoid dancer at morph shape position
+  updateHumanoid(morphMesh.position);
+
+  // MMPA Archetype Morph: Update Chestahedron ↔ Bell transformation
+  updateArchetypeMorph(deltaTime);
 
   // Phase 2.2.0: Render shadow projection for Conflat 6
   renderShadowProjection();
+
+  // VCN Phase 1: Update navigation systems
+  if (window.fpControls) {
+    window.fpControls.update(fpDelta);
+  }
+
+  if (window.fieldNavigationSystem && window.destinationManager) {
+    window.fieldNavigationSystem.update(performance.now(), window.destinationManager, camera);
+  }
+
+  if (window.vcnPanel && window.vcnPanel.isOpen) {
+    window.vcnPanel.update(camera);
+  }
+
+  // Phase 1.5: Update perception state transitions
+  if (window.perceptionState) {
+    window.perceptionState.update(fpDelta);
+  }
+
+  // Stage 2: Update game mode
+  if (window.gameMode) {
+    window.gameMode.update(fpDelta);
+
+    // Update score display in HUD
+    const scoreDiv = document.getElementById('game-mode-score');
+    if (scoreDiv && window.gameMode.enabled) {
+      scoreDiv.textContent = `Score: ${window.gameMode.score}`;
+    }
+
+    // Update health display in HUD
+    const healthDiv = document.getElementById('game-mode-health');
+    if (healthDiv && window.gameMode.enabled) {
+      const hearts = '❤️'.repeat(window.gameMode.health);
+      const emptyHearts = '🖤'.repeat(window.gameMode.maxHealth - window.gameMode.health);
+      healthDiv.innerHTML = `Health: <span style="color: #ff3366;">${hearts}${emptyHearts}</span>`;
+    }
+  }
+
+  // Skybox Destination Authoring: Update marker animations
+  if (window.destinationAuthoring) {
+    window.destinationAuthoring.updateMarkers(performance.now() * 0.001);
+  }
+
+  // Skybox Destination Authoring: Update navigation transitions
+  if (window.destinationNavigator) {
+    window.destinationNavigator.update();
+  }
+
+  // Myth Layer Compiler: Update glyph billboarding
+  if (window.glyphRenderer) {
+    window.glyphRenderer.update();
+  }
 
   // Phase 2.3.3: Render Shadow Box projection
   const shadowBox = getShadowBox();
@@ -609,12 +1012,22 @@ function animate() {
     shadowBox.render(scene);
   }
 
-  // Dual Trail System: Use composer for motion trails, renderer for normal rendering
+  // Phase 13.8: Render shadow layer (split-screen with phase offset)
+  // This must be called AFTER composer.render() to render the second view
+  // Will be imported and called after composer renders
+
+  // Dual Trail System: Use composer for motion trails
   if (state.motionTrailsEnabled) {
     afterimagePass.uniforms['damp'].value = state.motionTrailIntensity;
-    composer.render();
+    afterimagePass.enabled = true;
   } else {
-    renderer.render(scene, camera);
+    afterimagePass.enabled = false;
+  }
+  composer.render();
+
+  // Phase 13.8: Render shadow layer AFTER main render (split-screen with phase offset)
+  if (typeof window.renderShadowLayer === 'function') {
+    window.renderShadowLayer();
   }
 }
 

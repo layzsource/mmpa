@@ -1,0 +1,229 @@
+// 🎮 gamepadManager.js
+// Phase 1.5 — Pilot State: Gamepad Input Abstraction
+// Ported from mergedswapped.html (proven 2D duck/rabbit controller logic)
+
+/**
+ * GamepadManager abstracts browser gamepad API into clean state object.
+ *
+ * Mapping (Xbox/Switch layout):
+ * - Left Stick (axes[0,1]) → Movement X/Y
+ * - Right Stick (axes[2,3]) → Look X/Y
+ * - LT (button[6]) → Thrust/Turbo
+ * - RT (button[7]) → Action/Pulse
+ * - A (button[0]) → Interact
+ * - B (button[1]) → Perception toggle (duck ↔ rabbit)
+ * - Start/+ (button[9]) → Pause
+ *
+ * Reference: mergedswapped.html lines 197-295
+ */
+export class GamepadManager {
+  constructor() {
+    this.state = {
+      connected: false,
+      controller: null,
+
+      // Stick values (with deadzone applied)
+      stickX: 0,           // Left stick X (-1 to 1)
+      stickY: 0,           // Left stick Y (-1 to 1)
+      lookX: 0,            // Right stick X (-1 to 1)
+      lookY: 0,            // Right stick Y (-1 to 1)
+
+      // Trigger values (0.0 to 1.0)
+      thrustValue: 0,      // Left trigger (LT)
+      actionValue: 0,      // Right trigger (RT)
+
+      // Button states (for edge detection)
+      prevButtonA: false,
+      prevButtonB: false,
+      prevButtonStart: false,
+      prevTriggerRT: false,  // Stage 2: RT trigger edge detection
+
+      // Button press events (set true for ONE frame after press)
+      buttonAPressed: false,
+      buttonBPressed: false,
+      buttonStartPressed: false,
+      triggerRTPressed: false  // Stage 2: RT trigger just pressed
+    };
+
+    this.deadzone = 0.15;  // Analog stick deadzone
+    this.connected = false;
+
+    this.init();
+    console.log('🎮 gamepadManager.js loaded');
+  }
+
+  /**
+   * Initialize gamepad event listeners
+   */
+  init() {
+    window.addEventListener('gamepadconnected', (e) => {
+      this.state.connected = true;
+      this.connected = true;
+      console.log(`🎮 Gamepad connected: ${e.gamepad.id}`);
+    });
+
+    window.addEventListener('gamepaddisconnected', (e) => {
+      this.state.connected = false;
+      this.connected = false;
+      this.state.controller = null;
+      console.log('🎮 Gamepad disconnected');
+    });
+  }
+
+  /**
+   * Update gamepad state (call every frame)
+   */
+  update() {
+    // Reset press events
+    this.state.buttonAPressed = false;
+    this.state.buttonBPressed = false;
+    this.state.buttonStartPressed = false;
+    this.state.triggerRTPressed = false;  // Stage 2: Reset RT trigger press
+
+    if (!this.state.connected) return;
+
+    // Poll gamepad
+    const gamepads = navigator.getGamepads();
+
+    // Debug: Log ALL gamepads every 2 seconds
+    if (!this._gpDebugCounter) this._gpDebugCounter = 0;
+    if (this._gpDebugCounter % 120 === 0) {
+      console.log('🎮 ALL Gamepads:', Array.from(gamepads).map((gp, idx) => ({
+        index: idx,
+        id: gp ? gp.id : 'null',
+        axes: gp ? gp.axes.length : 0,
+        buttons: gp ? gp.buttons.length : 0
+      })));
+    }
+    this._gpDebugCounter++;
+
+    this.state.controller = gamepads[0];
+
+    if (!this.state.controller) return;
+
+    const gp = this.state.controller;
+
+    // --- Analog Sticks (with deadzone) ---
+    const leftX = gp.axes[0];
+    const leftY = gp.axes[1];
+    const rightX = gp.axes[2];
+    const rightY = gp.axes[3];
+
+    // Debug logging (temporary)
+    if (!this._debugLogCounter) this._debugLogCounter = 0;
+    if (this._debugLogCounter % 120 === 0) {  // Log every ~2 seconds
+      console.log('🎮 Raw Gamepad Axes:', {
+        axes_count: gp.axes.length,
+        axes_0: leftX?.toFixed(3),
+        axes_1: leftY?.toFixed(3),
+        axes_2: rightX?.toFixed(3),
+        axes_3: rightY?.toFixed(3),
+        all_axes: Array.from(gp.axes).map(v => v.toFixed(3)),
+        deadzone: this.deadzone
+      });
+    }
+    this._debugLogCounter++;
+
+    this.state.stickX = Math.abs(leftX) > this.deadzone ? leftX : 0;
+    this.state.stickY = Math.abs(leftY) > this.deadzone ? leftY : 0;
+    this.state.lookX = Math.abs(rightX) > this.deadzone ? rightX : 0;
+    this.state.lookY = Math.abs(rightY) > this.deadzone ? rightY : 0;
+
+    // --- Triggers ---
+    const leftTrigger = gp.buttons[6];
+    const rightTrigger = gp.buttons[7];
+    this.state.thrustValue = leftTrigger ? leftTrigger.value : 0;
+    this.state.actionValue = rightTrigger ? rightTrigger.value : 0;
+
+    // --- Buttons (edge detection) ---
+    const buttonA = gp.buttons[0];
+    const buttonB = gp.buttons[1];
+    const buttonStart = gp.buttons[9];
+
+    const aPressed = buttonA ? buttonA.pressed : false;
+    const bPressed = buttonB ? buttonB.pressed : false;
+    const startPressed = buttonStart ? buttonStart.pressed : false;
+
+    // Detect rising edge (button just pressed this frame)
+    if (aPressed && !this.state.prevButtonA) {
+      this.state.buttonAPressed = true;
+    }
+    if (bPressed && !this.state.prevButtonB) {
+      this.state.buttonBPressed = true;
+    }
+    if (startPressed && !this.state.prevButtonStart) {
+      this.state.buttonStartPressed = true;
+    }
+
+    // Store for next frame
+    this.state.prevButtonA = aPressed;
+    this.state.prevButtonB = bPressed;
+    this.state.prevButtonStart = startPressed;
+
+    // Stage 2: RT trigger edge detection (treat as button when > 50%)
+    const rtPressed = this.state.actionValue > 0.5;
+    if (rtPressed && !this.state.prevTriggerRT) {
+      this.state.triggerRTPressed = true;
+    }
+    this.state.prevTriggerRT = rtPressed;
+  }
+
+  /**
+   * Get thrust boost active (LT > 50%)
+   */
+  isThrustActive() {
+    return this.state.thrustValue > 0.5;
+  }
+
+  /**
+   * Get action active (RT > 50%)
+   */
+  isActionActive() {
+    return this.state.actionValue > 0.5;
+  }
+
+  /**
+   * Check if B button was just pressed (for perception toggle)
+   */
+  wasTogglePressed() {
+    return this.state.buttonBPressed;
+  }
+
+  /**
+   * Check if A button was just pressed (for interact)
+   */
+  wasInteractPressed() {
+    return this.state.buttonAPressed;
+  }
+
+  /**
+   * Check if Start was just pressed (for pause)
+   */
+  wasPausePressed() {
+    return this.state.buttonStartPressed;
+  }
+
+  /**
+   * Stage 2: Check if RT trigger was just pressed (for firing projectiles)
+   */
+  wasFirePressed() {
+    return this.state.triggerRTPressed;
+  }
+
+  /**
+   * Get debug info for HUD
+   */
+  getDebugInfo() {
+    return {
+      connected: this.state.connected,
+      stickX: this.state.stickX.toFixed(2),
+      stickY: this.state.stickY.toFixed(2),
+      lookX: this.state.lookX.toFixed(2),
+      lookY: this.state.lookY.toFixed(2),
+      thrust: this.state.thrustValue.toFixed(2),
+      action: this.state.actionValue.toFixed(2)
+    };
+  }
+}
+
+export default GamepadManager;

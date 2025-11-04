@@ -1,0 +1,466 @@
+/* Dieter Rams Design Principles Applied to MMPA HUD - Dark Mode */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  /* Palette reduced to essentials (Dark Mode) */
+  --bg-graphite: #1a1b1e;
+  --surface-primary: #2a2b2e;
+  --surface-secondary: #3a3b3e;
+  --text-primary: #f0f0f0;
+  --text-secondary: #8a8d93;
+  --shadow-soft: rgba(0, 0, 0, 0.4);
+  --shadow-hard: rgba(0, 0, 0, 0.6);
+  --accent-subtle: #323335;
+}
+
+/* HUD Panel: Clean, functional container */
+#hud-panel {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: var(--surface-primary);
+  color: var(--text-primary);
+  padding: 0;
+  border: 1px solid var(--surface-secondary);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px var(--shadow-soft);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  z-index: 1000;
+  max-height: 90vh;
+  overflow: hidden;
+  width: fit-content;
+  max-width: 360px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar styling */
+#hud-panel *::-webkit-scrollbar {
+  width: 6px;
+}
+
+#hud-panel *::-webkit-scrollbar-thumb {
+  background: var(--text-secondary);
+  border-radius: 3px;
+}
+
+#hud-panel *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Header */
+#hud-panel .hud-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 1.5rem 1rem 1.5rem;
+  border-bottom: 1px solid var(--surface-secondary);
+  background: transparent;
+}
+
+#hud-panel .hud-title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+/* Header buttons */
+#hud-panel .hud-header-btn {
+  background: var(--surface-primary);
+  border: 1px solid var(--surface-secondary);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0px 2px 4px var(--shadow-soft);
+}
+
+#hud-panel .hud-header-btn:hover {
+  background: var(--accent-subtle);
+  color: var(--text-primary);
+  box-shadow: 0px 4px 8px var(--shadow-soft);
+}
+
+#hud-panel .hud-header-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0px 1px 2px var(--shadow-soft);
+}
+
+/* Tab Navigation */
+#hud-panel .hud-tabs {
+  display: flex;
+  gap: 0;
+  padding: 0;
+  background: transparent;
+  border-bottom: 1px solid var(--surface-secondary);
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-bottom: 0;
+}
+
+#hud-panel .hud-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+#hud-panel .hud-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.75rem 1rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+#hud-panel .hud-tab:hover {
+  color: var(--text-primary);
+}
+
+#hud-panel .hud-tab.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--text-primary);
+}
+
+/* Content Container */
+#hud-panel .hud-content {
+  padding: 1.5rem;
+  max-height: calc(90vh - 200px);
+  overflow-y: auto;
+}
+
+/* Section */
+#hud-panel .hud-section {
+  margin-bottom: 1.5rem;
+}
+
+#hud-panel .hud-section:last-child {
+  margin-bottom: 0;
+}
+
+#hud-panel .hud-section-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin: 0 0 0.75rem 0;
+}
+
+/* Control Grid */
+#hud-panel .hud-control-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
+}
+
+/* Base Button */
+#hud-panel .hud-btn {
+  width: 140px;
+  height: 140px;
+  background-image: linear-gradient(145deg, var(--surface-primary), var(--surface-primary));
+  border: 1px solid var(--surface-secondary);
+  border-radius: 12px;
+  box-shadow:
+    0px 5px 15px var(--shadow-soft),
+    inset 0 1px 1px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  transition: background-image 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 0;
+}
+
+#hud-panel .hud-btn:hover {
+  background-image: linear-gradient(145deg, var(--surface-primary), var(--surface-secondary));
+  color: var(--text-primary);
+  box-shadow:
+    0px 8px 18px var(--shadow-soft),
+    inset 0 1px 1px rgba(0, 0, 0, 0.4);
+}
+
+#hud-panel .hud-btn:active {
+  transform: translateY(1px);
+  background-image: linear-gradient(145deg, var(--surface-secondary), var(--surface-secondary));
+  box-shadow:
+    0px 2px 5px var(--shadow-soft),
+    inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+#hud-panel .hud-btn.active {
+  background-image: linear-gradient(145deg, var(--surface-secondary), var(--surface-secondary));
+  color: var(--text-primary);
+}
+
+/* Slider Control */
+#hud-panel .hud-slider-wrapper {
+  margin-bottom: 1rem;
+}
+
+#hud-panel .hud-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+#hud-panel .hud-slider-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+#hud-panel .hud-slider-value {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+#hud-panel .hud-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: var(--surface-secondary);
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+}
+
+#hud-panel .hud-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--surface-primary);
+  border: 1px solid var(--surface-secondary);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 5px var(--shadow-soft);
+  transition: all 0.15s ease;
+}
+
+#hud-panel .hud-slider:hover::-webkit-slider-thumb {
+  background: var(--accent-subtle);
+  box-shadow: 0 3px 8px var(--shadow-soft);
+}
+
+#hud-panel .hud-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: var(--surface-primary);
+  border: 1px solid var(--surface-secondary);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 5px var(--shadow-soft);
+  transition: all 0.15s ease;
+}
+
+#hud-panel .hud-slider:hover::-moz-range-thumb {
+  background: var(--accent-subtle);
+  box-shadow: 0 3px 8px var(--shadow-soft);
+}
+
+/* Toggle Switch */
+#hud-panel .hud-toggle-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: var(--surface-primary);
+  border: 1px solid var(--surface-secondary);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+#hud-panel .hud-toggle-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+#hud-panel .hud-toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+#hud-panel .hud-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+#hud-panel .hud-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--surface-secondary);
+  border-radius: 24px;
+  transition: all 0.2s ease;
+}
+
+#hud-panel .hud-toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--surface-primary);
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px var(--shadow-soft);
+}
+
+#hud-panel .hud-toggle input:checked + .hud-toggle-slider {
+  background-color: var(--text-primary);
+}
+
+#hud-panel .hud-toggle input:checked + .hud-toggle-slider:before {
+  transform: translateX(20px);
+}
+
+/* Dropdown/Select */
+#hud-panel .hud-select {
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--surface-primary);
+  border: 1px solid var(--surface-secondary);
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-bottom: 0.5rem;
+}
+
+#hud-panel .hud-select:hover {
+  background: var(--accent-subtle);
+  box-shadow: 0 2px 8px var(--shadow-soft);
+}
+
+#hud-panel .hud-select:focus {
+  outline: none;
+  border-color: var(--text-primary);
+}
+
+/* Input Field */
+#hud-panel .hud-input {
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--surface-primary);
+  border: 1px solid var(--surface-secondary);
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  color: var(--text-primary);
+  transition: all 0.15s ease;
+  margin-bottom: 0.5rem;
+  box-sizing: border-box;
+}
+
+#hud-panel .hud-input:hover {
+  border-color: var(--text-secondary);
+}
+
+#hud-panel .hud-input:focus {
+  outline: none;
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 3px rgba(26, 27, 30, 0.1);
+}
+
+/* Collapsible Section */
+#hud-panel .hud-collapsible-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: var(--accent-subtle);
+  border: 1px solid var(--surface-secondary);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-bottom: 0.5rem;
+}
+
+#hud-panel .hud-collapsible-header:hover {
+  background: var(--surface-secondary);
+}
+
+#hud-panel .hud-collapsible-content {
+  padding: 0.75rem;
+  border: 1px solid var(--surface-secondary);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  margin-top: -0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Info Display */
+#hud-panel .hud-info {
+  padding: 0.75rem;
+  background: var(--accent-subtle);
+  border: 1px solid var(--surface-secondary);
+  border-radius: 8px;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+#hud-panel .hud-info-label {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+/* Utility Classes */
+.hud-hidden {
+  display: none !important;
+}
+
+.hud-mb-1 {
+  margin-bottom: 0.5rem;
+}
+
+.hud-mb-2 {
+  margin-bottom: 1rem;
+}
+
+.hud-mt-1 {
+  margin-top: 0.5rem;
+}
+
+.hud-mt-2 {
+  margin-top: 1rem;
+}

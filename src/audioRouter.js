@@ -1,5 +1,6 @@
 // 🎶 audioRouter.js — Phase 13.31 (Stability Minimum)
 // Event-driven relay: AudioEngine → audioState → geometry/particles/HUD
+// Signal Multimodality: Also connects to signalRouter
 
 import { AudioEngine } from "./audio.js";
 import { notifyHUDUpdate } from "./hud.js";
@@ -109,6 +110,31 @@ export function initAudioRouter() {
       audioState.treble = processed.treble;
       audioState.level = processed.level;
       audioState.spectrum = AudioEngine.getSpectrum();
+
+      // Signal Multimodality: Feed audio signal to signal router
+      if (window?.signalRouter) {
+        // Create audio signal wrapper if not exists
+        if (!window.signalRouter.sources.audio) {
+          // Use dynamic import instead of require
+          import('./signalAudio.js').then(({ AudioSignal }) => {
+            const audioSignal = new AudioSignal('Microphone');
+            audioSignal.enabled = true;
+            audioSignal.state = 'running';
+            window.signalRouter.sources.audio = audioSignal;
+            window.signalRouter.multiplexer.addSource('audio', audioSignal, 1.0);
+            console.log("📡 Audio source auto-connected to signal router");
+          }).catch(err => {
+            console.warn("⚠️ Could not load signalAudio.js:", err);
+          });
+        }
+
+        // Update audio signal bands directly
+        const audioSignal = window.signalRouter.sources.audio;
+        if (audioSignal) {
+          audioSignal.bands = { ...processed };
+          audioSignal.spectrum = AudioEngine.getSpectrum();
+        }
+      }
 
       // Phase 13.31: Auto-calibrate + tone
       if (state.audio?.autoTone) {

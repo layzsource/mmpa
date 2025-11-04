@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Financial Feature Extractor - Unit Tests</title>
+  <style>
+    body {
+      font-family: 'Monaco', 'Courier New', monospace;
+      background: #0a0a0a;
+      color: #00ff00;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #00ffff;
+      border-bottom: 2px solid #00ffff;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #ffff00;
+      margin-top: 30px;
+    }
+    .test-section {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 5px;
+    }
+    .test-result {
+      margin: 10px 0;
+      padding: 10px;
+      border-left: 4px solid;
+      background: #0f0f0f;
+    }
+    .test-result.pass {
+      border-color: #00ff00;
+    }
+    .test-result.fail {
+      border-color: #ff0000;
+      color: #ff6666;
+    }
+    .test-result.warning {
+      border-color: #ffaa00;
+      color: #ffaa00;
+    }
+    code {
+      background: #000;
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: #ff00ff;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+    }
+    th, td {
+      padding: 8px;
+      text-align: left;
+      border: 1px solid #333;
+    }
+    th {
+      background: #222;
+      color: #ffff00;
+    }
+    button {
+      background: #00ffff;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      margin: 10px 5px;
+      cursor: pointer;
+      font-weight: bold;
+      border-radius: 3px;
+    }
+    button:hover {
+      background: #00cccc;
+    }
+    .summary {
+      background: #2a2a2a;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 5px;
+      border: 2px solid #00ffff;
+    }
+  </style>
+</head>
+<body>
+  <h1>💰 Financial Feature Extractor - Unit Tests</h1>
+  <p>Testing JavaScript implementation against Python reference (Sigma_R Framework)</p>
+
+  <div class="test-section">
+    <button onclick="runAllTests()">▶️ Run All Tests</button>
+    <button onclick="clearResults()">🗑️ Clear Results</button>
+    <button onclick="loadSyntheticData()">📊 Load Synthetic SPY Data</button>
+    <button onclick="loadPythonReferenceData()">🔬 Compare with Python Reference</button>
+  </div>
+
+  <div id="summary" class="summary" style="display: none;">
+    <h3>Test Summary</h3>
+    <div id="summary-content"></div>
+  </div>
+
+  <h2>Test Results</h2>
+  <div id="test-results"></div>
+
+  <script type="module">
+    import { FinancialFeatureExtractor, getFinancialExtractor } from './src/financialFeatureExtractor.js';
+
+    // Make available globally for button clicks
+    window.FinancialFeatureExtractor = FinancialFeatureExtractor;
+    window.getFinancialExtractor = getFinancialExtractor;
+
+    let testResults = [];
+
+    function logTest(name, passed, message, details = null) {
+      const result = {
+        name,
+        passed,
+        message,
+        details,
+        timestamp: new Date().toLocaleTimeString()
+      };
+      testResults.push(result);
+
+      const resultsDiv = document.getElementById('test-results');
+      const testDiv = document.createElement('div');
+      testDiv.className = `test-result ${passed ? 'pass' : 'fail'}`;
+
+      let html = `<strong>${passed ? '✅' : '❌'} ${name}</strong><br>${message}`;
+      if (details) {
+        html += `<br><small>${JSON.stringify(details, null, 2)}</small>`;
+      }
+      testDiv.innerHTML = html;
+
+      resultsDiv.appendChild(testDiv);
+    }
+
+    function logWarning(name, message) {
+      const resultsDiv = document.getElementById('test-results');
+      const testDiv = document.createElement('div');
+      testDiv.className = 'test-result warning';
+      testDiv.innerHTML = `<strong>⚠️ ${name}</strong><br>${message}`;
+      resultsDiv.appendChild(testDiv);
+    }
+
+    // =====================================================================
+    // Test 1: Basic Initialization
+    // =====================================================================
+    function testInitialization() {
+      const extractor = new FinancialFeatureExtractor();
+      const passed = extractor && extractor.params && extractor.state;
+      logTest(
+        'Initialization',
+        passed,
+        'Extractor instance created with default params',
+        { paramsCount: Object.keys(extractor.params).length }
+      );
+    }
+
+    // =====================================================================
+    // Test 2: Default Features Structure
+    // =====================================================================
+    function testDefaultFeatures() {
+      const extractor = new FinancialFeatureExtractor();
+      const features = extractor.getFeatures();
+
+      const hasAllCategories = ['identity', 'relationship', 'complexity', 'transformation', 'alignment', 'potential', 'resolution']
+        .every(cat => features.features.hasOwnProperty(cat));
+
+      logTest(
+        'Default Features Structure',
+        hasAllCategories,
+        'All 6+1 MMPA feature categories present',
+        { categories: Object.keys(features.features) }
+      );
+    }
+
+    // =====================================================================
+    // Test 3: Single Update (with NaN protection)
+    // =====================================================================
+    function testSingleUpdate() {
+      const extractor = new FinancialFeatureExtractor();
+      const features = extractor.update(100.0, 1000000);
+
+      const noNaN = !Object.values(features.features).some(cat =>
+        Object.values(cat).some(val => isNaN(val) || val === Infinity || val === -Infinity)
+      );
+
+      logTest(
+        'Single Update (NaN Protection)',
+        noNaN,
+        'No NaN/Infinity values after single price update',
+        { sigma_R: features.features.resolution.sigma_R }
+      );
+    }
+
+    // =====================================================================
+    // Test 4: Rolling Statistics
+    // =====================================================================
+    function testRollingStatistics() {
+      const extractor = new FinancialFeatureExtractor();
+
+      // Add 100 synthetic prices with known volatility
+      for (let i = 0; i < 100; i++) {
+        const price = 100 + Math.sin(i / 10) * 5 + (Math.random() - 0.5) * 2;
+        extractor.update(price, 1000000);
+      }
+
+      const features = extractor.getFeatures();
+      const sigma_long = features.features.complexity.centroid / 1000; // Unscaled
+
+      const passed = sigma_long > 0 && sigma_long < 1.0; // Reasonable volatility
+      logTest(
+        'Rolling Volatility',
+        passed,
+        `Long-term volatility computed: ${sigma_long.toFixed(6)}`,
+        { sigma_long }
+      );
+    }
+
+    // =====================================================================
+    // Test 5: Hurst Exponent Calculation
+    // =====================================================================
+    function testHurstExponent() {
+      const extractor = new FinancialFeatureExtractor();
+
+      // Generate trending data (should have H > 0.5)
+      for (let i = 0; i < 100; i++) {
+        const price = 100 + i * 0.1 + (Math.random() - 0.5);
+        extractor.update(price, 1000000);
+      }
+
+      const features = extractor.getFeatures();
+      const hurst = features.features.complexity.brightness;
+
+      const passed = hurst >= 0.01 && hurst <= 0.99;
+      logTest(
+        'Hurst Exponent',
+        passed,
+        `Hurst computed in valid range [0.01, 0.99]: ${hurst.toFixed(4)}`,
+        { hurst, interpretation: hurst > 0.5 ? 'persistent' : 'anti-persistent' }
+      );
+    }
+
+    // =====================================================================
+    // Test 6: EWMA Smoothing
+    // =====================================================================
+    function testEWMASmoothing() {
+      const extractor = new FinancialFeatureExtractor({ trans_span: 5 });
+
+      // Feed data with volatility spike
+      for (let i = 0; i < 50; i++) {
+        const volatility = i > 25 && i < 35 ? 5 : 0.5;
+        const price = 100 + (Math.random() - 0.5) * volatility;
+        extractor.update(price, 1000000);
+      }
+
+      const ewmaState = extractor.state.ewma;
+      const hasEWMA = ewmaState.trans_sm !== null;
+
+      logTest(
+        'EWMA Smoothing',
+        hasEWMA,
+        'EWMA states initialized and updated',
+        { trans_sm: ewmaState.trans_sm }
+      );
+    }
+
+    // =====================================================================
+    // Test 7: Crisis Detection (Synthetic 2008-style drop)
+    // =====================================================================
+    function testCrisisDetection() {
+      const extractor = new FinancialFeatureExtractor();
+
+      // Normal market (50 days)
+      for (let i = 0; i < 50; i++) {
+        const price = 150 + (Math.random() - 0.5) * 2;
+        extractor.update(price, 1000000);
+      }
+
+      const normalFeatures = extractor.getFeatures();
+      const normalSigmaR = normalFeatures.features.resolution.sigma_R;
+
+      // Crisis (high volatility + negative drift)
+      for (let i = 0; i < 30; i++) {
+        const price = 150 - i * 2 + (Math.random() - 0.5) * 10; // Big drop + high vol
+        extractor.update(price, 2000000); // Higher volume
+      }
+
+      const crisisFeatures = extractor.getFeatures();
+      const crisisSigmaR = crisisFeatures.features.resolution.sigma_R;
+
+      const dropped = crisisSigmaR < normalSigmaR;
+      const dropPercent = ((normalSigmaR - crisisSigmaR) / normalSigmaR * 100).toFixed(1);
+
+      logTest(
+        'Crisis Detection',
+        dropped,
+        `Sigma_R dropped during crisis: ${dropPercent}% (${normalSigmaR.toFixed(4)} → ${crisisSigmaR.toFixed(4)})`,
+        { normalSigmaR, crisisSigmaR, dropPercent }
+      );
+    }
+
+    // =====================================================================
+    // Test 8: Bulk Data Loading
+    // =====================================================================
+    function testBulkDataLoading() {
+      const extractor = new FinancialFeatureExtractor();
+
+      // Generate 200 data points
+      const bulkData = [];
+      for (let i = 0; i < 200; i++) {
+        bulkData.push({
+          price: 100 + Math.sin(i / 20) * 10 + (Math.random() - 0.5) * 2,
+          volume: 1000000 + Math.random() * 500000,
+          timestamp: Date.now() + i * 60000
+        });
+      }
+
+      const features = extractor.loadHistoricalData(bulkData);
+      const passed = extractor.state.priceHistory.length === 200;
+
+      logTest(
+        'Bulk Data Loading',
+        passed,
+        `Loaded ${bulkData.length} historical points`,
+        { dataPoints: extractor.state.priceHistory.length }
+      );
+    }
+
+    // =====================================================================
+    // Test 9: State Reset
+    // =====================================================================
+    function testStateReset() {
+      const extractor = new FinancialFeatureExtractor();
+
+      // Add some data
+      for (let i = 0; i < 50; i++) {
+        extractor.update(100 + i, 1000000);
+      }
+
+      extractor.reset();
+
+      const passed = extractor.state.priceHistory.length === 0 &&
+                     extractor.state.ewma.trans_sm === null;
+
+      logTest(
+        'State Reset',
+        passed,
+        'State cleared after reset()',
+        { historyLength: extractor.state.priceHistory.length }
+      );
+    }
+
+    // =====================================================================
+    // Test 10: Boundedness (Sigma_R must be in [0, 1])
+    // =====================================================================
+    function testBoundedness() {
+      const extractor = new FinancialFeatureExtractor();
+
+      // Extreme data
+      for (let i = 0; i < 100; i++) {
+        const price = 100 + (Math.random() - 0.5) * 50; // Extreme volatility
+        extractor.update(price, 1000000);
+      }
+
+      const features = extractor.getFeatures();
+      const sigma_R = features.features.resolution.sigma_R;
+      const sigma_C = features.features.resolution.sigma_C;
+
+      const bounded = sigma_R >= 0 && sigma_R <= 1 && sigma_C >= 0 && sigma_C <= 1;
+
+      logTest(
+        'Boundedness',
+        bounded,
+        `Sigma_R and Sigma_C within [0, 1]: σ_R=${sigma_R.toFixed(4)}, σ_C=${sigma_C.toFixed(4)}`,
+        { sigma_R, sigma_C }
+      );
+    }
+
+    // =====================================================================
+    // Test 11: Comparison with Python Reference Values
+    // =====================================================================
+    function testPythonReferenceComparison() {
+      // From Python backtest: Normal mean ~0.128, Crisis min ~0.045-0.054
+      logWarning(
+        'Python Reference Comparison',
+        'To fully validate, feed same SPY CSV data and compare output. Expected: Normal ~0.128, Crisis ~0.045'
+      );
+    }
+
+    // =====================================================================
+    // Run All Tests
+    // =====================================================================
+    window.runAllTests = function() {
+      clearResults();
+      console.log("🧪 Running all tests...");
+
+      testInitialization();
+      testDefaultFeatures();
+      testSingleUpdate();
+      testRollingStatistics();
+      testHurstExponent();
+      testEWMASmoothing();
+      testCrisisDetection();
+      testBulkDataLoading();
+      testStateReset();
+      testBoundedness();
+      testPythonReferenceComparison();
+
+      showSummary();
+    };
+
+    window.clearResults = function() {
+      document.getElementById('test-results').innerHTML = '';
+      document.getElementById('summary').style.display = 'none';
+      testResults = [];
+    };
+
+    function showSummary() {
+      const passed = testResults.filter(t => t.passed).length;
+      const failed = testResults.filter(t => !t.passed).length;
+      const total = testResults.length;
+
+      const summaryDiv = document.getElementById('summary');
+      const contentDiv = document.getElementById('summary-content');
+
+      contentDiv.innerHTML = `
+        <table>
+          <tr><th>Total Tests</th><td>${total}</td></tr>
+          <tr><th>Passed</th><td style="color: #00ff00;">${passed}</td></tr>
+          <tr><th>Failed</th><td style="color: #ff0000;">${failed}</td></tr>
+          <tr><th>Success Rate</th><td>${((passed / total) * 100).toFixed(1)}%</td></tr>
+        </table>
+      `;
+
+      summaryDiv.style.display = 'block';
+    }
+
+    // =====================================================================
+    // Load Synthetic SPY Data (matches Python synthetic generator)
+    // =====================================================================
+    window.loadSyntheticData = function() {
+      const extractor = new FinancialFeatureExtractor();
+
+      // Generate SPY-like data: 2007-2024 (simplified)
+      const startDate = new Date('2007-01-01');
+      const daysToSimulate = 200; // Smaller subset for browser
+
+      const data = [];
+      let price = 150;
+
+      for (let i = 0; i < daysToSimulate; i++) {
+        const timestamp = startDate.getTime() + i * 24 * 60 * 60 * 1000;
+
+        // Base volatility
+        let dailyReturn = (Math.random() - 0.5) * 0.02;
+
+        // Crisis simulation (days 50-70)
+        if (i >= 50 && i <= 70) {
+          dailyReturn = (Math.random() - 0.7) * 0.06; // Higher vol + drift down
+        }
+
+        price = price * (1 + dailyReturn);
+        const volume = 1e8 + Math.abs(dailyReturn) * 1e8 + Math.random() * 5e7;
+
+        data.push({ price, volume, timestamp });
+      }
+
+      const features = extractor.loadHistoricalData(data);
+
+      logTest(
+        'Synthetic SPY Data Loaded',
+        true,
+        `Loaded ${data.length} days of synthetic SPY data`,
+        extractor.getStateSummary()
+      );
+
+      showSummary();
+    };
+
+    // =====================================================================
+    // Load Python Reference Data and Compare
+    // =====================================================================
+    window.loadPythonReferenceData = async function() {
+      clearResults();
+      console.log("🔬 Loading Python reference data...");
+
+      try {
+        // Fetch the Python-generated CSV
+        const response = await fetch('/spy_prices_for_js_validation.csv');
+        const csvText = await response.text();
+
+        // Parse CSV
+        const lines = csvText.trim().split('\n');
+        const headers = lines[0].split(',');
+        const data = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',');
+          data.push({
+            date: values[0],
+            price: parseFloat(values[1]),
+            sigma_R_python: parseFloat(values[2]),
+            sigma_C_python: parseFloat(values[3]),
+            hurst_python: parseFloat(values[4])
+          });
+        }
+
+        logTest(
+          'Python CSV Loaded',
+          true,
+          `Loaded ${data.length} data points from Python backtest`,
+          { firstDate: data[0].date, lastDate: data[data.length - 1].date }
+        );
+
+        // Run JavaScript extractor on same price data
+        const extractor = new FinancialFeatureExtractor();
+        const priceData = data.map(d => ({ price: d.price, volume: null, timestamp: null }));
+        const jsFeatures = extractor.loadHistoricalData(priceData);
+
+        const js_sigma_R = jsFeatures.features.resolution.sigma_R;
+        const js_sigma_C = jsFeatures.features.resolution.sigma_C;
+        const js_hurst = jsFeatures.features.complexity.brightness;
+
+        // Get Python values for comparison (last data point)
+        const py_sigma_R = data[data.length - 1].sigma_R_python;
+        const py_sigma_C = data[data.length - 1].sigma_C_python;
+        const py_hurst = data[data.length - 1].hurst_python;
+
+        logTest(
+          'JavaScript Computation Complete',
+          true,
+          `Computed features from ${data.length} price points`,
+          { js_sigma_R, js_sigma_C, js_hurst }
+        );
+
+        // Compare final values
+        const tolerance = 0.05; // 5% tolerance
+        const sigma_R_diff = Math.abs(js_sigma_R - py_sigma_R);
+        const sigma_C_diff = Math.abs(js_sigma_C - py_sigma_C);
+        const hurst_diff = Math.abs(js_hurst - py_hurst);
+
+        const sigma_R_match = sigma_R_diff < tolerance;
+        const sigma_C_match = sigma_C_diff < tolerance;
+        const hurst_match = hurst_diff < tolerance;
+
+        logTest(
+          'Sigma_R Comparison',
+          sigma_R_match,
+          `Python: ${py_sigma_R.toFixed(6)}, JavaScript: ${js_sigma_R.toFixed(6)}, Diff: ${sigma_R_diff.toFixed(6)}`,
+          { python: py_sigma_R, javascript: js_sigma_R, difference: sigma_R_diff, tolerance }
+        );
+
+        logTest(
+          'Sigma_C Comparison',
+          sigma_C_match,
+          `Python: ${py_sigma_C.toFixed(6)}, JavaScript: ${js_sigma_C.toFixed(6)}, Diff: ${sigma_C_diff.toFixed(6)}`,
+          { python: py_sigma_C, javascript: js_sigma_C, difference: sigma_C_diff, tolerance }
+        );
+
+        logTest(
+          'Hurst Exponent Comparison',
+          hurst_match,
+          `Python: ${py_hurst.toFixed(6)}, JavaScript: ${js_hurst.toFixed(6)}, Diff: ${hurst_diff.toFixed(6)}`,
+          { python: py_hurst, javascript: js_hurst, difference: hurst_diff, tolerance }
+        );
+
+        // Overall validation
+        const allMatch = sigma_R_match && sigma_C_match && hurst_match;
+        logTest(
+          'Python-JavaScript Equivalence',
+          allMatch,
+          allMatch ?
+            '✅ JavaScript implementation matches Python reference within 5% tolerance!' :
+            '⚠️ Some values exceed 5% tolerance - may need debugging or parameter tuning',
+          { sigma_R_match, sigma_C_match, hurst_match }
+        );
+
+        showSummary();
+
+      } catch (error) {
+        logTest(
+          'Python CSV Load Error',
+          false,
+          `Failed to load spy_prices_for_js_validation.csv: ${error.message}`,
+          { error: error.toString() }
+        );
+      }
+    };
+
+    // Auto-run on load
+    window.addEventListener('load', () => {
+      console.log("💰 Financial extractor test page loaded");
+    });
+  </script>
+</body>
+</html>

@@ -4,45 +4,195 @@ import { applyMIDIBinding } from './controlBindings.js';
 
 console.log("🎹 midiRouter.js loaded");
 
-// Phase 13.16 — MIDI Learn capture (prints mapping snippet)
+// Phase 13.16 — MIDI Learn capture with LIVE mapping execution
 const _MidiLearn = (function() {
+  // Store active learned mappings: { cc: { path, min, max, label, apply } }
+  const activeMappings = {};
+
   function _normToRange(val01, min, max) {
     const v = Math.max(0, Math.min(1, val01));
     return min + (max - min) * v;
   }
-  function _makeSnippet({ cc, channel = 0, path, min, max }) {
-    const nice = `// CC${cc} → ${path} (${min}..${max})
-{ cc: ${cc}, ch: ${channel}, apply: (value01) => {
-  const v = ${min} + (${max} - ${min}) * value01;
-  // Example HUD update; replace with your central binding call if different:
-  window.onHUDUpdate?.({ "${path}": v });
-}}`;
-    return nice;
+
+  function _makeApplyFunction(path, min, max) {
+    return function(value01) {
+      const v = _normToRange(value01, min, max);
+
+      // Special handling for particle size (needs to trigger particle system update)
+      if (path === 'particleSize') {
+        if (window.state) window.state.particleSize = v;
+        else state.particleSize = v;
+
+        // Import and call notifyHUDUpdate from hud.js
+        import('./hud.js').then(({ notifyHUDUpdate }) => {
+          notifyHUDUpdate({ particlesSize: v });
+        });
+        return v;
+      }
+
+      // Special handling for camera zoom (needs to update camera position)
+      if (path === 'camera.zoom') {
+        import('./geometry.js').then(({ camera }) => {
+          camera.position.set(0, 0, v);
+          camera.lookAt(0, 0, 0);
+        });
+        return v;
+      }
+
+      // Apply to state directly using path
+      if (path.includes('.')) {
+        const parts = path.split('.');
+        let obj = window.state || state;
+        for (let i = 0; i < parts.length - 1; i++) {
+          if (!obj[parts[i]]) obj[parts[i]] = {};
+          obj = obj[parts[i]];
+        }
+        obj[parts[parts.length - 1]] = v;
+      } else {
+        if (window.state) window.state[path] = v;
+        else state[path] = v;
+      }
+
+      // Import and notify HUD for UI updates
+      import('./hud.js').then(({ notifyHUDUpdate }) => {
+        const update = {};
+        update[path] = v;
+        notifyHUDUpdate(update);
+      });
+
+      return v;
+    };
   }
 
   function handleCC({ cc, value, channel = 0 }) {
     const l = window.MidiLearn;
-    if (!l?.active || !l?.target) return;
-    const { path, min = 0, max = 1, label = path } = l.target;
-    const value01 = Math.max(0, Math.min(1, value / 127));
-    const preview = _normToRange(value01, min, max);
 
-    console.log(`✅ MIDI Learn: CC${cc} captured for "${label}" → path="${path}", range=[${min}, ${max}]`);
-    console.log("📋 Paste this into your mapping (e.g., controlBindings):\n" + _makeSnippet({ cc, channel, path, min, max }));
+    console.log(`🔍 [MIDI Learn] handleCC called - CC${cc}, active=${l?.active}, target=${l?.target?.label || 'none'}, mappings=${Object.keys(activeMappings).length}`);
 
-    // store lightweight binding suggestion in localStorage (non-executing)
-    try {
-      const prev = JSON.parse(localStorage.getItem("midiLearnSuggestions") || "[]");
-      prev.push({ ts: Date.now(), cc, channel, path, min, max, label });
-      localStorage.setItem("midiLearnSuggestions", JSON.stringify(prev));
-    } catch {}
+    // Check if there's an active mapping for this CC
+    if (activeMappings[cc]) {
+      const mapping = activeMappings[cc];
+      const value01 = Math.max(0, Math.min(1, value / 127));
+      const appliedValue = mapping.apply(value01);
+      console.log(`🎛️ MIDI CC${cc} → ${mapping.label}: ${appliedValue.toFixed(3)}`);
+      return true; // Signal that mapping was applied
+    }
 
-    // auto-exit learn to avoid accidental rebinds
-    l.setActive(false);
+    // If in learning mode, capture new mapping
+    if (l?.active && l?.target) {
+      const { path, min = 0, max = 1, label = path } = l.target;
+      const value01 = Math.max(0, Math.min(1, value / 127));
+
+      console.log(`🎓 [MIDI Learn] Capturing CC${cc} for "${label}"`);
+
+      // Create and store the mapping function
+      const applyFunc = _makeApplyFunction(path, min, max);
+      activeMappings[cc] = {
+        cc,
+        channel,
+        path,
+        min,
+        max,
+        label,
+        apply: applyFunc
+      };
+
+      // IMPORTANT: Apply the current value immediately so mapping takes effect right away
+      const appliedValue = applyFunc(value01);
+      console.log(`✅ MIDI Learn: CC${cc} → "${label}" (${min}..${max}) ACTIVE - Initial value: ${appliedValue.toFixed(3)}`);
+
+      // Save to localStorage
+      saveMappings();
+
+      // Auto-exit learn mode
+      l.setActive(false);
+
+      // Update UI to show active mappings
+      if (window.updateMidiLearnUI) window.updateMidiLearnUI();
+
+      return true;
+    }
+
+    console.log(`🔍 [MIDI Learn] No action taken for CC${cc}`);
+    return false;
   }
 
-  return { handleCC };
+  function saveMappings() {
+    try {
+      const mappingsData = Object.keys(activeMappings).map(cc => ({
+        cc: parseInt(cc),
+        channel: activeMappings[cc].channel,
+        path: activeMappings[cc].path,
+        min: activeMappings[cc].min,
+        max: activeMappings[cc].max,
+        label: activeMappings[cc].label
+      }));
+      localStorage.setItem("midiLearnMappings", JSON.stringify(mappingsData));
+      console.log(`💾 Saved ${mappingsData.length} MIDI mappings`);
+    } catch (e) {
+      console.error("Failed to save MIDI mappings:", e);
+    }
+  }
+
+  function loadMappings() {
+    try {
+      const data = localStorage.getItem("midiLearnMappings");
+      if (data) {
+        const mappingsData = JSON.parse(data);
+        mappingsData.forEach(m => {
+          activeMappings[m.cc] = {
+            ...m,
+            apply: _makeApplyFunction(m.path, m.min, m.max)
+          };
+        });
+        console.log(`📂 Loaded ${mappingsData.length} MIDI mappings`);
+        return mappingsData.length;
+      }
+    } catch (e) {
+      console.error("Failed to load MIDI mappings:", e);
+    }
+    return 0;
+  }
+
+  function clearMapping(cc) {
+    if (activeMappings[cc]) {
+      const label = activeMappings[cc].label;
+      delete activeMappings[cc];
+      saveMappings();
+      console.log(`🗑️ Cleared CC${cc} → ${label}`);
+      if (window.updateMidiLearnUI) window.updateMidiLearnUI();
+      return true;
+    }
+    return false;
+  }
+
+  function clearAllMappings() {
+    const count = Object.keys(activeMappings).length;
+    Object.keys(activeMappings).forEach(cc => delete activeMappings[cc]);
+    saveMappings();
+    console.log(`🗑️ Cleared all ${count} MIDI mappings`);
+    if (window.updateMidiLearnUI) window.updateMidiLearnUI();
+  }
+
+  function getMappings() {
+    return { ...activeMappings };
+  }
+
+  // Auto-load on init
+  setTimeout(() => loadMappings(), 100);
+
+  return {
+    handleCC,
+    saveMappings,
+    loadMappings,
+    clearMapping,
+    clearAllMappings,
+    getMappings
+  };
 })();
+
+// Expose MIDI Learn API globally for HUD access
+window.MidiLearnAPI = _MidiLearn;
 
 // Phase 11.7.24: Import mandala controller getter
 let getMandalaController;
@@ -75,7 +225,9 @@ onCC(({ cc, value, device, channel = 0 }) => {
   console.log(`🎹 CC${cc} from ${device}: ${value}`);
 
   // Phase 13.16: MIDI Learn capture (early exit if captured)
-  _MidiLearn.handleCC({ cc, value, channel });
+  if (_MidiLearn.handleCC({ cc, value, channel })) {
+    return; // Learned mapping handled, skip other routing
+  }
 
   // Phase 11.7.28: Mandala MIDI bindings (CC20-24) - priority when mandala enabled
   if (state.emojiMandala?.enabled) {
@@ -365,6 +517,51 @@ onCC(({ cc, value, device, channel = 0 }) => {
         console.log(`🎹 MIDI pad ${cc} → Bank ${bankIndex + 1} loaded`);
       }
     }
+  } else if (cc === 50) {
+    // Phase 13.7: CC50 → Camera horizontal orbit (0-360°)
+    const angle = (value / 127) * Math.PI * 2; // Map 0-127 to 0-2π radians
+    import('./geometry.js').then(({ camera }) => {
+      // Get current radius (distance from center)
+      const radius = Math.sqrt(camera.position.x ** 2 + camera.position.z ** 2);
+      const currentY = camera.position.y;
+
+      // Calculate new position on orbit
+      camera.position.x = Math.sin(angle) * radius;
+      camera.position.z = Math.cos(angle) * radius;
+      camera.position.y = currentY; // Keep Y position constant
+
+      // Always look at center
+      camera.lookAt(0, 0, 0);
+
+      console.log(`🎹 CC50: Camera orbit ${(angle * 180 / Math.PI).toFixed(0)}°`);
+    });
+  } else if (cc === 51) {
+    // Phase 13.7: CC51 → Camera vertical orbit (-90° to +90°)
+    const elevation = ((value / 127) - 0.5) * Math.PI; // Map 0-127 to -π/2 to π/2 radians
+    import('./geometry.js').then(({ camera }) => {
+      // Get current horizontal angle from X and Z position
+      const horizontalAngle = Math.atan2(camera.position.x, camera.position.z);
+
+      // Get current radius in XZ plane
+      const radiusXZ = Math.sqrt(camera.position.x ** 2 + camera.position.z ** 2);
+
+      // Calculate total radius (distance from center)
+      const totalRadius = Math.sqrt(radiusXZ ** 2 + camera.position.y ** 2);
+
+      // Calculate new position based on elevation angle
+      const newRadiusXZ = totalRadius * Math.cos(elevation);
+      const newY = totalRadius * Math.sin(elevation);
+
+      // Apply horizontal angle to get X and Z
+      camera.position.x = Math.sin(horizontalAngle) * newRadiusXZ;
+      camera.position.z = Math.cos(horizontalAngle) * newRadiusXZ;
+      camera.position.y = newY;
+
+      // Always look at center
+      camera.lookAt(0, 0, 0);
+
+      console.log(`🎹 CC51: Camera elevation ${(elevation * 180 / Math.PI).toFixed(0)}°`);
+    });
   }
 });
 
@@ -407,6 +604,22 @@ onNote(({ note, velocity, noteOn, device }) => {
         state.emojiMandala.activeNotes.delete(note);
         state.emojiMandala.notePulse[note] = 0;
       }
+    }
+
+    // Phase 13.5.1: Track active notes for platonic solid morphing
+    if (noteOn && velocity > 0) {
+      const noteId = `${note}_${Date.now()}`;
+      state.geometry.activeNotes[noteId] = {
+        note: note,
+        velocity: velocity / 127
+      };
+    } else {
+      // Remove all instances of this note
+      Object.keys(state.geometry.activeNotes).forEach(noteId => {
+        if (state.geometry.activeNotes[noteId].note === note) {
+          delete state.geometry.activeNotes[noteId];
+        }
+      });
     }
   }
 });

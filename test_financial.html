@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Financial System Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #0a0a0a; color: #00ff00; }
+        .status { padding: 10px; margin: 10px 0; border: 1px solid #333; }
+        .error { color: #ff0000; }
+        .success { color: #00ff00; }
+    </style>
+</head>
+<body>
+    <h1>MMPA V2.0 Financial System Test</h1>
+    <div id="status"></div>
+    <button onclick="testSystem()">Run Test</button>
+
+    <script type="module">
+        const statusDiv = document.getElementById('status');
+
+        function log(msg, isError = false) {
+            const div = document.createElement('div');
+            div.className = 'status ' + (isError ? 'error' : 'success');
+            div.textContent = msg;
+            statusDiv.appendChild(div);
+            console.log(msg);
+        }
+
+        window.testSystem = async function() {
+            statusDiv.innerHTML = '';
+            log('Starting system test...');
+
+            try {
+                // Test 1: Import FIM
+                log('Test 1: Loading FeatureImportanceModule...');
+                const { FeatureImportanceModule } = await import('./src/featureImportanceModule.js');
+                log('✓ FIM loaded successfully');
+
+                // Test 2: Import UKF
+                log('Test 2: Loading KalmanBifurcationFilter...');
+                const { KalmanBifurcationFilter } = await import('./src/kalmanBifurcationFilter_v2.js');
+                log('✓ UKF loaded successfully');
+
+                // Test 3: Initialize UKF
+                log('Test 3: Initializing UKF...');
+                const ukf = new KalmanBifurcationFilter({ filterType: 'UKF', phiRegWeight: 0.1 });
+                log(`✓ UKF initialized: ${ukf.filterType} mode, φ-weight: ${ukf.phiRegWeight}`);
+
+                // Test 4: Initialize FIM
+                log('Test 4: Initializing FIM...');
+                const fim = new FeatureImportanceModule();
+                log('✓ FIM initialized');
+
+                // Test 5: Run a filter step
+                log('Test 5: Running UKF prediction...');
+                const result = ukf.step([0.1, 0.2], 0.5);
+                log(`✓ UKF step complete. Σ* = ${result.sigma_star.toFixed(4)}, Risk = ${(result.bifurcation_risk * 100).toFixed(1)}%`);
+
+                // Test 6: Calculate feature importance
+                log('Test 6: Calculating XAI breakdown...');
+                const xai = fim.calculateFeatureImportance(
+                    { delta_p: 0.02, vol_stress: 0.3, H: 0.1, entropy: 0.4 },
+                    [0.1, 0.2],
+                    { B: ukf.B }
+                );
+                log(`✓ XAI complete. Total instability: ${xai.total_instability.toFixed(3)}`);
+                log(`  Top contributor: ${xai.top_3[0].name} (${xai.top_3[0].contribution_pct.toFixed(1)}%)`);
+
+                // Test 7: Import Pipeline
+                log('Test 7: Loading FinancialDataPipeline...');
+                const { FinancialDataPipeline } = await import('./src/financialDataPipeline.js');
+                log('✓ Pipeline loaded');
+
+                log('');
+                log('🎉 ALL TESTS PASSED! System is operational.');
+                log('');
+                log('If financial mode still doesn\'t work in main app:');
+                log('1. Hard refresh browser (Cmd+Shift+R on Mac, Ctrl+Shift+R on Windows)');
+                log('2. Open browser console (F12) and check for errors');
+                log('3. Look for "💹 Financial Mode" section in the Audio tab of the HUD');
+
+            } catch (error) {
+                log(`❌ ERROR: ${error.message}`, true);
+                log(error.stack, true);
+            }
+        };
+
+        // Auto-run on load
+        testSystem();
+    </script>
+</body>
+</html>

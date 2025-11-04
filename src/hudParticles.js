@@ -139,10 +139,10 @@ export function createParticlesHudSection(container, notifyHUDUpdate, createTogg
   container.appendChild(audioGainControl);
 
   // Orbital Speed slider (Phase 4.9.0)
-  const velocityControl = createSliderControl('Orbital Speed', 0.05, 0.01, 2.0, 0.01, (value) => {
+  const velocityControl = createSliderControl('Orbital Speed', 0.05, 0.0, 2.0, 0.01, (value) => {
     notifyHUDUpdate({ particlesVelocity: value });
   });
-  velocityControl.title = 'Controls particle orbital speed around vessel (min: 0.01)';
+  velocityControl.title = 'Controls particle orbital speed around vessel (0.0 = static, reacts to audio)';
   container.appendChild(velocityControl);
 
   // Motion Smoothness slider
@@ -179,6 +179,234 @@ export function createParticlesHudSection(container, notifyHUDUpdate, createTogg
   });
   particleAudioJitterControl.title = 'Add velocity bursts on FFT peaks';
   container.appendChild(particleAudioJitterControl);
+
+  // ——— Phase 13.4: Chladni & Moiré Pattern Controls ———
+  const patternSeparator = document.createElement('hr');
+  patternSeparator.style.cssText = 'border: 1px solid #555; margin: 15px 0;';
+  container.appendChild(patternSeparator);
+
+  const patternTitle = document.createElement('h4');
+  patternTitle.textContent = '🌀 Pattern Modes';
+  patternTitle.style.cssText = 'margin: 0 0 10px 0; color: #ff69b4; font-size: 12px;';
+  container.appendChild(patternTitle);
+
+  // Chladni pattern toggle
+  const chladniControl = createToggleControl('Chladni Plates', false, async (value) => {
+    const { getParticleSystemInstance } = await import('./particles.js');
+    const particles = getParticleSystemInstance();
+    if (particles) {
+      particles.chladniEnabled = value;
+      console.log(`🌀 Chladni pattern: ${value ? 'ON' : 'OFF'}`);
+    } else {
+      console.warn('🌀 Particle system not initialized yet');
+    }
+  });
+  chladniControl.title = 'Audio-reactive resonance plate patterns';
+  container.appendChild(chladniControl);
+
+  // Chladni M mode slider
+  const chladniMControl = createSliderControl('Chladni M', 3, 1, 8, 1, async (value) => {
+    const { getParticleSystemInstance } = await import('./particles.js');
+    const particles = getParticleSystemInstance();
+    if (particles) {
+      particles.chladniM = value;
+      console.log(`🌀 Chladni M mode: ${value}`);
+    }
+  });
+  chladniMControl.title = 'Horizontal mode number (1-8)';
+  container.appendChild(chladniMControl);
+
+  // Chladni N mode slider
+  const chladniNControl = createSliderControl('Chladni N', 4, 1, 8, 1, async (value) => {
+    const { getParticleSystemInstance } = await import('./particles.js');
+    const particles = getParticleSystemInstance();
+    if (particles) {
+      particles.chladniN = value;
+      console.log(`🌀 Chladni N mode: ${value}`);
+    }
+  });
+  chladniNControl.title = 'Vertical mode number (1-8)';
+  container.appendChild(chladniNControl);
+
+  // Chladni frequency slider
+  const chladniFreqControl = createSliderControl('Chladni Frequency', 1.0, 0.0, 3.0, 0.1, async (value) => {
+    const { getParticleSystemInstance } = await import('./particles.js');
+    const particles = getParticleSystemInstance();
+    if (particles) {
+      particles.chladniFrequency = value;
+      console.log(`🌀 Chladni frequency: ${value.toFixed(1)}`);
+    }
+  });
+  chladniFreqControl.title = 'Oscillation speed (0.0 = static, reacts to audio)';
+  container.appendChild(chladniFreqControl);
+
+  // Moiré pattern toggle
+  const moireControl = createToggleControl('Moiré Patterns', false, async (value) => {
+    const { getParticleSystemInstance } = await import('./particles.js');
+    const particles = getParticleSystemInstance();
+    if (particles) {
+      particles.moireEnabled = value;
+      console.log(`🌀 Moiré pattern: ${value ? 'ON' : 'OFF'}`);
+    } else {
+      console.warn('🌀 Particle system not initialized yet');
+    }
+  });
+  moireControl.title = 'Audio-reactive interference patterns';
+  container.appendChild(moireControl);
+
+  // Moiré scale slider
+  const moireScaleControl = createSliderControl('Moiré Scale', 1.0, 0.5, 3.0, 0.1, async (value) => {
+    const { getParticleSystemInstance } = await import('./particles.js');
+    const particles = getParticleSystemInstance();
+    if (particles) {
+      particles.moireScale = value;
+      console.log(`🌀 Moiré scale: ${value.toFixed(1)}`);
+    }
+  });
+  moireScaleControl.title = 'Pattern frequency (0.5-3.0)';
+  container.appendChild(moireScaleControl);
+
+  // Moiré speed slider
+  const moireSpeedControl = createSliderControl('Moiré Speed', 0.01, 0.0, 0.05, 0.001, async (value) => {
+    const { getParticleSystemInstance } = await import('./particles.js');
+    const particles = getParticleSystemInstance();
+    if (particles) {
+      particles.moireSpeed = value;
+      console.log(`🌀 Moiré speed: ${value.toFixed(3)}`);
+    }
+  });
+  moireSpeedControl.title = 'Rotation speed (0.0 = static, reacts to audio)';
+  container.appendChild(moireSpeedControl);
+
+  // ——— Phase 13.6: Advanced Cymatic Pattern Controls ———
+  const advancedPatternSeparator = document.createElement('hr');
+  advancedPatternSeparator.style.cssText = 'border: 1px solid #555; margin: 15px 0;';
+  container.appendChild(advancedPatternSeparator);
+
+  const advancedPatternTitle = document.createElement('h3');
+  advancedPatternTitle.textContent = '🌌 Advanced Cymatics';
+  advancedPatternTitle.style.cssText = 'margin: 0 0 10px 0; color: #00d9ff; font-size: 12px;';
+  container.appendChild(advancedPatternTitle);
+
+  // Spectrogram tessellations toggle
+  const spectrogramControl = createToggleControl('Spectrogram Mandala', false, async (value) => {
+    const { getParticleSystemInstance } = await import('./particles.js');
+    const particles = getParticleSystemInstance();
+    if (particles) {
+      particles.spectrogramEnabled = value;
+      console.log(`🌌 Spectrogram tessellations: ${value ? 'ON' : 'OFF'}`);
+    }
+  });
+  spectrogramControl.title = 'FFT frequency bins mapped to radial mandala';
+  container.appendChild(spectrogramControl);
+
+  // Spectrogram bands slider
+  const spectrogramBandsControl = createSliderControl('Spectrogram Bands', 32, 8, 64, 4, async (value) => {
+    const { getParticleSystemInstance } = await import('./particles.js');
+    const particles = getParticleSystemInstance();
+    if (particles) {
+      particles.spectrogramBands = value;
+      console.log(`🌌 Spectrogram bands: ${value}`);
+    }
+  });
+  spectrogramBandsControl.title = 'Number of frequency bands (8-64)';
+  container.appendChild(spectrogramBandsControl);
+
+  // Spectrogram speed slider
+  const spectrogramSpeedControl = createSliderControl('Spectrogram Speed', 0.01, 0.0, 0.05, 0.001, async (value) => {
+    const { getParticleSystemInstance } = await import('./particles.js');
+    const particles = getParticleSystemInstance();
+    if (particles) {
+      particles.spectrogramSpeed = value;
+      console.log(`🌌 Spectrogram speed: ${value.toFixed(3)}`);
+    }
+  });
+  spectrogramSpeedControl.title = 'Rotation speed (0.0 = static)';
+  container.appendChild(spectrogramSpeedControl);
+
+  // Phase-shift interference toggle
+  const phaseShiftControl = createToggleControl('Holographic Moiré', false, async (value) => {
+    const { getParticleSystemInstance } = await import('./particles.js');
+    const particles = getParticleSystemInstance();
+    if (particles) {
+      particles.phaseShiftEnabled = value;
+      console.log(`🌌 Phase-shift interference: ${value ? 'ON' : 'OFF'}`);
+    }
+  });
+  phaseShiftControl.title = 'Multi-layer phase interference patterns';
+  container.appendChild(phaseShiftControl);
+
+  // Phase-shift layers slider
+  const phaseShiftLayersControl = createSliderControl('Phase Layers', 3, 2, 6, 1, async (value) => {
+    const { getParticleSystemInstance } = await import('./particles.js');
+    const particles = getParticleSystemInstance();
+    if (particles) {
+      particles.phaseShiftLayers = value;
+      console.log(`🌌 Phase layers: ${value}`);
+    }
+  });
+  phaseShiftLayersControl.title = 'Number of interference layers (2-6)';
+  container.appendChild(phaseShiftLayersControl);
+
+  // Phase-shift speed slider
+  const phaseShiftSpeedControl = createSliderControl('Phase Speed', 0.02, 0.0, 0.1, 0.01, async (value) => {
+    const { getParticleSystemInstance } = await import('./particles.js');
+    const particles = getParticleSystemInstance();
+    if (particles) {
+      particles.phaseShiftSpeed = value;
+      console.log(`🌌 Phase speed: ${value.toFixed(2)}`);
+    }
+  });
+  phaseShiftSpeedControl.title = 'Animation speed (0.0 = static)';
+  container.appendChild(phaseShiftSpeedControl);
+
+  // Phase-shift depth slider
+  const phaseShiftDepthControl = createSliderControl('Holographic Depth', 1.0, 0.0, 3.0, 0.1, async (value) => {
+    const { getParticleSystemInstance } = await import('./particles.js');
+    const particles = getParticleSystemInstance();
+    if (particles) {
+      particles.phaseShiftDepth = value;
+      console.log(`🌌 Holographic depth: ${value.toFixed(1)}`);
+    }
+  });
+  phaseShiftDepthControl.title = '3D depth displacement (0.0-3.0)';
+  container.appendChild(phaseShiftDepthControl);
+
+  // Diffraction toggle
+  const diffractionControl = createToggleControl('Spectral Diffraction', false, async (value) => {
+    const { getParticleSystemInstance } = await import('./particles.js');
+    const particles = getParticleSystemInstance();
+    if (particles) {
+      particles.diffractionEnabled = value;
+      console.log(`🌌 Spectral diffraction: ${value ? 'ON' : 'OFF'}`);
+    }
+  });
+  diffractionControl.title = 'Rainbow prismatic dispersion and iridescence';
+  container.appendChild(diffractionControl);
+
+  // Diffraction intensity slider
+  const diffractionIntensityControl = createSliderControl('Diffraction Intensity', 1.0, 0.0, 3.0, 0.1, async (value) => {
+    const { getParticleSystemInstance } = await import('./particles.js');
+    const particles = getParticleSystemInstance();
+    if (particles) {
+      particles.diffractionIntensity = value;
+      console.log(`🌌 Diffraction intensity: ${value.toFixed(1)}`);
+    }
+  });
+  diffractionIntensityControl.title = 'Color intensity and dispersion strength (0.0-3.0)';
+  container.appendChild(diffractionIntensityControl);
+
+  // Diffraction speed slider
+  const diffractionSpeedControl = createSliderControl('Diffraction Speed', 0.01, 0.0, 0.05, 0.001, async (value) => {
+    const { getParticleSystemInstance } = await import('./particles.js');
+    const particles = getParticleSystemInstance();
+    if (particles) {
+      particles.diffractionSpeed = value;
+      console.log(`🌌 Diffraction speed: ${value.toFixed(3)}`);
+    }
+  });
+  diffractionSpeedControl.title = 'Prism rotation speed (0.0 = static)';
+  container.appendChild(diffractionSpeedControl);
 
   // ——— Phase 13.11: Sprites Reactivity Controls (additive, safe) ———
   (function addSpriteControls() {
@@ -245,6 +473,56 @@ export function createParticlesHudSection(container, notifyHUDUpdate, createTogg
     ['#sp-attack','#sp-release','#sp-thresh','#sp-size','#sp-spawn','#sp-hue','#sp-flash']
       .forEach(id => $(id).addEventListener('input', apply));
   })();
+
+  // ——— Stage 2: Game Mode Controls ———
+  const gameModeSeparator = document.createElement('hr');
+  gameModeSeparator.style.cssText = 'border: 1px solid #555; margin: 15px 0;';
+  container.appendChild(gameModeSeparator);
+
+  const gameModeTitle = document.createElement('h4');
+  gameModeTitle.textContent = '🎮 Stage 2: Game Mode';
+  gameModeTitle.style.cssText = 'margin: 0 0 10px 0; color: #ff6600; font-size: 12px;';
+  container.appendChild(gameModeTitle);
+
+  // Game mode toggle
+  const gameModeControl = createToggleControl('Enable Game Mode', false, async (value) => {
+    const { getGameModeInstance } = await import('./main.js');
+    const gameMode = getGameModeInstance();
+    if (gameMode) {
+      gameMode.toggle();
+      console.log(`🎮 Game Mode: ${value ? 'ON' : 'OFF'}`);
+    } else {
+      console.warn('🎮 Game mode not initialized yet');
+    }
+  });
+  gameModeControl.title = 'Toggle deer shooting game mode';
+  container.appendChild(gameModeControl);
+
+  // Score and Health display container
+  const gameStatsDiv = document.createElement('div');
+  gameStatsDiv.style.cssText = 'margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px;';
+
+  // Score display
+  const scoreDiv = document.createElement('div');
+  scoreDiv.id = 'game-mode-score';
+  scoreDiv.style.cssText = 'font-size: 14px; color: #ff6600; margin-bottom: 5px;';
+  scoreDiv.textContent = 'Score: 0';
+  gameStatsDiv.appendChild(scoreDiv);
+
+  // Health display
+  const healthDiv = document.createElement('div');
+  healthDiv.id = 'game-mode-health';
+  healthDiv.style.cssText = 'font-size: 14px; color: #ff0066;';
+  healthDiv.innerHTML = 'Health: <span style="color: #ff3366;">❤️❤️❤️</span>';
+  gameStatsDiv.appendChild(healthDiv);
+
+  container.appendChild(gameStatsDiv);
+
+  // Instructions
+  const instructionsDiv = document.createElement('div');
+  instructionsDiv.style.cssText = 'margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 5px; font-size: 11px; color: #888;';
+  instructionsDiv.innerHTML = '<strong>Controls:</strong><br/>Click to shoot red burst particles<br/>Hit the deer emojis flying through space';
+  container.appendChild(instructionsDiv);
 
   console.log("✨ Particles HUD section created");
 }

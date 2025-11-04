@@ -95,52 +95,165 @@ export function createMidiHudSection(parentContainer, notifyHUDUpdate) {
   `;
   parentContainer.appendChild(infoDiv);
 
-  // ——— Phase 13.16: MIDI Learn (micro) ———
+  // ——— Phase 13.16: MIDI Learn (Enhanced) ———
   (function addMidiLearnUI() {
     const wrap = document.createElement('div');
     wrap.style.cssText = 'margin-top:12px;padding-top:8px;border-top:1px solid #333;';
     wrap.innerHTML = `
-      <div style="display:flex;align-items:center;gap:10px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
         <button id="ml-toggle" style="padding:6px 10px;">🎓 MIDI Learn: OFF</button>
-        <span style="opacity:.8">Pick a target, toggle Learn, then twist a knob.</span>
+        <button id="ml-clear-all" style="padding:6px 10px;background:#663333;">🗑️ Clear All</button>
       </div>
 
-      <div style="margin-top:10px;display:grid;grid-template-columns:1fr auto;gap:6px;">
-        <div>Audio Intensity (0..1)</div>
-        <button id="ml-bind-audio" style="padding:4px 8px;">Bind</button>
+      <div id="ml-mappings" style="margin-bottom:10px;padding:8px;background:rgba(0,0,0,0.3);border-radius:5px;min-height:40px;max-height:200px;overflow-y:auto;">
+        <div style="opacity:.6;font-size:11px;">No active mappings</div>
+      </div>
 
-        <div>Particles → Hue Shift (−180..+180)</div>
-        <button id="ml-bind-hue" style="padding:4px 8px;">Bind</button>
+      <div style="margin-top:10px;">
+        <div style="font-weight:bold;margin-bottom:6px;color:#ff00ff;">Quick Learn Targets:</div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:6px;font-size:11px;">
+          <div>Vessel → Opacity (0..1)</div>
+          <button id="ml-bind-vessel-opacity" style="padding:4px 8px;">Learn</button>
 
-        <div>Mandala → Rings (1..8)</div>
-        <button id="ml-bind-rings" style="padding:4px 8px;">Bind</button>
+          <div>Vessel → Scale (0.5..2.0)</div>
+          <button id="ml-bind-vessel-scale" style="padding:4px 8px;">Learn</button>
+
+          <div>Particles → Size (0.05..1.0)</div>
+          <button id="ml-bind-particle-size" style="padding:4px 8px;">Learn</button>
+
+          <div>Particles → Hue (0..360)</div>
+          <button id="ml-bind-hue" style="padding:4px 8px;">Learn</button>
+
+          <div>Geometry → Audio Intensity (0..1)</div>
+          <button id="ml-bind-audio" style="padding:4px 8px;">Learn</button>
+
+          <div>Mandala → Rings (1..12)</div>
+          <button id="ml-bind-rings" style="padding:4px 8px;">Learn</button>
+
+          <div>Mandala → Symmetry (2..24)</div>
+          <button id="ml-bind-symmetry" style="padding:4px 8px;">Learn</button>
+
+          <div>Rotation X (0..0.1)</div>
+          <button id="ml-bind-rotx" style="padding:4px 8px;">Learn</button>
+
+          <div>Rotation Y (0..0.1)</div>
+          <button id="ml-bind-roty" style="padding:4px 8px;">Learn</button>
+
+          <div>Camera Zoom (1..15)</div>
+          <button id="ml-bind-camera-zoom" style="padding:4px 8px;">Learn</button>
+        </div>
       </div>
     `;
     parentContainer.appendChild(wrap);
 
     const $ = (id) => wrap.querySelector(id);
     const btn = $('#ml-toggle');
+    const mappingsDiv = $('#ml-mappings');
 
     const updateToggle = () => {
       btn.textContent = `🎓 MIDI Learn: ${window.MidiLearn.active ? "ON" : "OFF"}`;
       btn.style.background = window.MidiLearn.active ? "#225522" : "";
     };
 
+    const updateMappingsList = () => {
+      const mappings = window.MidiLearnAPI?.getMappings() || {};
+      const keys = Object.keys(mappings);
+
+      if (keys.length === 0) {
+        mappingsDiv.innerHTML = '<div style="opacity:.6;font-size:11px;">No active mappings</div>';
+        return;
+      }
+
+      mappingsDiv.innerHTML = keys.map(cc => {
+        const m = mappings[cc];
+        return `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px;margin-bottom:4px;background:rgba(255,0,255,0.1);border-radius:3px;">
+            <div style="font-size:11px;">
+              <span style="color:#ff00ff;font-weight:bold;">CC${m.cc}</span> → ${m.label}
+              <span style="opacity:.6;">(${m.min}..${m.max})</span>
+            </div>
+            <button onclick="window.MidiLearnAPI.clearMapping(${cc})" style="padding:2px 6px;font-size:10px;background:#663333;">✕</button>
+          </div>
+        `;
+      }).join('');
+    };
+
+    // Expose update function globally
+    window.updateMidiLearnUI = updateMappingsList;
+
     btn.addEventListener('click', () => {
       window.MidiLearn.setActive(!window.MidiLearn.active);
       updateToggle();
     });
-    updateToggle();
 
-    // Predefined quick targets (safe examples)
+    $('#ml-clear-all').addEventListener('click', () => {
+      if (confirm('Clear all MIDI mappings?')) {
+        window.MidiLearnAPI?.clearAllMappings();
+      }
+    });
+
+    updateToggle();
+    updateMappingsList();
+
+    // Predefined quick targets
+    $('#ml-bind-vessel-opacity').addEventListener('click', () => {
+      window.MidiLearn.setTarget({ label: "Vessel Opacity", path: "vessel.opacity", min: 0, max: 1 });
+      window.MidiLearn.setActive(true);
+      updateToggle();
+    });
+
+    $('#ml-bind-vessel-scale').addEventListener('click', () => {
+      window.MidiLearn.setTarget({ label: "Vessel Scale", path: "vessel.scale", min: 0.5, max: 2.0 });
+      window.MidiLearn.setActive(true);
+      updateToggle();
+    });
+
+    $('#ml-bind-particle-size').addEventListener('click', () => {
+      window.MidiLearn.setTarget({ label: "Particle Size", path: "particleSize", min: 0.05, max: 1.0 });
+      window.MidiLearn.setActive(true);
+      updateToggle();
+    });
+
     $('#ml-bind-audio').addEventListener('click', () => {
-      window.MidiLearn.setTarget({ label: "Audio Intensity", path: "geometry.audioIntensity", min: 0, max: 1 });
+      window.MidiLearn.setTarget({ label: "Geometry Audio Intensity", path: "colorLayers.geometry.audioIntensity", min: 0, max: 1 });
+      window.MidiLearn.setActive(true);
+      updateToggle();
     });
+
     $('#ml-bind-hue').addEventListener('click', () => {
-      window.MidiLearn.setTarget({ label: "Particles Hue Shift", path: "particles.hueShift", min: -180, max: 180 });
+      window.MidiLearn.setTarget({ label: "Particles Hue", path: "particles.hue", min: 0, max: 360 });
+      window.MidiLearn.setActive(true);
+      updateToggle();
     });
+
     $('#ml-bind-rings').addEventListener('click', () => {
-      window.MidiLearn.setTarget({ label: "Mandala Rings", path: "mandala.rings", min: 1, max: 8 });
+      window.MidiLearn.setTarget({ label: "Mandala Rings", path: "emojiMandala.rings", min: 1, max: 12 });
+      window.MidiLearn.setActive(true);
+      updateToggle();
+    });
+
+    $('#ml-bind-symmetry').addEventListener('click', () => {
+      window.MidiLearn.setTarget({ label: "Mandala Symmetry", path: "emojiMandala.symmetry", min: 2, max: 24 });
+      window.MidiLearn.setActive(true);
+      updateToggle();
+    });
+
+    $('#ml-bind-rotx').addEventListener('click', () => {
+      window.MidiLearn.setTarget({ label: "Rotation X", path: "rotationX", min: 0, max: 0.1 });
+      window.MidiLearn.setActive(true);
+      updateToggle();
+    });
+
+    $('#ml-bind-roty').addEventListener('click', () => {
+      window.MidiLearn.setTarget({ label: "Rotation Y", path: "rotationY", min: 0, max: 0.1 });
+      window.MidiLearn.setActive(true);
+      updateToggle();
+    });
+
+    $('#ml-bind-camera-zoom').addEventListener('click', () => {
+      window.MidiLearn.setTarget({ label: "Camera Zoom", path: "camera.zoom", min: 1, max: 15 });
+      window.MidiLearn.setActive(true);
+      updateToggle();
     });
   })();
 

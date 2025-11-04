@@ -6,6 +6,11 @@
 
 console.log("🧠 AUDIO DEBUG PROBE ACTIVE — Phase 13.1a");
 
+import { AudioBandFilter } from './audioKalmanFilter.js';
+import { AudioMMPABridge } from './audioMMPABridge.js';
+import { DropPredictor } from './audioAnalysis.js';
+import { FullSpectrumDropPredictor } from './audioAnalysisFull.js';
+
 const LOG = (...args) => console.log("audio.js:", ...args);
 LOG("🎶 audio.js loaded (Phase 13.1)");
 
@@ -41,6 +46,31 @@ class AudioCore {
     this.frameListeners = new Set();
     this.bands = { bass: 0, mid: 0, treble: 0, level: 0 };
     this.frameLoop = null;
+
+    // Phase 13.29: Kalman-LQR filtering for audio bands
+    this.kalmanFilter = new AudioBandFilter({
+      preset: 'balanced',  // smooth, balanced, responsive, reactive
+      enabled: true
+    });
+    this.rawBands = { bass: 0, mid: 0, treble: 0, level: 0 }; // Store raw for comparison
+
+    // Phase 13.30: MMPA V2.0 Audio Bridge (predictive bifurcation detection)
+    this.mmpaBridge = new AudioMMPABridge({
+      enabled: true,  // ENABLED: Using MMPA V2.0 predictions (UKF/LQR/FIM)
+      audioFeatureMode: 'bands'  // Use band-based features
+    });
+    this.mmpaData = null; // Store MMPA predictions/attribution
+    this.mmpaLogCounter = 0; // Counter for periodic logging
+    console.log("🎯 MMPA V2.0 Bridge initialized:", {
+      enabled: this.mmpaBridge.enabled,
+      mode: this.mmpaBridge.audioFeatureMode
+    });
+
+    // Phase 13.31: Real Audio Analysis (onset detection, beat tracking, drop prediction)
+    // Will be initialized after audio context is created
+    this.dropPredictor = null;
+    this.audioAnalysisData = null; // Store real audio analysis results
+    this.analysisLogCounter = 0;
 
     // one-time handlers
     this._boundResume = this._resumeIfSuspended.bind(this);
@@ -111,6 +141,91 @@ class AudioCore {
     if (!this.preGain) return;
     this.preGain.gain.value = Math.max(0.1, Math.min(16.0, mult));
     console.log("🔉 AudioEngine preGain =", this.preGain.gain.value.toFixed(2), "x");
+  }
+
+  // Phase 13.29: Kalman-LQR filter control methods
+  setKalmanPreset(preset) {
+    // preset: 'smooth', 'balanced', 'responsive', 'reactive'
+    if (!this.kalmanFilter) return;
+    this.kalmanFilter.setPreset(preset);
+    console.log(`🎵 AudioEngine: Kalman filter preset changed to '${preset}'`);
+  }
+
+  setKalmanEnabled(enabled) {
+    if (!this.kalmanFilter) return;
+    this.kalmanFilter.setEnabled(enabled);
+    console.log(`🎵 AudioEngine: Kalman filter ${enabled ? 'enabled' : 'disabled (bypass)'}`);
+  }
+
+  getKalmanDiagnostics() {
+    if (!this.kalmanFilter) return null;
+    return this.kalmanFilter.getDiagnostics();
+  }
+
+  // Phase 13.30: MMPA V2.0 control methods
+  setMMPAEnabled(enabled) {
+    if (!this.mmpaBridge) return;
+    this.mmpaBridge.enabled = enabled;
+    console.log(`🎵 AudioEngine: MMPA bridge ${enabled ? 'enabled' : 'disabled'}`);
+  }
+
+  getMMPAData() {
+    return this.mmpaData;
+  }
+
+  getMMPAHUDData() {
+    if (!this.mmpaBridge) return null;
+    return this.mmpaBridge.getHUDData();
+  }
+
+  getMMPADiagnostics() {
+    if (!this.mmpaBridge) return null;
+    return this.mmpaBridge.getDiagnostics();
+  }
+
+  resetMMPA() {
+    if (!this.mmpaBridge) return;
+    this.mmpaBridge.reset();
+    this.mmpaData = null;
+    console.log('🎵 AudioEngine: MMPA bridge reset');
+  }
+
+  // Phase 13.31: Audio Analysis control methods
+  setAudioAnalysisEnabled(enabled) {
+    if (!this.dropPredictor) return;
+    this.dropPredictor.enabled = enabled;
+    console.log(`🎵 AudioEngine: Audio analysis ${enabled ? 'enabled' : 'disabled'}`);
+  }
+
+  getAudioAnalysisData() {
+    return this.audioAnalysisData;
+  }
+
+  getAudioAnalysisHUDData() {
+    if (!this.dropPredictor) return null;
+    return this.dropPredictor.getHUDData();
+  }
+
+  getAudioAnalysisDiagnostics() {
+    if (!this.dropPredictor) return null;
+    return this.dropPredictor.getDiagnostics();
+  }
+
+  resetAudioAnalysis() {
+    if (!this.dropPredictor) return;
+    this.dropPredictor.reset();
+    this.audioAnalysisData = null;
+    console.log('🎵 AudioEngine: Audio analysis reset');
+  }
+
+  tap() {
+    if (!this.dropPredictor) return;
+    this.dropPredictor.tap();
+  }
+
+  resetTapTempo() {
+    if (!this.dropPredictor) return;
+    this.dropPredictor.resetTapTempo();
   }
 
   // ---- public API ----------------------------------------------------------
@@ -212,12 +327,41 @@ class AudioCore {
       const midEnd = Math.floor(n * 0.6);
       const avg = (arr, a, b) => arr.slice(a, b).reduce((s, v) => s + v, 0) / (b - a);
 
-      this.bands = {
+      // Compute raw bands from FFT
+      this.rawBands = {
         bass: avg(spectrum, 0, bassEnd) / 255,
         mid: avg(spectrum, bassEnd, midEnd) / 255,
         treble: avg(spectrum, midEnd, n) / 255,
         level: rms
       };
+
+      // Apply Kalman-LQR filtering for stable, smooth output
+      this.bands = this.kalmanFilter.update(this.rawBands);
+
+      // Phase 13.30: Run MMPA V2.0 prediction cycle
+      if (this.mmpaBridge && this.mmpaBridge.enabled) {
+        this.mmpaData = this.mmpaBridge.update(this.bands);
+
+        // Log MMPA data every 300 frames (every 5 seconds at 60fps) for debugging
+        this.mmpaLogCounter++;
+        if (this.mmpaLogCounter % 300 === 0 && this.mmpaData) {
+          console.log("🎯 MMPA Update:", {
+            enabled: this.mmpaData.enabled,
+            sigma_star: this.mmpaData.sigma_star?.toFixed(3),
+            risk: (this.mmpaData.bifurcation_risk * 100)?.toFixed(1) + '%',
+            dominant_band: this.mmpaData.dominant_band,
+            warning: this.mmpaData.predictions?.transitionWarning
+          });
+        }
+      }
+
+      // Phase 13.31: Run Full-Spectrum Audio Analysis (Drop Prediction)
+      if (this.dropPredictor) {
+        this.audioAnalysisData = this.dropPredictor.update(); // No parameters - reads directly from analyser
+
+        // The new Full-Spectrum predictor has built-in logging every 3 seconds
+        // Removed redundant logging here
+      }
 
       // after computing this.bands = { bass, mid, treble, level }
       if (!this._printedNonZero && (this.bands.level > 0.02)) {
@@ -336,6 +480,14 @@ class AudioCore {
     this.analyser.fftSize = this.fftSize;
     this.analyser.smoothingTimeConstant = this.smoothing;
 
+    // Phase 13.31: Initialize Full-Spectrum Drop Predictor after analyser is ready
+    if (!this.dropPredictor) {
+      this.dropPredictor = new FullSpectrumDropPredictor(this.ctx, this.analyser, {
+        onsetThreshold: 15  // Flux threshold for onset detection
+      });
+      console.log("🎵 FullSpectrumDropPredictor initialized with", this.analyser.frequencyBinCount, "FFT bins");
+    }
+
     // wire: source -> inputGain -> analyser (no audio to destination)
     try {
       this.source.disconnect();
@@ -384,8 +536,25 @@ if (typeof window !== "undefined") {
       bands: AudioEngine.bands,
     }),
     getBands: () => AudioEngine.bands,
+    getRawBands: () => AudioEngine.rawBands,
     getRMS: () => AudioEngine.getRMS(),
     getSpectrum: () => AudioEngine.getSpectrum(),
+    // Phase 13.29: Kalman-LQR filter controls
+    setKalmanPreset: (preset) => AudioEngine.setKalmanPreset(preset),
+    setKalmanEnabled: (enabled) => AudioEngine.setKalmanEnabled(enabled),
+    getKalmanDiagnostics: () => AudioEngine.getKalmanDiagnostics(),
+    // Phase 13.30: MMPA V2.0 controls
+    setMMPAEnabled: (enabled) => AudioEngine.setMMPAEnabled(enabled),
+    getMMPAData: () => AudioEngine.getMMPAData(),
+    getMMPAHUDData: () => AudioEngine.getMMPAHUDData(),
+    getMMPADiagnostics: () => AudioEngine.getMMPADiagnostics(),
+    resetMMPA: () => AudioEngine.resetMMPA(),
+    // Phase 13.31: Audio Analysis controls (onset detection, beat tracking, drop prediction)
+    setAudioAnalysisEnabled: (enabled) => AudioEngine.setAudioAnalysisEnabled(enabled),
+    getAudioAnalysisData: () => AudioEngine.getAudioAnalysisData(),
+    getAudioAnalysisHUDData: () => AudioEngine.getAudioAnalysisHUDData(),
+    getAudioAnalysisDiagnostics: () => AudioEngine.getAudioAnalysisDiagnostics(),
+    resetAudioAnalysis: () => AudioEngine.resetAudioAnalysis(),
     // Test event subscription
     testEvent: () => {
       const testListener = (bands) => {
@@ -453,4 +622,9 @@ export function onAudioUpdate(callback) {
   if (typeof callback === "function") {
     AudioEngine.onReady(callback);
   }
+}
+
+// Get audio context for recording
+export function getAudioContext() {
+  return AudioEngine.ctx;
 }

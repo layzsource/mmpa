@@ -1,0 +1,488 @@
+// src/cameraControls.js
+// VCN Phase 1: First-Person Camera Controls
+// WASD + mouse look navigation (pointer lock)
+// Phase 1.5.1: Extended with gamepad support + perception-aware movement
+// Phase 1.5.2: Flight physics with inertia, banking, and dream-like control
+
+import * as THREE from 'three';
+import { FlightParams, applyExpo, getEffectiveFlightParams } from './flightParams.js';
+
+console.log("🎮 cameraControls.js loaded");
+
+/**
+ * FirstPersonControls — Enables first-person navigation in signal-space
+ * Camera becomes the vessel, user navigates through the field
+ *
+ * Phase 1.5: Gamepad navigation + perception state integration
+ */
+export class FirstPersonControls {
+  constructor(camera, domElement) {
+    this.camera = camera;
+    this.domElement = domElement || document.body;
+
+    // Movement state flags (keyboard)
+    this.moveForward = false;
+    this.moveBackward = false;
+    this.moveLeft = false;
+    this.moveRight = false;
+    this.moveUp = false;
+    this.moveDown = false;
+
+    // Settings
+    this.movementSpeed = 10.0;    // Units per second
+    this.lookSpeed = 0.002;       // Radians per pixel
+    this.enabled = false;         // Requires pointer lock (keyboard/mouse)
+
+    // Phase 1.5: Gamepad settings
+    this.gamepadEnabled = true;   // Always active if gamepad connected
+
+    // Phase 1.5.2: Flight physics state
+    this.velocity = new THREE.Vector3();      // Current velocity (world space)
+    this.acceleration = new THREE.Vector3();  // Temp acceleration vector
+    this.bankRoll = 0;                        // Current roll angle (radians)
+
+    // Look direction (Euler angles)
+    this.euler = new THREE.Euler(0, 0, 0, 'YXZ');
+    this.PI_2 = Math.PI / 2;
+
+    // Phase 1.5: External system references (set from main.js)
+    this.gamepadManager = null;
+    this.perceptionState = null;
+
+    // Phase 1.5.2: Track gamepad usage for destination navigation coordination
+    this.lastGamepadInputTime = 0;
+
+    // Phase 1.5.2: Flight telemetry (exposed for HUD)
+    this.telemetry = {
+      speed: 0,          // Current speed (m/s)
+      thrustMult: 1.0,   // Current thrust multiplier
+      damping: 0.9,      // Current damping factor
+      mode: 'wave',      // Current perception mode
+    };
+
+    // Bind event handlers
+    this.onKeyDown = this.onKeyDown.bind(this);
+    this.onKeyUp = this.onKeyUp.bind(this);
+    this.onMouseMove = this.onMouseMove.bind(this);
+    this.onPointerLockChange = this.onPointerLockChange.bind(this);
+    this.onPointerLockError = this.onPointerLockError.bind(this);
+
+    // Setup event listeners
+    this.setupEventListeners();
+
+    console.log("🎮 FirstPersonControls initialized (click canvas to enable)");
+  }
+
+  setupEventListeners() {
+    // Keyboard events
+    document.addEventListener('keydown', this.onKeyDown);
+    document.addEventListener('keyup', this.onKeyUp);
+
+    // Pointer lock events
+    document.addEventListener('pointerlockchange', this.onPointerLockChange);
+    document.addEventListener('pointerlockerror', this.onPointerLockError);
+
+    // Click canvas to enable pointer lock
+    this.domElement.addEventListener('click', () => {
+      if (!this.enabled) {
+        this.domElement.requestPointerLock();
+      }
+    });
+
+    console.log("🎮 Event listeners attached (WASD + Mouse)");
+  }
+
+  onPointerLockChange() {
+    if (document.pointerLockElement === this.domElement) {
+      this.enabled = true;
+      document.addEventListener('mousemove', this.onMouseMove);
+      console.log("🎮 First-person controls ENABLED (ESC to exit)");
+    } else {
+      this.enabled = false;
+      document.removeEventListener('mousemove', this.onMouseMove);
+      console.log("🎮 First-person controls DISABLED");
+    }
+  }
+
+  onPointerLockError() {
+    console.error("🎮 Pointer lock error");
+  }
+
+  onMouseMove(event) {
+    if (!this.enabled) return;
+
+    const movementX = event.movementX || 0;
+    const movementY = event.movementY || 0;
+
+    // Update euler angles from camera quaternion
+    this.euler.setFromQuaternion(this.camera.quaternion);
+
+    // Apply mouse movement
+    this.euler.y -= movementX * this.lookSpeed;  // Yaw (left/right)
+    this.euler.x -= movementY * this.lookSpeed;  // Pitch (up/down)
+
+    // NO PITCH CLAMPING - allow full 360-degree rotation
+
+    // Update camera quaternion
+    this.camera.quaternion.setFromEuler(this.euler);
+  }
+
+  onKeyDown(event) {
+    switch (event.code) {
+      case 'KeyW':
+      case 'ArrowUp':
+        this.moveForward = true;
+        break;
+
+      case 'KeyS':
+      case 'ArrowDown':
+        this.moveBackward = true;
+        break;
+
+      case 'KeyA':
+      case 'ArrowLeft':
+        this.moveLeft = true;
+        break;
+
+      case 'KeyD':
+      case 'ArrowRight':
+        this.moveRight = true;
+        break;
+
+      case 'Space':
+        this.moveUp = true;
+        event.preventDefault(); // Prevent page scroll
+        break;
+
+      case 'ShiftLeft':
+      case 'ShiftRight':
+        this.moveDown = true;
+        break;
+
+      case 'KeyE':
+        // Future: Toggle VCN panel
+        break;
+
+      case 'KeyR':
+        // Future: Reset camera position
+        this.resetPosition();
+        break;
+    }
+  }
+
+  onKeyUp(event) {
+    switch (event.code) {
+      case 'KeyW':
+      case 'ArrowUp':
+        this.moveForward = false;
+        break;
+
+      case 'KeyS':
+      case 'ArrowDown':
+        this.moveBackward = false;
+        break;
+
+      case 'KeyA':
+      case 'ArrowLeft':
+        this.moveLeft = false;
+        break;
+
+      case 'KeyD':
+      case 'ArrowRight':
+        this.moveRight = false;
+        break;
+
+      case 'Space':
+        this.moveUp = false;
+        break;
+
+      case 'ShiftLeft':
+      case 'ShiftRight':
+        this.moveDown = false;
+        break;
+    }
+  }
+
+  update(delta) {
+    // Phase 1.5: Update gamepad state (always, even without pointer lock)
+    if (this.gamepadManager) {
+      this.gamepadManager.update();
+
+      // Handle perception toggle (B button)
+      if (this.gamepadManager.wasTogglePressed() && this.perceptionState) {
+        this.perceptionState.toggle();
+      }
+
+      // Stage 2: Handle projectile firing (RT trigger)
+      if (this.gamepadManager.wasFirePressed()) {
+        const gameMode = window.gameMode;
+        if (gameMode && gameMode.enabled) {
+          console.log("🎮 Gamepad RT trigger fired!");
+          gameMode.fireProjectile();
+        }
+      }
+    }
+
+    // Phase 1.5.2: Get effective flight params for current perception mode
+    const params = this.perceptionState
+      ? getEffectiveFlightParams(this.perceptionState)
+      : FlightParams;
+
+    // Update telemetry
+    this.telemetry.mode = this.perceptionState ? this.perceptionState.mode : 'wave';
+    this.telemetry.damping = params.damping;
+
+    // ========== LOOK CONTROL (Right Stick + Mouse) ==========
+    this.updateLook(delta, params);
+
+    // ========== MOVEMENT PHYSICS (Left Stick + WASD) ==========
+    this.updateMovement(delta, params);
+  }
+
+  /**
+   * Phase 1.5.2: Look control with banking (gamepad only)
+   * Mouse look handled by onMouseMove() event - kept direct and immediate
+   */
+  updateLook(delta, params) {
+    const hasGamepadInput = this.gamepadEnabled && this.gamepadManager && this.gamepadManager.state.connected;
+
+    // Debug logging (temporary)
+    if (!this._logCounter) this._logCounter = 0;
+    if (this._logCounter % 120 === 0 && hasGamepadInput) {  // Log every ~2 seconds
+      console.log('🎮 Gamepad Look Debug:', {
+        connected: this.gamepadManager.state.connected,
+        rawLookX: this.gamepadManager.state.lookX,
+        rawLookY: this.gamepadManager.state.lookY,
+        yawSens: params.yawSensitivity,
+        pitchSens: params.pitchSensitivity
+      });
+    }
+    this._logCounter++;
+
+    // Gamepad right stick (always active if connected)
+    if (hasGamepadInput) {
+      const rawLX = this.gamepadManager.state.lookX;
+      const rawLY = this.gamepadManager.state.lookY;
+
+      // Apply expo curve for fine control
+      const lookX = applyExpo(rawLX, params.input.expo);
+      const lookY = applyExpo(rawLY, params.input.expo);
+
+      // Apply gamepad look if any input
+      if (lookX !== 0 || lookY !== 0) {
+        // Track that gamepad is actively being used
+        this.lastGamepadInputTime = performance.now();
+        console.log('🎮 Gamepad timestamp updated:', this.lastGamepadInputTime);
+
+        this.euler.setFromQuaternion(this.camera.quaternion);
+
+        // Degrees per frame at 60fps, scaled by dt
+        const yawDelta = THREE.MathUtils.degToRad(params.yawSensitivity * lookX) * (delta * 60);
+        const pitchDelta = THREE.MathUtils.degToRad(params.pitchSensitivity * lookY) * (delta * 60);
+
+        // Debug logging (temporary)
+        if (this._logCounter % 60 === 0) {  // Log every second
+          console.log('🔄 Camera Rotation:', {
+            lookX, lookY,
+            yawDelta: (yawDelta * 180 / Math.PI).toFixed(2) + '°',
+            pitchDelta: (pitchDelta * 180 / Math.PI).toFixed(2) + '°',
+            euler_before: `y:${(this.euler.y * 180 / Math.PI).toFixed(1)}° x:${(this.euler.x * 180 / Math.PI).toFixed(1)}°`
+          });
+        }
+
+        this.euler.y -= yawDelta;  // Yaw (left/right)
+        this.euler.x -= pitchDelta; // Pitch (up/down)
+
+        // NO PITCH CLAMPING - allow full 360-degree rotation
+
+        this.camera.quaternion.setFromEuler(this.euler);
+
+        if (this._logCounter % 60 === 0) {
+          console.log('🔄 After rotation:', {
+            euler_after: `y:${(this.euler.y * 180 / Math.PI).toFixed(1)}° x:${(this.euler.x * 180 / Math.PI).toFixed(1)}°`
+          });
+        }
+      }
+
+      // Phase 1.5.2: Banking (visual roll from yaw input - gamepad only)
+      const targetRoll = -lookX * params.bankingFactor;
+      this.bankRoll = THREE.MathUtils.lerp(this.bankRoll, targetRoll, 1 - params.look.bankReturn);
+      this.euler.setFromQuaternion(this.camera.quaternion);
+      this.euler.z = this.bankRoll;
+      this.camera.quaternion.setFromEuler(this.euler);
+    } else {
+      // No gamepad - return roll to level
+      if (Math.abs(this.bankRoll) > 0.001) {
+        this.bankRoll = THREE.MathUtils.lerp(this.bankRoll, 0, 0.1);
+        this.euler.setFromQuaternion(this.camera.quaternion);
+        this.euler.z = this.bankRoll;
+        this.camera.quaternion.setFromEuler(this.euler);
+      }
+    }
+  }
+
+  /**
+   * Phase 1.5.2: Movement physics
+   * Keyboard: Direct movement (original feel)
+   * Gamepad: Flight physics with inertia, damping, and thrust
+   */
+  updateMovement(delta, params) {
+    const hasKeyboardInput = this.enabled;
+    const hasGamepadInput = this.gamepadEnabled && this.gamepadManager && this.gamepadManager.state.connected;
+
+    if (!hasKeyboardInput && !hasGamepadInput) return;
+
+    // ===== KEYBOARD: Direct movement (Phase 1 original) =====
+    if (hasKeyboardInput && !hasGamepadInput) {
+      const moveSpeed = this.movementSpeed * delta;
+      const direction = new THREE.Vector3();
+
+      // Forward/backward
+      if (this.moveForward) direction.z -= 1;
+      if (this.moveBackward) direction.z += 1;
+
+      // Left/right
+      if (this.moveLeft) direction.x -= 1;
+      if (this.moveRight) direction.x += 1;
+
+      // Up/down
+      if (this.moveUp) direction.y += 1;
+      if (this.moveDown) direction.y -= 1;
+
+      // Normalize and apply speed
+      if (direction.length() > 0) {
+        direction.normalize();
+        direction.multiplyScalar(moveSpeed);
+        direction.applyQuaternion(this.camera.quaternion);
+        this.camera.position.add(direction);
+      }
+
+      // Clear velocity when keyboard-only
+      this.velocity.set(0, 0, 0);
+      this.telemetry.speed = 0;
+      this.telemetry.thrustMult = 1.0;
+      return;
+    }
+
+    // ===== GAMEPAD: Flight physics with velocity =====
+    // (Also active if both keyboard + gamepad are used together)
+
+    // ===== 1. Get input (stick + WASD) =====
+    let inputX = 0;  // Strafe (right positive)
+    let inputZ = 0;  // Forward (forward negative)
+
+    // Keyboard (WASD) - binary input
+    if (hasKeyboardInput) {
+      if (this.moveLeft) inputX -= 1;
+      if (this.moveRight) inputX += 1;
+      if (this.moveForward) inputZ -= 1;
+      if (this.moveBackward) inputZ += 1;
+    }
+
+    // Gamepad (left stick) - analog input with expo
+    if (hasGamepadInput) {
+      const rawSX = this.gamepadManager.state.stickX;
+      const rawSY = this.gamepadManager.state.stickY;
+
+      inputX += applyExpo(rawSX, params.input.expo);
+      inputZ += applyExpo(-rawSY, params.input.expo);  // Invert Y: stick up = forward (negative Z)
+    }
+
+    // Clamp to -1..1 range
+    inputX = THREE.MathUtils.clamp(inputX, -1, 1);
+    inputZ = THREE.MathUtils.clamp(inputZ, -1, 1);
+
+    // Track gamepad usage for destination navigation coordination
+    if (hasGamepadInput) {
+      const inputMagnitude = Math.sqrt(inputX * inputX + inputZ * inputZ);
+      if (inputMagnitude > 0.05) {
+        this.lastGamepadInputTime = performance.now();
+      }
+    }
+
+    // ===== 2. Calculate thrust multiplier (LT trigger) =====
+    let thrustMult = 1.0;
+    if (hasGamepadInput) {
+      const rawThrust = this.gamepadManager.state.thrustValue;
+      // Apply expo to thrust for smoother ramp
+      const shapedThrust = Math.pow(rawThrust, 1.0 - params.input.thrustExpo);
+      thrustMult = 1.0 + shapedThrust * (params.thrustMultiplier - 1.0);
+    }
+    this.telemetry.thrustMult = thrustMult;
+
+    // ===== 3. Build local-space acceleration vector =====
+    const forwardAcc = -inputZ * params.accel * thrustMult;
+    const strafeAcc = inputX * params.strafeAccel * thrustMult;
+
+    this.acceleration.set(strafeAcc, 0, forwardAcc);
+
+    // ===== 4. Rotate acceleration to world space =====
+    this.acceleration.applyQuaternion(this.camera.quaternion);
+
+    // ===== 5. Micro-brake when input near zero (prevents endless drift) =====
+    const inputMagnitude = Math.sqrt(inputX * inputX + inputZ * inputZ);
+    if (inputMagnitude < 0.05) {
+      const brake = this.velocity.clone().multiplyScalar(-params.microBrake);
+      this.acceleration.add(brake);
+    }
+
+    // ===== 6. Integrate velocity =====
+    this.velocity.addScaledVector(this.acceleration, delta);
+
+    // ===== 7. Apply damping (continuous-time) =====
+    // v *= damping^(dt * 60) to normalize feel across frame rates
+    const dampFactor = Math.pow(params.damping, delta * 60);
+    this.velocity.multiplyScalar(dampFactor);
+
+    // ===== 8. Vertical movement (Space/Shift) =====
+    if (hasKeyboardInput) {
+      if (this.moveUp) {
+        this.velocity.y += params.verticalAccel * delta;
+      }
+      if (this.moveDown) {
+        this.velocity.y -= params.verticalAccel * delta;
+      }
+    }
+
+    // ===== 9. Clamp speed to max =====
+    const currentSpeed = this.velocity.length();
+    if (currentSpeed > params.maxSpeed) {
+      this.velocity.setLength(params.maxSpeed);
+    }
+    this.telemetry.speed = currentSpeed;
+
+    // ===== 10. Integrate position =====
+    this.camera.position.addScaledVector(this.velocity, delta);
+  }
+
+  resetPosition() {
+    this.camera.position.set(0, 0, 5);
+    this.camera.lookAt(0, 0, 0);
+    this.euler.set(0, 0, 0);
+    // Phase 1.5.2: Clear velocity and bank roll
+    this.velocity.set(0, 0, 0);
+    this.bankRoll = 0;
+    console.log("🎮 Camera position reset (velocity cleared)");
+  }
+
+  setMovementSpeed(speed) {
+    this.movementSpeed = Math.max(1, Math.min(50, speed));
+    console.log(`🎮 Movement speed: ${this.movementSpeed.toFixed(1)}`);
+  }
+
+  setLookSpeed(speed) {
+    this.lookSpeed = Math.max(0.0001, Math.min(0.01, speed));
+    console.log(`🎮 Look speed: ${this.lookSpeed.toFixed(4)}`);
+  }
+
+  dispose() {
+    document.removeEventListener('keydown', this.onKeyDown);
+    document.removeEventListener('keyup', this.onKeyUp);
+    document.removeEventListener('mousemove', this.onMouseMove);
+    document.removeEventListener('pointerlockchange', this.onPointerLockChange);
+    document.removeEventListener('pointerlockerror', this.onPointerLockError);
+    console.log("🎮 FirstPersonControls disposed");
+  }
+}
+
+console.log("🎮 Camera controls ready");
