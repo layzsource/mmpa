@@ -73,7 +73,7 @@ const PARTICLE_MIST_SHADER = {
       pos.y += uTime * 0.05 * uSpeed;
 
       // Wrap Y position for continuous vertical cycling
-      pos.y = mod(pos.y + 60.0, 120.0) - 60.0;
+      pos.y = mod(pos.y + 250.0, 500.0) - 250.0;
 
       vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
       gl_Position = projectionMatrix * mvPosition;
@@ -82,8 +82,8 @@ const PARTICLE_MIST_SHADER = {
       gl_PointSize = (150.0 * aScale) / -mvPosition.z;
 
       // Height-based alpha falloff - gentle falloff from ground to sky
-      // More visible near ground (y=-60), gradually fades toward top (y=+60)
-      float heightNorm = (pos.y + 60.0) / 120.0; // Normalize to 0..1
+      // More visible near ground (y=-250), gradually fades toward top (y=+250)
+      float heightNorm = (pos.y + 250.0) / 500.0; // Normalize to 0..1
       float heightFalloff = clamp(1.0 - smoothstep(0.0, 1.0, heightNorm * 0.8), 0.2, 1.0);
       vAlpha = heightFalloff * (0.4 + noise * 0.3);
     }
@@ -155,8 +155,8 @@ const PLANE_MIST_SHADER = {
       vPosition = worldPos.xyz;
 
       // Height-based alpha falloff - gentle falloff across full cubic volume
-      // More visible near ground (y=-60), gradually fades toward top (y=+60)
-      float heightNorm = (worldPos.y + 60.0) / 120.0; // Normalize to 0..1
+      // More visible near ground (y=-125), gradually fades toward top (y=+125)
+      float heightNorm = (worldPos.y + 125.0) / 250.0; // Normalize to 0..1
       float heightFalloff = clamp(1.0 - smoothstep(0.0, 1.0, heightNorm * 0.8), 0.2, 1.0);
       vAlpha = heightFalloff * (0.4 + noise * 0.3);
 
@@ -185,27 +185,26 @@ function initParticleMist(scene) {
   console.log("🌫️ Initializing particle-based volumetric mist...");
 
   // Create extremely dense particle field distributed throughout 3D cubic volume
-  const particleCount = 100000;  // Increased for larger volume
+  const particleCount = 1000000;  // 1 million particles for dense volumetric coverage
   const positions = new Float32Array(particleCount * 3);
   const randoms = new Float32Array(particleCount);
   const scales = new Float32Array(particleCount);
 
-  // Volume dimensions - full cubic skybox volume
-  const width = 200;   // Expanded to fill skybox
-  const height = 120;  // Much taller to fill vertical space
-  const depth = 200;   // Expanded to fill skybox
+  // Volume dimensions - uniform cubic volume
+  const width = 500;   // X axis
+  const height = 500;  // Y axis
+  const depth = 500;   // Z axis
   const centerY = 0.0; // Center at origin
 
   // Distribute particles uniformly in 3D cubic volume
   for (let i = 0; i < particleCount; i++) {
     // Random position in volume - uniform distribution
-    positions[i * 3] = (Math.random() - 0.5) * width;      // X
+    positions[i * 3] = (Math.random() - 0.5) * width;      // X: -250 to +250
 
-    // Distribute more uniformly in height with slight ground bias
-    const yRand = Math.pow(Math.random(), 1.2); // Gentler curve for more vertical fill
-    positions[i * 3 + 1] = centerY - (height/2) + yRand * height;  // Y: -60 to +60
+    // Uniform distribution in height
+    positions[i * 3 + 1] = (Math.random() - 0.5) * height;  // Y: -250 to +250
 
-    positions[i * 3 + 2] = (Math.random() - 0.5) * depth;  // Z
+    positions[i * 3 + 2] = (Math.random() - 0.5) * depth;  // Z: -250 to +250
 
     // Random values for animation variation
     randoms[i] = Math.random();
@@ -248,8 +247,8 @@ function initPlaneMist(scene) {
 
   mistGroup = new THREE.Group();
 
-  // Create large plane geometry covering the environment
-  mistPlaneGeometry = new THREE.PlaneGeometry(200, 200, 1, 1);
+  // Create plane geometry for layered volumetric effect
+  mistPlaneGeometry = new THREE.PlaneGeometry(250, 250, 1, 1);
 
   // Shader material with FBM noise
   mistPlaneMaterial = new THREE.ShaderMaterial({
@@ -269,10 +268,10 @@ function initPlaneMist(scene) {
   // Create many layers for full cubic volumetric effect
   const numHorizontalLayers = 240;  // Horizontal planes (XZ) stacked along Y
   const numVerticalLayers = 240;     // Vertical planes (YZ) distributed along X
-  const startHeight = -60.0;
-  const maxHeight = 120.0;
-  const startX = -100.0;
-  const maxX = 200.0;
+  const startHeight = -125.0;
+  const maxHeight = 250.0;
+  const startX = -125.0;
+  const maxX = 250.0;
 
   // Horizontal planes (XZ orientation, stacked vertically)
   for (let i = 0; i < numHorizontalLayers; i++) {
@@ -320,11 +319,38 @@ function initPlaneMist(scene) {
     mistPlanes.push({ mesh, material });
   }
 
+  // Vertical planes (XY orientation, distributed along Z axis)
+  const numDepthLayers = 240;  // Planes distributed along Z
+  const startZ = -125.0;
+  const maxZ = 250.0;
+
+  for (let i = 0; i < numDepthLayers; i++) {
+    const material = mistPlaneMaterial.clone();
+    const mesh = new THREE.Mesh(mistPlaneGeometry, material);
+
+    // No rotation needed - default orientation is XY plane
+    // mesh.rotation stays at default (0, 0, 0) for XY plane
+
+    // Distribute along Z axis
+    const zPos = startZ + (i / (numDepthLayers - 1)) * maxZ;
+    mesh.position.z = zPos;
+
+    // Varied rotation for organic look
+    mesh.rotation.z = (i / numDepthLayers) * Math.PI * 2.0 + Math.sin(i * 0.5 + 2.0) * 0.3;
+
+    // Slight scale variation
+    const scaleVar = 1.0 + Math.sin(i * 0.7 + 2.0) * 0.1;
+    mesh.scale.set(scaleVar, scaleVar, 1);
+
+    mistGroup.add(mesh);
+    mistPlanes.push({ mesh, material });
+  }
+
   scene.add(mistGroup);
   mistGroup.visible = false; // Hidden by default
 
-  const totalPlanes = numHorizontalLayers + numVerticalLayers;
-  console.log(`✅ Plane-based volumetric mist initialized with ${totalPlanes} planes (${numHorizontalLayers} horizontal + ${numVerticalLayers} vertical, FBM noise)`);
+  const totalPlanes = numHorizontalLayers + numVerticalLayers + numDepthLayers;
+  console.log(`✅ Plane-based volumetric mist initialized with ${totalPlanes} planes (250x250x250 cube: ${numHorizontalLayers} horizontal XZ + ${numVerticalLayers} vertical YZ + ${numDepthLayers} vertical XY, FBM noise)`);
 }
 
 /**
