@@ -3,6 +3,7 @@ import {
   startRecording,
   stopRecording,
   downloadRecording,
+  downloadRecordingAsMP4,
   discardRecording,
   getRecordingStatus,
   onRecordingStatusChange,
@@ -85,6 +86,7 @@ export function createRecorderHudSection(container) {
       durationText.textContent = formatDuration(status.duration);
       startStopButton.textContent = '⏹ Stop Recording';
       downloadButton.disabled = true;
+      downloadMP4Button.disabled = true;
       discardButton.disabled = true;
     } else if (status.chunkCount > 0) {
       statusIndicator.style.backgroundColor = '#00ff00';
@@ -93,6 +95,7 @@ export function createRecorderHudSection(container) {
       durationText.textContent = formatDuration(status.duration);
       startStopButton.textContent = '⏺ Start Recording';
       downloadButton.disabled = false;
+      downloadMP4Button.disabled = false;
       discardButton.disabled = false;
     } else {
       statusIndicator.style.backgroundColor = '#555';
@@ -101,6 +104,7 @@ export function createRecorderHudSection(container) {
       durationText.textContent = '0:00';
       startStopButton.textContent = '⏺ Start Recording';
       downloadButton.disabled = true;
+      downloadMP4Button.disabled = true;
       discardButton.disabled = true;
     }
   }
@@ -160,18 +164,51 @@ export function createRecorderHudSection(container) {
   });
   section.appendChild(startStopButton);
 
-  // Download button
+  // Download buttons container (for side-by-side layout)
+  const downloadContainer = document.createElement('div');
+  downloadContainer.style.display = 'flex';
+  downloadContainer.style.gap = '5px';
+  downloadContainer.style.marginTop = '5px';
+
+  // Download WebM button
   const downloadButton = document.createElement('button');
-  downloadButton.textContent = '⬇ Download Recording';
+  downloadButton.textContent = '⬇ WebM';
   downloadButton.disabled = true;
-  downloadButton.style.width = '100%';
+  downloadButton.style.flex = '1';
   downloadButton.style.padding = '10px';
-  downloadButton.style.marginTop = '5px';
   downloadButton.addEventListener('click', async () => {
     await downloadRecording();
     updateStatus(getRecordingStatus());
   });
-  section.appendChild(downloadButton);
+  downloadContainer.appendChild(downloadButton);
+
+  // Download MP4 button
+  const downloadMP4Button = document.createElement('button');
+  downloadMP4Button.textContent = '⬇ MP4';
+  downloadMP4Button.disabled = true;
+  downloadMP4Button.style.flex = '1';
+  downloadMP4Button.style.padding = '10px';
+  downloadMP4Button.addEventListener('click', async () => {
+    try {
+      // Show progress feedback
+      downloadMP4Button.disabled = true;
+      downloadMP4Button.textContent = 'Converting...';
+
+      await downloadRecordingAsMP4(null, (progress) => {
+        downloadMP4Button.textContent = `Converting ${Math.round(progress)}%`;
+      });
+
+      downloadMP4Button.textContent = '⬇ MP4';
+      updateStatus(getRecordingStatus());
+    } catch (error) {
+      alert('MP4 conversion failed. Check console for details.');
+      downloadMP4Button.textContent = '⬇ MP4';
+      downloadMP4Button.disabled = false;
+    }
+  });
+  downloadContainer.appendChild(downloadMP4Button);
+
+  section.appendChild(downloadContainer);
 
   // Discard button
   const discardButton = document.createElement('button');
@@ -196,8 +233,8 @@ export function createRecorderHudSection(container) {
   infoText.style.lineHeight = '1.4';
   infoText.innerHTML = `
     <strong>Quality:</strong> 60 FPS, 8 Mbps<br>
-    <strong>Format:</strong> WebM (VP8/VP9)<br>
-    <strong>Note:</strong> Recording captures the entire canvas with real-time audio (if enabled).
+    <strong>Formats:</strong> WebM (instant) or MP4 (H.264, converted)<br>
+    <strong>Note:</strong> MP4 conversion uses native FFmpeg (fast, 5-10 seconds for 20-second video).
   `;
   section.appendChild(infoText);
 

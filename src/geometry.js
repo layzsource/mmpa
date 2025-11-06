@@ -812,12 +812,19 @@ const morphClock = new THREE.Clock();
 // VCN Phase 1: Clock for first-person controls
 const fpClock = new THREE.Clock();
 
+// Phase 13.12: Error boundary tracking for animation loop
+let consecutiveAnimationErrors = 0;
+let lastAnimationErrorTime = 0;
+const MAX_ANIMATION_ERRORS = 10; // Warn after 10 consecutive errors
+const ERROR_THROTTLE_MS = 1000; // Log errors max once per second
+
 // Main animation loop
 function animate() {
   requestAnimationFrame(animate);
 
-  // Phase 13.5.1: Get deltaTime for morphing
-  const deltaTime = morphClock.getDelta();
+  try {
+    // Phase 13.5.1: Get deltaTime for morphing
+    const deltaTime = morphClock.getDelta();
 
   // VCN Phase 1: Get deltaTime for camera controls
   const fpDelta = fpClock.getDelta();
@@ -1041,6 +1048,29 @@ function animate() {
   // Phase 13.8: Render shadow layer AFTER main render (split-screen with phase offset)
   if (typeof window.renderShadowLayer === 'function') {
     window.renderShadowLayer();
+  }
+
+    // Phase 13.12: Reset error counter on successful frame
+    consecutiveAnimationErrors = 0;
+
+  } catch (error) {
+    // Phase 13.12: Error boundary - log but continue animation loop
+    consecutiveAnimationErrors++;
+
+    // Throttle error logging to prevent console spam
+    const now = performance.now();
+    if (now - lastAnimationErrorTime > ERROR_THROTTLE_MS) {
+      console.error(`🚨 Animation loop error (${consecutiveAnimationErrors} consecutive):`, error);
+      console.error('Stack trace:', error.stack);
+      lastAnimationErrorTime = now;
+
+      // Warn user after threshold
+      if (consecutiveAnimationErrors === MAX_ANIMATION_ERRORS) {
+        console.error(`⚠️ ${MAX_ANIMATION_ERRORS} consecutive animation errors detected. App may be unstable.`);
+        console.error('💡 Try refreshing the page or check console for underlying issues.');
+      }
+    }
+    // Continue loop despite error (graceful degradation)
   }
 }
 

@@ -19,6 +19,7 @@
 console.log("🎵 audioMMPABridge.js V2.0 loaded");
 
 import { MMPAControlSystem } from './mmpaControlSystem.js';
+import { ANLG } from './anlg.js';
 
 export class AudioMMPABridge {
   constructor(options = {}) {
@@ -101,9 +102,38 @@ export class AudioMMPABridge {
       maxLength: 300  // 5 seconds at 60fps
     };
 
+    // === ANLG: Adaptive Noise and Latency Governor ===
+    this.anlg = new ANLG({
+      R_base: 0.005,  // Match UKF R from audioMMPABridge
+      R_min: 0.001,   // High trust in clean signal
+      R_max: 0.05,    // Low trust in noisy signal
+
+      // Signal quality thresholds (matched to audio domain)
+      STE_low: 0.01,   // Below this = too quiet
+      STE_high: 0.3,   // Above this = good signal (reduced from 0.5 for audio)
+      ZCR_low: 5,      // Below this = tonal (trust)
+      ZCR_high: 80,    // Above this = noisy (distrust, reduced from 100)
+
+      // Cancellation logic (disabled for now - LQR handles control)
+      cancellation_threshold: 0.0,
+      cancellation_gain: 0.0,
+
+      // Data throttling based on stability
+      throttle_enabled: true,
+      Sigma_stable_threshold: 0.80,
+      Sigma_unstable_threshold: 0.60,
+      rate_stable: 1.0,      // 1 Hz when stable
+      rate_unstable: 10.0,   // 10 Hz when unstable
+      rate_chaotic: 30.0,    // 30 Hz when chaotic
+
+      // Performance tracking
+      track_performance_gap: true
+    });
+
     console.log("🎵 Audio-MMPA Bridge initialized");
     console.log(`   Mode: ${this.audioFeatureMode}`);
     console.log(`   Prediction: ${this.enabled ? 'ENABLED' : 'DISABLED'}`);
+    console.log(`   ANLG: ENABLED (adaptive R, throttling, telemetry)`);
   }
 
   /**
@@ -118,6 +148,20 @@ export class AudioMMPABridge {
       return { enabled: false };
     }
 
+    // ━━━ STEP 0: ANLG - Extract Audio Signal Quality ━━━
+    // Get STE (Short-Time Energy) = RMS level
+    const STE = audioBands.level || 0;
+
+    // Get ZCR (Zero-Crossing Rate) from audioFeatures if available
+    // Otherwise estimate from treble energy (high ZCR = noisy/high-freq content)
+    const ZCR = audioFeatures?.zcr || (audioBands.treble * 100);
+
+    // Calculate adaptive measurement covariance based on signal quality
+    const adaptiveR = this.anlg.calculateAdaptiveCovariance(STE, ZCR);
+
+    // Update UKF's R matrix dynamically
+    this.mmpa.ukf.R = adaptiveR;
+
     // ━━━ STEP 1: Map Audio Features → Control Inputs ━━━
     const { trans_sm, res } = this.mapAudioToControlInputs(audioBands, audioFeatures);
     const u_t = [trans_sm, res];
@@ -129,10 +173,22 @@ export class AudioMMPABridge {
     // ━━━ STEP 3: Run MMPA V2.0 Control Cycle ━━━
     const mmpaResult = this.mmpa.step(u_t, y_t);
 
-    // ━━━ STEP 4: Analyze Predictions ━━━
+    // ━━━ STEP 4: ANLG - Track Performance Gap ━━━
+    const performanceGap = this.anlg.recordPerformanceGap(
+      mmpaResult.tracking_error,
+      mmpaResult.control_signal,
+      this.mmpa.lqr.Q,
+      this.mmpa.lqr.R
+    );
+
+    // ━━━ STEP 5: ANLG - Check Data Throttling ━━━
+    const shouldSendData = this.anlg.shouldSendData(Date.now());
+    const currentThrottleRate = this.anlg.getStatusDataRate(mmpaResult.sigma_star, audioFeatures?.spectralFlatness || 0.5);
+
+    // ━━━ STEP 6: Analyze Predictions ━━━
     this.updatePredictions(mmpaResult);
 
-    // ━━━ STEP 5: Update Metrics ━━━
+    // ━━━ STEP 7: Update Metrics ━━━
     this.metrics.currentStability = mmpaResult.sigma_star;
     this.metrics.bifurcationRisk = mmpaResult.bifurcation_risk;
     this.metrics.attribution = mmpaResult.force_attribution;
@@ -142,7 +198,7 @@ export class AudioMMPABridge {
       this.metrics.dominantBand = this.metrics.attribution.top_contributors[0].name;
     }
 
-    // ━━━ STEP 6: Log History ━━━
+    // ━━━ STEP 8: Log History ━━━
     this.history.stability.push(mmpaResult.sigma_star);
     this.history.audio.push({ ...audioBands });
     this.history.predictions.push({ ...this.predictions });
@@ -153,7 +209,7 @@ export class AudioMMPABridge {
       this.history.predictions.shift();
     }
 
-    // ━━━ STEP 7: Return Complete State ━━━
+    // ━━━ STEP 9: Return Complete State ━━━
     return {
       enabled: true,
 
@@ -170,6 +226,15 @@ export class AudioMMPABridge {
 
       // Control
       control_signal: mmpaResult.control_signal,
+
+      // ANLG Governance
+      anlg: {
+        adaptive_R: adaptiveR,
+        signal_quality: this.anlg.getSignalQuality(),
+        throttle_rate: currentThrottleRate,
+        should_send_data: shouldSendData,
+        performance_gap: performanceGap
+      },
 
       // Diagnostics
       ukf: mmpaResult.ukf_diagnostics,
@@ -320,7 +385,8 @@ export class AudioMMPABridge {
       },
       stats: {
         transitions: this.metrics.transitionsDetected
-      }
+      },
+      anlg: this.anlg.getHUDData()
     };
   }
 
@@ -329,6 +395,7 @@ export class AudioMMPABridge {
    */
   reset() {
     this.mmpa.reset();
+    this.anlg.reset();
     this.history = {
       stability: [],
       audio: [],
@@ -342,7 +409,7 @@ export class AudioMMPABridge {
       trajectory: []
     };
     this.metrics.transitionsDetected = 0;
-    console.log("🎵 Audio-MMPA Bridge reset");
+    console.log("🎵 Audio-MMPA Bridge reset (with ANLG)");
   }
 
   /**
@@ -350,10 +417,11 @@ export class AudioMMPABridge {
    */
   getDiagnostics() {
     return {
-      version: '2.0-AudioMMPABridge',
+      version: '2.0-AudioMMPABridge-ANLG',
       enabled: this.enabled,
       mode: this.audioFeatureMode,
       mmpa: this.mmpa.getDiagnostics(),
+      anlg: this.anlg.getDiagnostics(),
       metrics: this.metrics,
       history_length: this.history.stability.length
     };

@@ -32,16 +32,30 @@ let theoryModeEnabled = false;
 function analyzeDominantFrequency(spectrum) {
   if (!spectrum || spectrum.length === 0) return 0.5;
 
-  // Divide spectrum into frequency bands
-  const bandSize = Math.floor(spectrum.length / 3);
-  const lowBand = spectrum.slice(0, bandSize); // Bass ~20-250Hz
-  const midBand = spectrum.slice(bandSize, bandSize * 2); // Mid ~250-2kHz
-  const highBand = spectrum.slice(bandSize * 2); // Treble ~2kHz-20kHz
+  // Calculate frequency range (assuming typical 48kHz sample rate)
+  // Each bin represents: sampleRate / fftSize Hz
+  // For 2048 FFT at 48kHz: 48000/2048 = 23.44 Hz/bin
+  const nyquist = 24000; // Half of 48kHz sample rate
+  const hzPerBin = nyquist / spectrum.length;
 
-  // Calculate weighted average for each band
-  const lowAvg = lowBand.reduce((sum, val) => sum + val, 0) / lowBand.length / 255.0;
-  const midAvg = midBand.reduce((sum, val) => sum + val, 0) / midBand.length / 255.0;
-  const highAvg = highBand.reduce((sum, val) => sum + val, 0) / highBand.length / 255.0;
+  // Define actual frequency bands (in Hz)
+  const bassCutoff = 250; // 0-250Hz = bass
+  const midCutoff = 2000; // 250-2000Hz = mid
+  // 2000Hz+ = treble
+
+  // Find bin indices for cutoffs
+  const bassBin = Math.floor(bassCutoff / hzPerBin);
+  const midBin = Math.floor(midCutoff / hzPerBin);
+
+  // Slice by actual frequency ranges
+  const lowBand = spectrum.slice(0, Math.min(bassBin, spectrum.length));
+  const midBand = spectrum.slice(Math.min(bassBin, spectrum.length), Math.min(midBin, spectrum.length));
+  const highBand = spectrum.slice(Math.min(midBin, spectrum.length));
+
+  // Calculate weighted average for each band (handle empty bands)
+  const lowAvg = lowBand.length > 0 ? lowBand.reduce((sum, val) => sum + val, 0) / lowBand.length / 255.0 : 0;
+  const midAvg = midBand.length > 0 ? midBand.reduce((sum, val) => sum + val, 0) / midBand.length / 255.0 : 0;
+  const highAvg = highBand.length > 0 ? highBand.reduce((sum, val) => sum + val, 0) / highBand.length / 255.0 : 0;
 
   // Find which band has the most energy
   const totalEnergy = lowAvg + midAvg + highAvg;

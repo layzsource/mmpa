@@ -19,73 +19,9 @@ setTimeout(() => { try { window.debugFeatures(); } catch (e) {} }, 0);
 
 // ---------- Projector Mode (REMOVED - see Phase 13.20/13.30 below) ----------
 
-// ---------- Screenshot / Posterize (safe) ----------
-(function(){
-  function getCanvas() {
-    // prefer Three's canvas
-    const c = document.querySelector("canvas");
-    if (!c) throw new Error("No canvas found");
-    return c;
-  }
-  function png() {
-    try {
-      const c = getCanvas();
-      const url = c.toDataURL("image/png");
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `capture_${Date.now()}.png`;
-      document.body.appendChild(a); a.click(); a.remove();
-      console.log("📸 Screenshot saved (PNG)");
-    } catch(e) { console.error("Capture.png error", e); }
-  }
-  function jpeg(quality = 0.92) {
-    try {
-      const c = getCanvas();
-      const url = c.toDataURL("image/jpeg", quality);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `capture_${Date.now()}.jpg`;
-      document.body.appendChild(a); a.click(); a.remove();
-      console.log("📸 Screenshot saved (JPEG)");
-    } catch(e) { console.error("Capture.jpeg error", e); }
-  }
-  window.Capture = { png, jpeg };
-})();
-
-// ---------- One-Key Hotkeys (guarded) ----------
-(function(){
-  function handler(e){
-    // Ignore when typing in inputs/textareas
-    const tag = (e.target && e.target.tagName || "").toLowerCase();
-    if (tag === "input" || tag === "textarea" || e.isComposing) return;
-
-    if (e.key === "p" || e.key === "P") {
-      // P → toggle Projector HUD (first press also ensures projector ON)
-      if (!document.fullscreenElement) window.ProjectorMode?.on();
-      else window.ProjectorMode?.toggleHUD();
-    }
-    if (e.key === "f" || e.key === "F") {
-      // F → full projector on/off
-      if (!document.fullscreenElement) window.ProjectorMode?.on();
-      else window.ProjectorMode?.off();
-    }
-    if (e.key === "s" || e.key === "S") {
-      // S → screenshot PNG
-      window.Capture?.png();
-    }
-  }
-  window.Hotkeys = { install(){
-    window.removeEventListener("keydown", handler, true);
-    window.addEventListener("keydown", handler, true);
-    console.log("⌨️ Hotkeys installed (P=presentation HUD, F=fullscreen toggle, S=screenshot)");
-  }};
-  // auto-install once DOM is ready
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", ()=>window.Hotkeys.install(), {once:true});
-  } else {
-    window.Hotkeys.install();
-  }
-})();
+// Phase 13.11: Feature modules extracted to src/features/
+// - Capture system: see features/capture.js
+// - Hotkeys system: see features/hotkeys.js
 
 // Phase 13.12 — Primary/Secondary role gate
 const params = new URLSearchParams(location.search);
@@ -133,6 +69,11 @@ let destinationNavigator = null;
 
 // Stage 2: Game Mode global reference
 let gameMode = null;
+
+// Phase 13.11/13.13: Feature modules
+import { initCapture } from './features/capture.js';
+import { initHotkeys } from './features/hotkeys.js';
+import { initProjectorMode } from './features/projectorMode.js';
 
 import * as THREE from 'three';
 import { initHUD, updatePresetList } from './hud.js';
@@ -201,6 +142,9 @@ import { GameMode } from './gameMode.js';
 
 // Humanoid dancer import
 import { initHumanoid, updateHumanoid, setHumanoidVisible } from './humanoid.js';
+
+// Phase 13.9: Input Manager import
+import { initInputManager } from './core/inputManager.js';
 
 // In secondary renderers, politely disable engine starts without breaking UI
 if (!IS_PRIMARY && AudioEngine?.start) {
@@ -599,6 +543,17 @@ console.log("  • Rhythm → Particle behavior");
 console.log("  • Mythic keywords → Myth transitions");
 console.log("✅ Text/NLP Signal Layer ready");
 
+// Phase 13.9: Initialize input manager (mouse, keyboard handlers)
+initInputManager({
+  renderer,
+  gameMode
+});
+
+// Phase 13.11/13.13: Initialize feature modules (Capture, Hotkeys, ProjectorMode)
+initCapture();
+initHotkeys();
+initProjectorMode();
+
 // Phase 1.5 — Pilot State: Perception + Gamepad Integration
 import { PerceptionState } from './perceptionState.js';
 import { GamepadManager } from './gamepadManager.js';
@@ -638,45 +593,11 @@ gameMode = new GameMode(scene, camera);
 window.gameMode = gameMode;
 console.log("🎮 GameMode initialized");
 
-// Add click listener for firing projectiles
-renderer.domElement.addEventListener('click', (e) => {
-  console.log("🖱️ Click detected on canvas", { enabled: gameMode?.enabled, gameMode: !!gameMode });
-  if (gameMode && gameMode.enabled) {
-    console.log("🎮 Attempting to fire projectile...");
-    gameMode.fireProjectile();
-  } else {
-    console.log("🎮 Game mode not enabled or not initialized");
-  }
-});
+// Phase 13.9: Game mode click handler moved to inputManager.js
 
 console.log("✅ Stage 2: Game Mode initialized — Ready for deer hunting");
 
-// Phase 11.7.18: Mouse interaction for emoji swirl forces
-let isMouseDown = false;
-let mouseX = 0;
-let mouseY = 0;
-
-window.addEventListener('mousedown', () => { isMouseDown = true; });
-window.addEventListener('mouseup', () => { isMouseDown = false; });
-window.addEventListener('mousemove', (e) => {
-  mouseX = e.clientX;
-  mouseY = e.clientY;
-
-  // Apply swirl force to all active emoji streams
-  if (isMouseDown && state.emojiPhysics?.mouseInteraction) {
-    if (window.emojiStreamManager) {
-      window.emojiStreamManager.streams.forEach((stream, emoji) => {
-        if (stream.enabled) {
-          stream.applySwirlForce(mouseX, mouseY);
-        }
-      });
-    }
-    // Also apply to single emoji particles if active
-    if (window.emojiParticles) {
-      window.emojiParticles.applySwirlForce(mouseX, mouseY);
-    }
-  }
-});
+// Phase 13.9: Mouse interaction handlers moved to inputManager.js
 
 initTelemetry(() => ({
   midiDevices: getMIDIDeviceCount(),
@@ -710,27 +631,7 @@ setTimeout(() => {
   updatePresetList(listPresets());
 }, 100);
 
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'p' || e.key === 'P') {
-    // Toggle to next morph target
-    const targets = state.morphState.targets;
-    const currentIndex = targets.indexOf(state.morphState.current);
-    const nextIndex = (currentIndex + 1) % targets.length;
-    const newTarget = targets[nextIndex];
-
-    // Update state
-    state.morphState.previous = state.morphState.current;
-    state.morphState.current = newTarget;
-
-    // Reset all weights and set new target to 1.0
-    targets.forEach(target => {
-      state.morphWeights[target] = 0;
-    });
-    state.morphWeights[newTarget] = 1.0;
-
-    console.log(`🔄 Toggled to morph target: ${newTarget}`);
-  }
-});
+// Phase 13.9: Morph toggle handler (P key) moved to inputManager.js
 
 console.log("✅ main.js loaded – all modules imported");
 
@@ -777,147 +678,7 @@ setTimeout(() => {
 // No manual initialization needed - HUD modules auto-register via registerHUDCallback()
 console.log("✅ Phase 13.4 HUD System Ready (Signal Bridge)");
 
-// ——— Phase 13.20 Projector Mode ———
-(function installProjectorMode() {
-  // 1) CSS: hide HUD + cursor when projector mode is active
-  const css = `
-    html.projector-mode, body.projector-mode { cursor: none !important; }
-    /* Hide common HUD roots (we don't assume exact id/class) */
-    .projector-mode [data-hud-root],
-    .projector-mode #hud,
-    .projector-mode .hud-root { display: none !important; }
-    /* Optional: keep canvas clean edge-to-edge */
-    .projector-mode body { background: #000 !important; }
-  `;
-  const style = document.createElement('style');
-  style.id = 'projector-mode-style';
-  style.textContent = css;
-  document.head.appendChild(style);
-
-  async function goFullscreen() {
-    try {
-      const el = document.documentElement;
-      if (!document.fullscreenElement && el.requestFullscreen) {
-        await el.requestFullscreen({ navigationUI: 'hide' }).catch(()=>{});
-      }
-    } catch {}
-  }
-  async function exitFullscreen() {
-    try {
-      if (document.fullscreenElement) await document.exitFullscreen().catch(()=>{});
-    } catch {}
-  }
-
-  // Optional render scale bump (safe, best-effort)
-  function bumpRenderScale(enable) {
-    try {
-      const r = window.renderer;
-      if (r?.setPixelRatio) {
-        if (enable) {
-          const target = Math.min(2, (window.devicePixelRatio || 1) * 1.15);
-          r.setPixelRatio(target);
-        } else {
-          r.setPixelRatio(window.devicePixelRatio || 1);
-        }
-        r.setSize(window.innerWidth, window.innerHeight, false);
-      }
-    } catch {}
-  }
-
-  window.ProjectorMode = window.ProjectorMode || {
-    enabled: false,
-    async enable() {
-      if (this.enabled) return;
-      document.documentElement.classList.add('projector-mode');
-      document.body.classList.add('projector-mode');
-      await goFullscreen();
-      bumpRenderScale(true);
-      this.enabled = true;
-      console.log('🖥️ Projector Mode: ON');
-      updateButton();
-    },
-    async disable() {
-      if (!this.enabled) return;
-      document.documentElement.classList.remove('projector-mode');
-      document.body.classList.remove('projector-mode');
-      bumpRenderScale(false);
-      await exitFullscreen();
-      this.enabled = false;
-      console.log('🖥️ Projector Mode: OFF');
-      updateButton();
-    },
-    async toggle() {
-      return this.enabled ? this.disable() : this.enable();
-    }
-  };
-
-  // Phase 13.30: Projector Mode button (bottom-right)
-  function createProjectorButton() {
-    const btn = document.createElement('button');
-    btn.id = '__projector_btn__';
-    btn.textContent = '🖥️ Projector Mode';
-    btn.style.cssText = `
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      padding: 10px 16px;
-      background: rgba(0,0,0,0.8);
-      color: #fff;
-      border: 1px solid #555;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      font-family: system-ui, -apple-system, sans-serif;
-      z-index: 9999;
-      transition: background 0.2s;
-    `;
-    btn.addEventListener('mouseenter', () => {
-      btn.style.background = 'rgba(40,40,40,0.9)';
-    });
-    btn.addEventListener('mouseleave', () => {
-      btn.style.background = 'rgba(0,0,0,0.8)';
-    });
-    btn.addEventListener('click', () => {
-      window.ProjectorMode.toggle();
-    });
-    document.body.appendChild(btn);
-    return btn;
-  }
-
-  function updateButton() {
-    const btn = document.getElementById('__projector_btn__');
-    if (!btn) return;
-    btn.textContent = window.ProjectorMode.enabled ? '✖️ Exit Projector' : '🖥️ Projector Mode';
-  }
-
-  // Create button after DOM loads
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', createProjectorButton);
-  } else {
-    createProjectorButton();
-  }
-
-  // Hotkeys: Shift+P toggles; Esc exits
-  window.addEventListener('keydown', async (e) => {
-    // Esc exits PM even if focus is on inputs
-    if (e.key === 'Escape' && window.ProjectorMode.enabled) {
-      e.preventDefault();
-      return window.ProjectorMode.disable();
-    }
-    // Shift+P toggle, avoid stealing common shortcuts otherwise
-    if ((e.key === 'P' || e.key === 'p') && e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
-      e.preventDefault();
-      return window.ProjectorMode.toggle();
-    }
-  });
-
-  // Safety: if fullscreen lost (e.g., user hits Esc), turn mode off
-  document.addEventListener('fullscreenchange', () => {
-    if (!document.fullscreenElement && window.ProjectorMode.enabled) {
-      window.ProjectorMode.disable();
-    }
-  });
-})();
+// Phase 13.13: Projector Mode now in features/projectorMode.js
 
 // ——— Phase 13.22: Screenshot + Posterize Export ———
 (function installCapture() {

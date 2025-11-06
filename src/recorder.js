@@ -8,6 +8,11 @@ let recordingStartTime = 0;
 let recordingDuration = 0;
 let animationFrameId = null;
 
+// FFmpeg.wasm for MP4 conversion
+let ffmpeg = null;
+let ffmpegLoaded = false;
+let ffmpegLoading = false;
+
 // Recording status callbacks
 const statusCallbacks = new Set();
 
@@ -221,6 +226,192 @@ export function formatDuration(seconds) {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Load FFmpeg.wasm for MP4 conversion
+async function loadFFmpeg() {
+  if (ffmpegLoaded) return true;
+  if (ffmpegLoading) {
+    console.log('🎥 FFmpeg already loading...');
+    // Wait for loading to complete
+    while (ffmpegLoading) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    return ffmpegLoaded;
+  }
+
+  try {
+    ffmpegLoading = true;
+    console.log('🎥 Loading FFmpeg.wasm for MP4 conversion...');
+
+    // Dynamically import FFmpeg.wasm
+    const { FFmpeg } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.7/dist/esm/index.min.js');
+    const { fetchFile, toBlobURL } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.min.js');
+
+    ffmpeg = new FFmpeg();
+
+    // Load FFmpeg core
+    const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
+    await ffmpeg.load({
+      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
+    });
+
+    ffmpegLoaded = true;
+    console.log('🎥 FFmpeg.wasm loaded successfully');
+    return true;
+
+  } catch (error) {
+    console.error('🎥 Failed to load FFmpeg.wasm:', error);
+    ffmpegLoaded = false;
+    return false;
+  } finally {
+    ffmpegLoading = false;
+  }
+}
+
+// Convert WebM to MP4 using native FFmpeg (Electron) or FFmpeg.wasm (browser)
+async function convertToMP4(webmBlob, onProgress = null) {
+  // Check if running in Electron with native FFmpeg support
+  if (window.electronAPI && window.electronAPI.convertToMP4) {
+    try {
+      console.log('🎥 Converting WebM to MP4 using native FFmpeg...');
+      const startTime = Date.now();
+
+      // Convert blob to array buffer
+      const webmData = await webmBlob.arrayBuffer();
+      const webmArray = Array.from(new Uint8Array(webmData));
+
+      // Call native FFmpeg via Electron IPC
+      const mp4Array = await window.electronAPI.convertToMP4(webmArray);
+
+      // Convert back to blob
+      const mp4Blob = new Blob([new Uint8Array(mp4Array)], { type: 'video/mp4' });
+
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.log(`🎥 Native FFmpeg conversion complete in ${duration}s`);
+
+      // Report 100% progress
+      if (onProgress) onProgress(100);
+
+      return mp4Blob;
+
+    } catch (error) {
+      console.error('🎥 Native FFmpeg conversion failed:', error);
+      throw error;
+    }
+  }
+
+  // Fallback to FFmpeg.wasm (browser-only, slow)
+  console.warn('🎥 Native FFmpeg not available, falling back to FFmpeg.wasm (slow)');
+
+  if (!await loadFFmpeg()) {
+    throw new Error('Failed to load FFmpeg');
+  }
+
+  try {
+    console.log('🎥 Converting WebM to MP4 with FFmpeg.wasm...');
+
+    // Register progress callback
+    if (onProgress) {
+      ffmpeg.on('progress', ({ progress }) => {
+        onProgress(progress * 100);
+      });
+    }
+
+    // Write input file
+    const webmData = await webmBlob.arrayBuffer();
+    await ffmpeg.writeFile('input.webm', new Uint8Array(webmData));
+
+    // Convert to MP4 with H.264 codec
+    await ffmpeg.exec([
+      '-i', 'input.webm',
+      '-c:v', 'libx264',
+      '-preset', 'fast',
+      '-crf', '18',
+      '-c:a', 'aac',
+      '-b:a', '128k',
+      'output.mp4'
+    ]);
+
+    // Read output file
+    const data = await ffmpeg.readFile('output.mp4');
+    const mp4Blob = new Blob([data.buffer], { type: 'video/mp4' });
+
+    // Cleanup
+    await ffmpeg.deleteFile('input.webm');
+    await ffmpeg.deleteFile('output.mp4');
+
+    console.log('🎥 MP4 conversion complete (FFmpeg.wasm)');
+    return mp4Blob;
+
+  } catch (error) {
+    console.error('🎥 MP4 conversion failed:', error);
+    throw error;
+  }
+}
+
+// Download recording as MP4
+export async function downloadRecordingAsMP4(filename = null, onProgress = null) {
+  if (recordedChunks.length === 0) {
+    console.warn('🎥 No recording data to download');
+    return;
+  }
+
+  try {
+    // Create WebM blob from chunks
+    const webmBlob = new Blob(recordedChunks, {
+      type: recordedChunks[0].type || 'video/webm'
+    });
+
+    const webmSize = (webmBlob.size / 1024 / 1024).toFixed(2);
+    console.log(`🎥 Converting to MP4 (${webmSize} MB WebM)`);
+
+    // Convert to MP4
+    const mp4Blob = await convertToMP4(webmBlob, onProgress);
+
+    const mp4Size = (mp4Blob.size / 1024 / 1024).toFixed(2);
+    console.log(`🎥 Creating MP4 download (${mp4Size} MB)`);
+
+    // Generate filename
+    if (!filename) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      filename = `MMPA_Recording_${timestamp}.mp4`;
+    }
+
+    // Create download link
+    const url = URL.createObjectURL(mp4Blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+
+    // Cleanup
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      console.log(`🎥 Downloaded: ${filename} (${mp4Size} MB)`);
+    }, 100);
+
+    // Clear chunks
+    recordedChunks = [];
+
+  } catch (error) {
+    console.error('🎥 MP4 download failed:', error);
+    throw error;
+  }
+}
+
+// Check if FFmpeg is loaded
+export function isFFmpegReady() {
+  return ffmpegLoaded;
+}
+
+// Preload FFmpeg (optional, can be called on app init)
+export async function preloadFFmpeg() {
+  return await loadFFmpeg();
 }
 
 console.log('🎥 Recorder module loaded');
