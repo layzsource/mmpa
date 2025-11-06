@@ -113,6 +113,7 @@ const PLANE_MIST_SHADER = {
     uniform float uSpeed;
     varying vec3 vPosition;
     varying float vAlpha;
+    varying vec2 vUv;
 
     // Hash function for noise
     float hash31(vec3 p) {
@@ -151,8 +152,9 @@ const PLANE_MIST_SHADER = {
       vec3 q = worldPos.xyz * 0.3 + vec3(0.0, uTime * 0.1 * uSpeed, 0.0);
       float noise = valueNoise3(q);
 
-      // Pass position and alpha to fragment shader
+      // Pass position, UV, and alpha to fragment shader
       vPosition = worldPos.xyz;
+      vUv = uv;
 
       // Height-based alpha falloff - gentle falloff across full cubic volume
       // More visible near ground (y=-125), gradually fades toward top (y=+125)
@@ -165,15 +167,28 @@ const PLANE_MIST_SHADER = {
   `,
   fragmentShader: `
     uniform float uDensity;
+    uniform float uEdgeFeather;
     varying vec3 vPosition;
     varying float vAlpha;
+    varying vec2 vUv;
 
     void main() {
       // Soft blue-gray mist color
       vec3 mistColor = vec3(0.53, 0.60, 0.73);
 
-      // Reduce alpha for stacked layers to prevent over-saturation
-      gl_FragColor = vec4(mistColor, vAlpha * uDensity * 0.04);
+      // Calculate distance from center (0.5, 0.5) for radial fade
+      vec2 center = vec2(0.5);
+      float distFromCenter = length(vUv - center);
+
+      // Edge feathering - fade out smoothly from center to edges
+      // uEdgeFeather controls how much of the plane fades (0.0-1.0)
+      // Higher values = more aggressive edge fade
+      float edgeFade = 1.0 - smoothstep(0.5 - uEdgeFeather * 0.5, 0.5, distFromCenter);
+
+      // Combine height-based alpha with edge fade
+      float finalAlpha = vAlpha * edgeFade * uDensity * 0.04;
+
+      gl_FragColor = vec4(mistColor, finalAlpha);
     }
   `
 };
@@ -250,14 +265,15 @@ function initPlaneMist(scene) {
   // Create plane geometry for layered volumetric effect
   mistPlaneGeometry = new THREE.PlaneGeometry(250, 250, 1, 1);
 
-  // Shader material with FBM noise
+  // Shader material with FBM noise and edge feathering
   mistPlaneMaterial = new THREE.ShaderMaterial({
     vertexShader: PLANE_MIST_SHADER.vertexShader,
     fragmentShader: PLANE_MIST_SHADER.fragmentShader,
     uniforms: {
       uTime: { value: 0.0 },
       uDensity: { value: 1.0 },
-      uSpeed: { value: 1.0 }
+      uSpeed: { value: 1.0 },
+      uEdgeFeather: { value: 0.6 }  // Default 60% edge fade for soft mist
     },
     transparent: true,
     depthWrite: false,

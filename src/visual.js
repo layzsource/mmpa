@@ -3308,6 +3308,12 @@ export function updateCellularAutomata(renderer) {
     }
 
     // Create new texture and update both render targets
+    // Phase 13.8: Dispose old init texture before creating new one
+    const oldTexture = cellularAutomataComputeMaterial.uniforms.uStateTexture.value;
+    if (oldTexture && oldTexture.isTexture && oldTexture !== cellularRenderTargetA.texture && oldTexture !== cellularRenderTargetB.texture) {
+      oldTexture.dispose();
+    }
+
     const initTexture = new THREE.DataTexture(
       initData,
       caResolution,
@@ -3324,6 +3330,9 @@ export function updateCellularAutomata(renderer) {
     renderer.setRenderTarget(cellularRenderTargetB);
     renderer.render(cellularComputeScene, new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1));
     renderer.setRenderTarget(null);
+
+    // Phase 13.8: Dispose temporary init texture after use
+    initTexture.dispose();
 
     cellularCurrentTarget = 'A';
     cellularFrameCount = 0;

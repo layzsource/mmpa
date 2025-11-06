@@ -2813,6 +2813,10 @@ export class EmojiParticles {
         undefined,
         (error) => {
           console.error('🖼️ Failed to load custom mandala image, falling back to emoji:', error);
+          // Phase 13.8: Dispose failed texture before creating fallback
+          if (texture && texture.dispose) {
+            texture.dispose();
+          }
           // Fallback to emoji on error
           const fallbackTexture = this.createEmojiTexture(newEmoji, 128);
           this.applyTexture(fallbackTexture);
