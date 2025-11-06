@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { SHADOW_LAYER } from './constants.js'; // Phase 2.3.3
 import { getEffectiveAudio, state } from './state.js'; // Phase 11.4.3: Stable audio gate + Phase 11.7: state access
+import { AudioEngine } from './audio.js'; // Phase 13.7: Spectrum visualization
 
 // Phase 11.7.22: Musical scale definitions (intervals from root)
 const MUSICAL_SCALES = {
@@ -517,6 +518,44 @@ export class ParticleSystem {
         case 'vesselPlanes': {
           // Phase 2.3.0: Vessel-aware layout with organic motion
           this.updateLayoutVesselPlanes();
+          break;
+        }
+        case 'spectrum': {
+          // Phase 13.7: Spectrum/Waveform visualization
+          // Get FFT spectrum data from AudioEngine
+          const spectrum = AudioEngine.getSpectrum();
+          const numBands = Math.min(64, spectrum.length); // Use up to 64 frequency bands
+
+          // Distribute particles evenly across frequency bands
+          const particlesPerBand = Math.ceil(this.count / numBands);
+
+          // Arrange particles in a circular spectrum analyzer
+          for (let bandIdx = 0; bandIdx < numBands; bandIdx++) {
+            // Get amplitude for this frequency band (0-255)
+            const amplitude = spectrum[bandIdx] / 255; // Normalize to 0-1
+
+            // Calculate angle for this frequency band (full circle)
+            const angle = (bandIdx / numBands) * Math.PI * 2;
+
+            // Base radius + amplitude-driven expansion
+            const baseRadius = 2.0;
+            const maxExpansion = 3.0; // Max outward expansion from amplitude
+            const radius = baseRadius + (amplitude * maxExpansion);
+
+            // Assign particles to this frequency band
+            const startParticle = bandIdx * particlesPerBand;
+            const endParticle = Math.min(startParticle + particlesPerBand, this.count);
+
+            for (let p = startParticle; p < endParticle; p++) {
+              // Offset particles radially outward for this band
+              const particleOffset = (p - startParticle) / particlesPerBand;
+              const particleRadius = radius + (particleOffset * 0.5);
+
+              this.targets[p * 3]     = Math.cos(angle) * particleRadius;
+              this.targets[p * 3 + 1] = Math.sin(angle) * particleRadius;
+              this.targets[p * 3 + 2] = (amplitude - 0.5) * 2.0; // Z-axis depth based on amplitude
+            }
+          }
           break;
         }
       }

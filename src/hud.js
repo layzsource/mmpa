@@ -395,7 +395,8 @@ function createHUDPanel() {
     { value: "random", label: "Random" },
     { value: "spiral", label: "Spiral 🌀" },
     { value: "wave", label: "Wave Grid 🌊" },
-    { value: "burst", label: "Burst 💥" }
+    { value: "burst", label: "Burst 💥" },
+    { value: "spectrum", label: "Spectrum 📊" }
   ];
 
   layoutOptions.forEach(opt => {

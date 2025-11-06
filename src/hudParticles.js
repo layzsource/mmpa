@@ -66,12 +66,14 @@ export function createParticlesHudSection(container, notifyHUDUpdate, createTogg
   particleLayoutSelect.id = 'particle-layout-dropdown';
   particleLayoutSelect.style.cssText = 'width: 100%; padding: 5px; background: #333; color: white; border: 1px solid #555; border-radius: 3px;';
 
-  ['cube', 'sphere', 'torus', 'vesselPlanes'].forEach(option => {
+  ['cube', 'sphere', 'torus', 'vesselPlanes', 'spectrum'].forEach(option => {
     const optionEl = document.createElement('option');
     optionEl.value = option;
-    // Special case for vesselPlanes display name
+    // Special case for vesselPlanes and spectrum display names
     if (option === 'vesselPlanes') {
       optionEl.textContent = 'Vessel Planes';
+    } else if (option === 'spectrum') {
+      optionEl.textContent = 'Spectrum 📊';
     } else {
       optionEl.textContent = option.charAt(0).toUpperCase() + option.slice(1);
     }
