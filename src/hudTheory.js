@@ -12,6 +12,7 @@ import {
   getStabilityMetric,
   getFluxMetric
 } from './archetypeRecognizer.js';
+import { setSynestheticColoringEnabled } from './archetypeMorph.js';
 
 // Track theory mode state
 let theoryModeEnabled = false;
@@ -152,6 +153,12 @@ export function createTheoryHudSection(container) {
     }
   });
   controlsDiv.appendChild(autoRotateToggle);
+
+  // Synesthetic coloring toggle
+  const synestheticColorToggle = createCheckbox('Synesthetic Colors', true, (checked) => {
+    setSynestheticColoringEnabled(checked);
+  });
+  controlsDiv.appendChild(synestheticColorToggle);
 
   section.appendChild(controlsDiv);
 
@@ -340,9 +347,11 @@ export function createTheoryHudSection(container) {
     <div>💎 Heart: Chestahedron (√2 geometry)</div>
     <div>🌀 Vortex: Life polarity meter</div>
     <div>🔍 Recognizer: Archetype detection</div>
+    <div>🎨 Synesthetic: Pitch → Color mapping</div>
     <div style="margin-top: 8px; color: #666;">
       Perfect Fifth = Coherent ringing bell<br>
-      Wolf Fifth = Chaotic cracked bell
+      Wolf Fifth = Chaotic cracked bell<br>
+      Colors map 7 scale degrees to 7 faces
     </div>
   `;
   section.appendChild(infoDiv);

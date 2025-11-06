@@ -250,7 +250,13 @@ console.log("🔄 Archetype Morph System initialized (auto-init)");
 // Theory ON: show archetype morph (chestahedron/bell)
 // Theory OFF: show old morph mesh (cube/sphere/pyramid/torus)
 let lastMorphTheoryState = null;
+let manualVisibilityControl = false; // Flag to disable automatic visibility control
 function updateMorphVisibility() {
+    // Skip automatic control if manual control is active
+    if (manualVisibilityControl) {
+        return;
+    }
+
     const theoryEnabled = window.theoryRenderer?.isEnabled?.() ?? true;
     morphMesh.visible = !theoryEnabled; // Show old morph when theory OFF
 
@@ -788,6 +794,13 @@ export function getMorphState() {
 }
 
 export { morphMesh };
+
+// Helper function to control morph visibility from HUD
+export function setMorphVisibility(visible) {
+  manualVisibilityControl = true; // Enable manual control, disable automatic
+  morphMesh.visible = visible;
+  console.log(`🔺 Morph shape visibility set to: ${visible ? 'ON' : 'OFF'} (manual control enabled)`);
+}
 
 // Phase 11.5.1: Performance monitoring for long-session lag detection
 let frameCount = 0;

@@ -5,7 +5,7 @@ console.log("🌀 hudMorph.js loaded");
  * Extracted from hud.js to complete HUD modularization
  */
 
-import { morphMesh } from './geometry.js';
+import { setMorphVisibility } from './geometry.js';
 import { setHumanoidVisible } from './humanoid.js';
 
 // Helper to create a control with consistent styling
@@ -97,10 +97,7 @@ export function createMorphHudSection(parentContainer, notifyHUDUpdate) {
 
   // Show/Hide Morph Shape toggle
   const showMorphControl = createToggleControl('Show Morph Shape', true, (value) => {
-    if (morphMesh) {
-      morphMesh.visible = value;
-      console.log(`🔺 Morph shape visibility: ${value ? 'ON' : 'OFF'}`);
-    }
+    setMorphVisibility(value);
   });
   showMorphControl.style.cssText = 'margin-bottom: 12px; padding: 8px; background: #2a2a2a; border-radius: 4px;';
   parentContainer.appendChild(showMorphControl);

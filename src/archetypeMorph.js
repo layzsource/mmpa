@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { onArchetypeEvent, ARCHETYPES } from './archetypeRecognizer.js';
+import { analyzePitchSpectrum, mapToDiatonicScale, getScaleDegreeColor, getNoteColor } from './pitchDetector.js';
+import { AudioEngine } from './audio.js';
 
 console.log("🔄 archetypeMorph.js loaded - Chestahedron ↔ Bell transformation");
 
@@ -52,9 +54,24 @@ const TOTAL_SCALE_FACTOR = (CH_Z_HEIGHT_UNSCALED * V_FACTOR) / TT_HEIGHT_UNSCALE
 let morphGroup = null;
 let chestahedronMesh = null;
 let tonalTowerMesh = null;
+let plasmaFlashMesh = null; // Wolf Fifth plasma flash at apex
 let currentMorphValue = 0; // 0-500 range
 let targetMorphValue = 0;
 let currentRotationSpeed = 0;
+
+// Calculate apex position (after geometry centering)
+const APEX_Z = (CH_Z_APEX_UNSCALED - CH_Z_CENTER_UNSCALED) * V_FACTOR; // 2.447438
+
+// =============================================================================
+// SYNESTHETIC COLOR MAPPING STATE
+// =============================================================================
+
+let synestheticColoringEnabled = true; // Toggle for synesthetic face coloring
+let lastPitchAnalysis = null; // Cache last pitch analysis result
+let colorUpdateCounter = 0; // For throttled updates
+const COLOR_UPDATE_INTERVAL = 6; // Update colors every 6 frames (10Hz at 60fps)
+
+const GOLD_COLOR = 0xffc01f; // Default gold color
 
 // =============================================================================
 // GEOMETRY CREATION
@@ -197,8 +214,7 @@ function createTonalTowerGeometry() {
 export function initArchetypeMorph(scene) {
     console.log("🔄 Initializing Archetype Morph System...");
 
-    // Create gold metallic material
-    const GOLD_COLOR = 0xffc01f;
+    // Create gold metallic material (using global GOLD_COLOR)
     const goldMaterial = new THREE.MeshStandardMaterial({
         color: GOLD_COLOR,
         metalness: 0.95,
@@ -229,9 +245,21 @@ export function initArchetypeMorph(scene) {
     const TILT_ANGLE = 36 * Math.PI / 180;
     morphGroup.rotation.x = TILT_ANGLE;
 
+    // Create plasma flash at apex for Wolf Fifth effect
+    const flashGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+    const flashMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending
+    });
+    plasmaFlashMesh = new THREE.Mesh(flashGeometry, flashMaterial);
+    plasmaFlashMesh.position.set(0, 0, APEX_Z); // Position at apex of bell/chestahedron
+
     // Add meshes to group
     morphGroup.add(chestahedronMesh);
     morphGroup.add(tonalTowerMesh);
+    morphGroup.add(plasmaFlashMesh); // Add plasma flash to group so it follows rotation
 
     // Initialize as hidden (theory mode starts disabled)
     morphGroup.visible = false;
@@ -241,6 +269,10 @@ export function initArchetypeMorph(scene) {
 
     // Register archetype event callbacks
     registerArchetypeCallbacks();
+
+    // Initialize morph state to show chestahedron (value = 0)
+    applyMorph(0);
+    console.log("🔄 Initial morph state applied: Chestahedron visible, Bell hidden");
 
     // Hide the theoryRenderer's static chestahedron to prevent visual conflict
     if (window.theoryRenderer && window.theoryRenderer.theoryState) {
@@ -259,26 +291,237 @@ export function initArchetypeMorph(scene) {
 }
 
 // =============================================================================
+// SYNESTHETIC COLOR MAPPING
+// =============================================================================
+
+/**
+ * Update chestahedron face colors based on detected pitch/key
+ * Maps the 7 diatonic scale degrees to the 7 faces using Newton-Scriabin color theory
+ */
+function updateSynestheticColors() {
+    // DEBUG 1: Check if function is being called
+    if (colorUpdateCounter === 0) {
+        console.log('🎨 DEBUG 1: updateSynestheticColors first call');
+    }
+
+    // DEBUG 2: Check enabled state and mesh existence
+    if (!synestheticColoringEnabled || !chestahedronMesh) {
+        if (colorUpdateCounter % 120 === 0) { // Log every 2 seconds
+            console.log('🎨 DEBUG 2: Early return - enabled:', synestheticColoringEnabled, 'mesh exists:', !!chestahedronMesh);
+        }
+        return;
+    }
+
+    // DEBUG 3: Check material array
+    if (!Array.isArray(chestahedronMesh.material)) {
+        if (colorUpdateCounter % 120 === 0) {
+            console.log('🎨 DEBUG 3: Material not array - type:', typeof chestahedronMesh.material, 'isArray:', Array.isArray(chestahedronMesh.material));
+        }
+        return;
+    }
+
+    // Throttle updates to reduce CPU load (10Hz update rate)
+    colorUpdateCounter++;
+    if (colorUpdateCounter % COLOR_UPDATE_INTERVAL !== 0) return;
+
+    // DEBUG 4: Past throttle check (log periodically)
+    if (colorUpdateCounter % 120 === 0) {
+        console.log('🎨 DEBUG 4: Past throttle check, counter:', colorUpdateCounter);
+    }
+
+    try {
+        // DEBUG 5: Check AudioEngine availability
+        if (!AudioEngine || !AudioEngine.analyser) {
+            if (colorUpdateCounter % 120 === 0) {
+                console.log('🎨 DEBUG 5: AudioEngine issue - engine exists:', !!AudioEngine, 'analyser exists:', !!AudioEngine?.analyser);
+            }
+            return;
+        }
+
+        // DEBUG 6: AudioEngine is available
+        if (colorUpdateCounter % 120 === 0) {
+            console.log('🎨 DEBUG 6: AudioEngine available, frequencyBinCount:', AudioEngine.analyser.frequencyBinCount);
+        }
+
+        // Get frequency spectrum
+        const spectrum = new Uint8Array(AudioEngine.analyser.frequencyBinCount);
+        AudioEngine.analyser.getByteFrequencyData(spectrum);
+
+        const sampleRate = AudioEngine.ctx.sampleRate;
+        const nyquist = sampleRate / 2;
+
+        // Analyze chromatic pitch profile (12 tones)
+        const pitchAnalysis = analyzePitchSpectrum(spectrum, sampleRate, nyquist);
+        lastPitchAnalysis = pitchAnalysis; // Cache for debugging
+
+        // Map to diatonic scale (7 scale degrees for 7 faces)
+        const diatonicMapping = mapToDiatonicScale(pitchAnalysis);
+
+        // DEBUG 7: Log energy levels periodically
+        if (colorUpdateCounter % 120 === 0) {
+            console.log('🎨 DEBUG 7: Energy:', pitchAnalysis.totalEnergy.toFixed(3), 'Threshold: 1.0');
+        }
+
+        // Check if we have enough signal energy to apply coloring
+        const ENERGY_THRESHOLD = 1.0; // Minimum energy to trigger color change
+        if (pitchAnalysis.totalEnergy < ENERGY_THRESHOLD) {
+            // Not enough signal - fade back to gold
+            chestahedronMesh.material.forEach(mat => {
+                mat.color.lerp(new THREE.Color(GOLD_COLOR), 0.1);
+            });
+            if (colorUpdateCounter % 120 === 0) {
+                console.log('🎨 DEBUG 8: Below energy threshold, fading to gold');
+            }
+            return;
+        }
+
+        // DEBUG 9: Energy threshold met - applying colors
+        if (colorUpdateCounter % 60 === 0) {
+            console.log(`🎨 DEBUG 9: APPLYING COLORS - Key: ${diatonicMapping.rootNote} ${diatonicMapping.mode}, energy: ${pitchAnalysis.totalEnergy.toFixed(2)}`);
+        }
+
+        // Apply colors to each face based on scale degree energy
+        const { scaleDegreeEnergyNormalized, scaleDegreeNotes } = diatonicMapping;
+        const rootNote = diatonicMapping.rootNote;
+        const mode = diatonicMapping.mode;
+
+        for (let faceIndex = 0; faceIndex < 7; faceIndex++) {
+            const material = chestahedronMesh.material[faceIndex];
+            const energy = scaleDegreeEnergyNormalized[faceIndex];
+
+            // Get the color for this scale degree
+            const scaleDegreeColor = getScaleDegreeColor(faceIndex, rootNote, mode);
+            const targetColor = new THREE.Color(scaleDegreeColor);
+
+            // Blend between gold (low energy) and chromatic color (high energy)
+            const goldColor = new THREE.Color(GOLD_COLOR);
+            const blendFactor = energy * 0.7; // Max 70% color blend (keep some gold)
+
+            material.color.copy(goldColor).lerp(targetColor, blendFactor);
+        }
+
+        // Apply dominant key color glow to entire shape (visible during bell morph too)
+        const dominantKeyColor = getNoteColor(pitchAnalysis.rootNote);
+        const glowColor = new THREE.Color(dominantKeyColor);
+
+        // Strong, visible glow: base 0.8 + scaled by strength, max 2.5
+        const glowIntensity = Math.min(0.8 + (pitchAnalysis.strength * 2.0), 2.5);
+
+        // Debug logging (every 60 frames = ~1 second at 60fps)
+        if (Math.random() < 0.016) { // ~1/60 chance
+            console.log(`🔆 GLOW DEBUG:`, {
+                rootNote: pitchAnalysis.rootNote,
+                rootNoteName: pitchAnalysis.rootNoteName,
+                dominantKeyColor,
+                glowIntensity: glowIntensity.toFixed(2),
+                strength: pitchAnalysis.strength.toFixed(4),
+                chromaticEnergy: pitchAnalysis.totalEnergy.toFixed(2),
+                diatonicEnergy: diatonicMapping.totalEnergy.toFixed(2),
+                hasChestahedronMaterials: Array.isArray(chestahedronMesh?.material),
+                hasTonalTowerMaterial: !!tonalTowerMesh?.material
+            });
+        }
+
+        // Apply glow to all chestahedron materials
+        if (Array.isArray(chestahedronMesh.material)) {
+            chestahedronMesh.material.forEach(mat => {
+                mat.emissive.copy(glowColor);
+                mat.emissiveIntensity = glowIntensity;
+            });
+        }
+
+        // Apply glow to tonal tower (bell) material as well
+        if (tonalTowerMesh && tonalTowerMesh.material) {
+            tonalTowerMesh.material.emissive.copy(glowColor);
+            tonalTowerMesh.material.emissiveIntensity = glowIntensity;
+        }
+
+    } catch (error) {
+        console.error("🎨 Error updating synesthetic colors:", error);
+        synestheticColoringEnabled = false; // Disable on error to prevent spam
+    }
+}
+
+/**
+ * Enable or disable synesthetic face coloring
+ * @param {boolean} enabled - Enable/disable flag
+ */
+export function setSynestheticColoringEnabled(enabled) {
+    synestheticColoringEnabled = enabled;
+    console.log(`🎨 Synesthetic coloring: ${enabled ? 'ENABLED' : 'DISABLED'}`);
+
+    // Reset to gold when disabled
+    if (!enabled) {
+        // Reset chestahedron materials
+        if (chestahedronMesh && Array.isArray(chestahedronMesh.material)) {
+            chestahedronMesh.material.forEach(mat => {
+                mat.color.setHex(GOLD_COLOR);
+                mat.emissive.setHex(0x000000); // Remove glow
+                mat.emissiveIntensity = 0;
+            });
+        }
+
+        // Reset tonal tower material
+        if (tonalTowerMesh && tonalTowerMesh.material) {
+            tonalTowerMesh.material.color.setHex(GOLD_COLOR);
+            tonalTowerMesh.material.emissive.setHex(0x000000); // Remove glow
+            tonalTowerMesh.material.emissiveIntensity = 0;
+        }
+    }
+}
+
+/**
+ * Get last pitch analysis result (for debugging)
+ */
+export function getLastPitchAnalysis() {
+    return lastPitchAnalysis;
+}
+
+// =============================================================================
 // ARCHETYPE EVENT CALLBACKS
 // =============================================================================
 
 function registerArchetypeCallbacks() {
     // PERFECT_FIFTH: Transition to bell (500)
     onArchetypeEvent('onPerfectFifthEnter', (data) => {
+        // Check if we're in startup delay period
+        const timeSinceEnable = Date.now() - theoryEnableTime;
+        if (theoryEnableTime > 0 && timeSinceEnable < STARTUP_DELAY_MS) {
+            console.log(`🔔 PERFECT_FIFTH detected BUT IGNORED (startup delay: ${timeSinceEnable}ms / ${STARTUP_DELAY_MS}ms)`);
+            return;
+        }
+
         console.log(`🔔 PERFECT_FIFTH detected - morphing to bell (φ-coherence: ${data.stabilityMetric.toFixed(3)})`);
         targetMorphValue = MAX_MORPH_VALUE; // Full bell
+        console.log(`   → targetMorphValue set to ${targetMorphValue} (full bell)`);
     });
 
     // WOLF_FIFTH: Return partway to chestahedron (250) - chaos state
     onArchetypeEvent('onWolfFifthEnter', (data) => {
+        // Check if we're in startup delay period
+        const timeSinceEnable = Date.now() - theoryEnableTime;
+        if (theoryEnableTime > 0 && timeSinceEnable < STARTUP_DELAY_MS) {
+            console.log(`⚡ WOLF_FIFTH detected BUT IGNORED (startup delay: ${timeSinceEnable}ms / ${STARTUP_DELAY_MS}ms)`);
+            return;
+        }
+
         console.log(`⚡ WOLF_FIFTH detected - partial morph (sub-φ crisis: ${data.stabilityMetric.toFixed(3)})`);
         targetMorphValue = MAX_MORPH_VALUE * 0.5; // Mid-point morph
+        console.log(`   → targetMorphValue set to ${targetMorphValue} (mid-point morph)`);
     });
 
     // NEUTRAL_STATE: Return to chestahedron (0)
     onArchetypeEvent('onNeutralStateEnter', (data) => {
+        // Check if we're in startup delay period
+        const timeSinceEnable = Date.now() - theoryEnableTime;
+        if (theoryEnableTime > 0 && timeSinceEnable < STARTUP_DELAY_MS) {
+            console.log(`🌫️ NEUTRAL_STATE detected BUT IGNORED (startup delay: ${timeSinceEnable}ms / ${STARTUP_DELAY_MS}ms)`);
+            return;
+        }
+
         console.log(`🌫️ NEUTRAL_STATE detected - returning to chestahedron (quiet field: ${data.fluxMetric.toFixed(3)})`);
         targetMorphValue = 0; // Full chestahedron
+        console.log(`   → targetMorphValue set to ${targetMorphValue} (full chestahedron)`);
     });
 }
 
@@ -400,6 +643,8 @@ function applyMorph(value) {
  */
 // Track last theory state for change detection
 let lastTheoryEnabled = null;
+let theoryEnableTime = 0; // Track when theory mode was enabled
+const STARTUP_DELAY_MS = 1000; // 1 second delay before allowing archetype transitions
 
 export function updateArchetypeMorph(deltaTime) {
     if (!morphGroup) return;
@@ -411,6 +656,20 @@ export function updateArchetypeMorph(deltaTime) {
     // Handle theory state changes
     if (lastTheoryEnabled !== theoryEnabled) {
         console.log(`🔷 Theory toggle changed: ${theoryEnabled ? 'ON' : 'OFF'} - morphGroup.visible = ${theoryEnabled}`);
+        console.log(`🔷 Current morph values: currentMorphValue=${currentMorphValue.toFixed(1)}, targetMorphValue=${targetMorphValue}`);
+
+        if (theoryEnabled) {
+            // Record when theory mode was enabled
+            theoryEnableTime = Date.now();
+
+            // Reset morph values to show chestahedron (ignore any pre-existing archetype state)
+            targetMorphValue = 0;
+            currentMorphValue = 0;
+            applyMorph(0); // Force immediate chestahedron visibility
+
+            console.log(`🔷 Theory ENABLED - Starting ${STARTUP_DELAY_MS}ms stabilization period`);
+            console.log(`🔷 Morph values RESET - currentMorphValue=0, targetMorphValue=0 (chestahedron)`);
+        }
 
         if (!theoryEnabled) {
             // Log details only when transitioning to disabled
@@ -476,6 +735,9 @@ export function updateArchetypeMorph(deltaTime) {
     // Apply current morph state
     applyMorph(currentMorphValue);
 
+    // Update synesthetic face colors based on audio pitch detection
+    updateSynestheticColors();
+
     // Apply rotation around Z-axis (geometric polar axis after X-tilt)
     if (currentRotationSpeed > 0) {
         // Scaling factor 0.1 for rotation rate (radians/sec)
@@ -502,6 +764,80 @@ export function setMorphValue(value) {
  */
 export function getMorphValue() {
     return currentMorphValue;
+}
+
+/**
+ * Trigger the plasma flash at the apex (called from theoryRenderer on Wolf Fifth)
+ * Enhanced with chaotic color-shifting for Wolf Fifth
+ */
+export function triggerPlasmaFlash() {
+    if (!plasmaFlashMesh) return;
+
+    console.log("⚡💥 PLASMA FLASH - Sonoluminescent Burst at apex!");
+
+    const flash = plasmaFlashMesh;
+    const material = flash.material;
+
+    // Reset
+    flash.scale.set(0.1, 0.1, 0.1);
+    material.opacity = 1.0;
+    material.color.setHex(0xffffff);
+
+    // Chaotic color sequence for Wolf Fifth
+    const colorSequence = [
+        0xffffff, // Bright white (initial burst)
+        0xff00ff, // Magenta (peak intensity)
+        0xff0000, // Red (implosion)
+        0xff4400, // Red-Orange (chaos)
+        0x8800ff, // Purple (dissipation)
+        0x0044ff  // Dark Blue (fade)
+    ];
+
+    // Animate expansion and fade
+    const startTime = performance.now();
+    const duration = 700; // milliseconds (slightly longer for dramatic effect)
+
+    function animateFlash() {
+        const elapsed = performance.now() - startTime;
+        const progress = elapsed / duration;
+
+        if (progress < 1.0) {
+            // Non-linear expansion (explosive burst then rapid expansion)
+            const expansionCurve = progress < 0.2
+                ? Math.pow(progress * 5, 2) * 0.04  // Explosive start
+                : 0.2 + (progress - 0.2) * 3.5;      // Rapid expansion
+            flash.scale.setScalar(0.1 + expansionCurve);
+
+            // Non-linear fade (bright burst, then fade)
+            material.opacity = progress < 0.3
+                ? 1.0                           // Hold brightness
+                : 1.0 - Math.pow((progress - 0.3) / 0.7, 1.5); // Accelerated fade
+
+            // Chaotic color cycling through dissonant spectrum
+            const colorProgress = progress * (colorSequence.length - 1);
+            const colorIndex = Math.floor(colorProgress);
+            const colorBlend = colorProgress - colorIndex;
+
+            if (colorIndex < colorSequence.length - 1) {
+                const color1 = new THREE.Color(colorSequence[colorIndex]);
+                const color2 = new THREE.Color(colorSequence[colorIndex + 1]);
+                material.color = color1.lerp(color2, colorBlend);
+            } else {
+                material.color.setHex(colorSequence[colorSequence.length - 1]);
+            }
+
+            // Add flicker/chaos effect during the flash
+            const flicker = 1.0 + Math.sin(performance.now() * 0.05) * 0.15;
+            material.opacity *= flicker;
+
+            requestAnimationFrame(animateFlash);
+        } else {
+            material.opacity = 0;
+            flash.scale.set(0.1, 0.1, 0.1);
+        }
+    }
+
+    animateFlash();
 }
 
 console.log("🔄 archetypeMorph.js ready - Chestahedron ↔ Bell transformation system loaded");

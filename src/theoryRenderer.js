@@ -37,6 +37,7 @@ import {
   getStabilityMetric,
   getFluxMetric
 } from './archetypeRecognizer.js';
+import { triggerPlasmaFlash } from './archetypeMorph.js';
 import {
   logSample,
   isLogging as isDataLogging,
@@ -143,7 +144,7 @@ export function initTheoryRenderer(scene, options = {}) {
   setupArchetypeCallbacks();
 
   // Create visual effects
-  createPlasmaFlashEffect(scene);
+  // NOTE: Plasma flash now created in archetypeMorph.js at apex
   createGlowEffect(scene);
 
   isInitialized = true;
@@ -326,19 +327,56 @@ function applyPerfectFifthEffect(confidence) {
 }
 
 /**
- * Wolf Fifth visual effect - dark, chaotic, pulsing
+ * Wolf Fifth visual effect - dark, chaotic, multi-color fracturing
+ * The "Cracked Bell" - each face pulses independently with dissonant colors
  */
 function applyWolfFifthEffect(confidence) {
   if (!theoryState.chestahedron) return;
 
-  // Darken and make erratic
-  theoryState.chestahedron.material.forEach(mat => {
-    mat.metalness = 0.3;
-    mat.roughness = 0.8;
+  const now = performance.now();
 
-    // Pulsing red emissive
-    const pulse = Math.sin(performance.now() * 0.01) * 0.5 + 0.5;
-    mat.emissive = new THREE.Color(0xff0000).multiplyScalar(pulse * confidence * 0.5);
+  // Dissonant color palette: red, orange, purple, dark blue
+  const dissonantColors = [
+    0xff0000, // Red
+    0xff4400, // Red-Orange
+    0xff00ff, // Magenta
+    0x8800ff, // Purple
+    0x0044ff  // Dark Blue
+  ];
+
+  // Apply chaotic, per-face fracturing
+  theoryState.chestahedron.material.forEach((mat, faceIndex) => {
+    // Darken and roughen the surface (cracked bell quality)
+    mat.metalness = 0.2 + Math.sin(now * 0.003 + faceIndex) * 0.1;
+    mat.roughness = 0.7 + Math.cos(now * 0.005 + faceIndex) * 0.15;
+
+    // IRREGULAR PULSING: Multiple overlapping sine waves at prime number frequencies
+    // This creates truly chaotic, non-periodic pulsing
+    const pulse1 = Math.sin(now * 0.007 + faceIndex * 1.3) * 0.5 + 0.5;  // 7 Hz base
+    const pulse2 = Math.sin(now * 0.011 + faceIndex * 2.1) * 0.5 + 0.5;  // 11 Hz overtone
+    const pulse3 = Math.sin(now * 0.013 + faceIndex * 0.7) * 0.5 + 0.5;  // 13 Hz chaotic layer
+    const chaosWave = (pulse1 * 0.5) + (pulse2 * 0.3) + (pulse3 * 0.2);
+
+    // PER-FACE COLOR SELECTION: Each face gets a different color from dissonant palette
+    // Cycle through colors over time, but at different rates per face
+    const colorIndex = Math.floor((now * 0.002 + faceIndex * 0.7) % dissonantColors.length);
+    const nextColorIndex = (colorIndex + 1) % dissonantColors.length;
+
+    // Smooth color transitions between dissonant hues
+    const colorBlend = ((now * 0.002 + faceIndex * 0.7) % 1.0);
+    const currentColor = new THREE.Color(dissonantColors[colorIndex]);
+    const nextColor = new THREE.Color(dissonantColors[nextColorIndex]);
+    const blendedColor = currentColor.lerp(nextColor, colorBlend);
+
+    // Apply emissive glow with chaotic intensity
+    const intensity = chaosWave * confidence * 0.8;
+    mat.emissive = blendedColor.multiplyScalar(intensity);
+
+    // Add occasional sharp flashes (sub-implosions)
+    const flashChance = Math.sin(now * 0.019 + faceIndex * 3.7);
+    if (flashChance > 0.97) {
+      mat.emissive.multiplyScalar(2.5); // Sudden brightness spike
+    }
   });
 }
 
@@ -365,69 +403,9 @@ function applyNeutralStateEffect() {
 // SPECIAL EFFECTS
 // ============================================================================
 
-/**
- * Create plasma flash effect for Wolf Fifth collapse
- */
-function createPlasmaFlashEffect(scene) {
-  const geometry = new THREE.SphereGeometry(0.5, 16, 16);
-  const material = new THREE.MeshBasicMaterial({
-    color: 0xffffff,
-    transparent: true,
-    opacity: 0,
-    blending: THREE.AdditiveBlending
-  });
-
-  theoryState.plasmaFlash = new THREE.Mesh(geometry, material);
-  theoryState.plasmaFlash.position.set(0, 0, 1.7); // Center of Chestahedron
-  scene.add(theoryState.plasmaFlash);
-}
-
-/**
- * Trigger the plasma flash (sonoluminescent burst)
- */
-export function triggerPlasmaFlash() {
-  if (!theoryState.plasmaFlash) return;
-
-  console.log("⚡💥 PLASMA FLASH - Sonoluminescent Burst!");
-
-  const flash = theoryState.plasmaFlash;
-  const material = flash.material;
-
-  // Reset
-  flash.scale.set(0.1, 0.1, 0.1);
-  material.opacity = 1.0;
-  material.color.setHex(0xffffff);
-
-  // Animate expansion and fade
-  const startTime = performance.now();
-  const duration = 500; // milliseconds
-
-  function animateFlash() {
-    const elapsed = performance.now() - startTime;
-    const progress = elapsed / duration;
-
-    if (progress < 1.0) {
-      flash.scale.setScalar(0.1 + progress * 3);
-      material.opacity = 1.0 - progress;
-
-      // Color shift: white → red → orange → fade
-      if (progress < 0.3) {
-        material.color.setHex(0xffffff);
-      } else if (progress < 0.6) {
-        material.color.setHex(0xff3333);
-      } else {
-        material.color.setHex(0xff8800);
-      }
-
-      requestAnimationFrame(animateFlash);
-    } else {
-      material.opacity = 0;
-      flash.scale.set(0.1, 0.1, 0.1);
-    }
-  }
-
-  animateFlash();
-}
+// NOTE: Plasma flash effect moved to archetypeMorph.js
+// It's now positioned at the apex of the bell/chestahedron and follows the 36° rotation
+// triggerPlasmaFlash is imported from archetypeMorph.js above
 
 /**
  * Create glow effect for Perfect Fifth state

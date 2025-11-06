@@ -217,6 +217,11 @@ export function recognizeArchetype(mmpaFeatures) {
     recognitionState.currentArchetype
   );
 
+  // Debug: Log strength value during archetype changes
+  if (detectedArchetype !== recognitionState.currentArchetype) {
+    console.log(`🔍 Archetype evaluation - strength: ${strength.toFixed(4)}, stability: ${stabilityMetric.toFixed(3)}, flux: ${fluxMetric.toFixed(3)}`);
+  }
+
   // Calculate confidence (proximity to φ for Perfect Fifth, distance for others)
   let confidence = 0;
   if (detectedArchetype === ARCHETYPES.PERFECT_FIFTH) {

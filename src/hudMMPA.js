@@ -14,6 +14,7 @@ console.log("🎯 hudMMPA.js loaded");
  */
 
 import { AudioEngine } from './audio.js';
+import { analyzePitchSpectrum } from './pitchDetector.js';
 
 // === TRANSIENT DETECTION STATE ===
 const transientDetector = {
@@ -981,69 +982,15 @@ function startMMPAOverlayUpdates() {
       const sampleRate = analyser.context.sampleRate;
       const nyquist = sampleRate / 2;
 
-      // 12-tone chromagram (pitch class profile)
-      const pitchClasses = new Array(12).fill(0);
-      const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+      // Use pitchDetector module for chromatic analysis
+      const pitchAnalysis = analyzePitchSpectrum(spectrum, sampleRate, nyquist);
 
-      // Accumulate energy for each pitch class across all octaves
-      // We'll analyze frequencies from 55Hz (A1) to 4186Hz (C8)
-      const minFreq = 55;
-      const maxFreq = 4186;
-
-      for (let i = 0; i < spectrum.length; i++) {
-        const freq = (i / spectrum.length) * nyquist;
-
-        if (freq >= minFreq && freq <= maxFreq && spectrum[i] > 10) {
-          // Convert frequency to MIDI note number
-          const midiNote = 12 * Math.log2(freq / 440.0) + 69;
-
-          // Get pitch class (0-11, where 0=C, 1=C#, etc.)
-          const pitchClass = Math.round(midiNote) % 12;
-
-          if (pitchClass >= 0 && pitchClass < 12) {
-            // Weight by amplitude
-            pitchClasses[pitchClass] += spectrum[i] / 255;
-          }
-        }
-      }
-
-      // Find dominant pitch class
-      let maxEnergy = 0;
-      let dominantPitch = 0;
-      let totalEnergy = 0;
-
-      for (let i = 0; i < 12; i++) {
-        totalEnergy += pitchClasses[i];
-        if (pitchClasses[i] > maxEnergy) {
-          maxEnergy = pitchClasses[i];
-          dominantPitch = i;
-        }
-      }
-
-      // Calculate key strength (how dominant is the peak vs. average)
-      const avgEnergy = totalEnergy / 12;
-      const strength = totalEnergy > 0 ? (maxEnergy / avgEnergy) / 3 : 0; // Normalize roughly to 0-1
-      const strengthPercent = Math.min(100, strength * 100);
-
-      // Determine major vs. minor by checking triad intervals
-      // Major triad: root (0), major third (+4 semitones), perfect fifth (+7 semitones)
-      // Minor triad: root (0), minor third (+3 semitones), perfect fifth (+7 semitones)
-      const majorThird = pitchClasses[(dominantPitch + 4) % 12];
-      const minorThird = pitchClasses[(dominantPitch + 3) % 12];
-      const fifth = pitchClasses[(dominantPitch + 7) % 12];
-
-      // If we have significant energy in the triad tones, determine mode
-      let mode = '';
-      if (totalEnergy > 1) { // Only show mode if we have enough signal
-        if (majorThird > minorThird && fifth > avgEnergy) {
-          mode = ' Maj';
-        } else if (minorThird > majorThird && fifth > avgEnergy) {
-          mode = ' Min';
-        }
-      }
+      // Extract results for display
+      const detectedKey = pitchAnalysis.detectedKey;
+      const strengthPercent = pitchAnalysis.strengthPercent;
+      const totalEnergy = pitchAnalysis.totalEnergy;
 
       // Update display
-      const detectedKey = noteNames[dominantPitch] + mode;
       keyValue.textContent = totalEnergy > 0.5 ? detectedKey : '--';
       keyConfidence.textContent = totalEnergy > 0.5 ? `${strengthPercent.toFixed(0)}%` : '--%';
     }

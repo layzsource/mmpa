@@ -409,9 +409,9 @@ export const state = {
     palette: 'Manual'  // Phase 2.3.6: 'Manual' | 'Alchemy Gold' | 'Blake Indigo' | 'Cosmic White'
   },
 
-  // Sprites configuration
+  // Sprites configuration (disabled by default - legacy audio visualizer)
   sprites: {
-    enabled: true,
+    enabled: false,
     count: 200
   },
 
@@ -454,7 +454,7 @@ export const state = {
     identity: {
       fundamentalFreq: 440.0,      // Hz
       harmonics: [440, 880, 1320], // Detected frequencies
-      strength: 0.85               // Pitch clarity (0-1)
+      strength: 0.0                // Pitch clarity (0-1) - 0 when no audio present
     },
 
     // RELATIONSHIP - "How does it relate?" (Ratios/intervals)
