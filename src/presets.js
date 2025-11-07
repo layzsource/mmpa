@@ -417,6 +417,11 @@ export function getCurrentPresetName() {
   return currentPresetName;
 }
 
+// Phase 13.16: Expose getCurrentPresetName for timeline capture
+if (typeof window !== "undefined") {
+  window.getCurrentPresetName = getCurrentPresetName;
+}
+
 export function getPresetData(name) {
   const presets = getPresetsFromStorage();
   return presets[name] || null;

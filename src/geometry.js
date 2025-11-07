@@ -1050,6 +1050,11 @@ function animate() {
     window.renderShadowLayer();
   }
 
+    // Phase 13.16: Capture timeline frame if recording
+    if (window.captureTimelineFrame) {
+      window.captureTimelineFrame();
+    }
+
     // Phase 13.12: Reset error counter on successful frame
     consecutiveAnimationErrors = 0;
 

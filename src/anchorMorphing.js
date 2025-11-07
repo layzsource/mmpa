@@ -93,6 +93,11 @@ export function getMorphProgress() {
   return morphProgress;
 }
 
+// Phase 13.16: Expose getMorphProgress for timeline capture
+if (typeof window !== "undefined") {
+  window.getMorphProgress = getMorphProgress;
+}
+
 /**
  * Get current morph info
  */

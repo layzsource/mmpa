@@ -126,6 +126,7 @@ import { createFinancialHUD } from './hudFinancial.js'; // Phase 13.27: Financia
 import { initTimeline } from './timelineIntegration.js'; // Phase 13.16: Timeline & Playback System
 import { createSettingsHudSection } from './hudSettings.js'; // Settings Configuration
 import { initSettings } from './settings.js'; // Settings Manager
+import { createSynthHudSection, getSynthInstance } from './hudSynth.js'; // MMPA Synth Engine
 
 // Phase 13.4.2: Register refresh callbacks for modules that export them
 // (Most modules removed registerHUDCallback to avoid circular dependencies)
@@ -148,13 +149,13 @@ export async function initHUD() {
   // Initialize Settings
   await initSettings();
 
-  const hudPanel = createHUDPanel();
+  const hudPanel = await createHUDPanel();
   document.body.appendChild(hudPanel);
 
   console.log("📟 HUD initialized with Rams design system");
 }
 
-function createHUDPanel() {
+async function createHUDPanel() {
   const panel = document.createElement('div');
   panel.id = 'hud-panel';
   // No inline styles - all handled by hud-rams.css
@@ -218,7 +219,7 @@ function createHUDPanel() {
   const tabNav = document.createElement('div');
   tabNav.className = 'hud-tabs';
 
-  const tabs = ['Morph', 'Presets', 'Audio', 'Visual', 'Advanced', 'Settings', 'MIDI', 'VCN', 'Destinations', 'Signals', 'Myth', 'Learn', 'AI', 'Camera', 'Portal', 'Text'];
+  const tabs = ['Morph', 'Presets', 'Audio', 'Synth', 'Visual', 'Advanced', 'Settings', 'MIDI', 'VCN', 'Destinations', 'Signals', 'Myth', 'Learn', 'AI', 'Camera', 'Portal', 'Text'];
   let activeTab = 'Morph';
   const tabButtons = {};
   const tabContainers = {};
@@ -295,6 +296,9 @@ function createHUDPanel() {
 
   // === MMPA Unified Theory - Heart/Vortex/Archetype ===
   createTheoryHudSection(tabContainers['Audio']);
+
+  // === MMPA Synth Engine ===
+  await createSynthHudSection(tabContainers['Synth']);
 
   // === Phase 4.8.1/11.7.50: Particles (Modular) ===
   createParticlesHudSection(tabContainers['Visual'], notifyHUDUpdate, createToggleControl, createSliderControl);

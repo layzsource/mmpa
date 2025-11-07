@@ -218,6 +218,9 @@ export function createDestinationHUD(container) {
   function refreshDestinationList() {
     if (!window.destinationAuthoring) return;
 
+    // IMPORTANT: Preserve the currently selected destination ID before clearing
+    const selectedId = destinationList.value;
+
     const destinations = window.destinationAuthoring.getAllDestinations();
     destinationList.innerHTML = '';
 
@@ -240,6 +243,13 @@ export function createDestinationHUD(container) {
 
       destinationList.appendChild(option);
     });
+
+    // Restore the previously selected destination if it still exists
+    if (selectedId && destinations.some(d => d.id === selectedId)) {
+      destinationList.value = selectedId;
+      // Also refresh clay objects list for this destination
+      refreshClayObjectsList();
+    }
   }
 
   // Refresh list on load and when destinations change
@@ -299,6 +309,231 @@ export function createDestinationHUD(container) {
   navButtons.appendChild(deleteButton);
 
   section.appendChild(navButtons);
+
+  // === CLAY OBJECTS LIST (Phase 13.22) ===
+  const clayObjectsSection = document.createElement('div');
+  clayObjectsSection.style.marginBottom = '16px';
+
+  const clayTitle = document.createElement('h4');
+  clayTitle.textContent = 'Clay Objects at Selected';
+  clayTitle.style.fontSize = '13px';
+  clayTitle.style.marginBottom = '8px';
+  clayObjectsSection.appendChild(clayTitle);
+
+  const clayObjectsList = document.createElement('select');
+  clayObjectsList.size = 5;
+  clayObjectsList.style.width = '100%';
+  clayObjectsList.style.marginBottom = '8px';
+  clayObjectsList.style.fontFamily = 'monospace';
+  clayObjectsList.style.fontSize = '11px';
+  clayObjectsSection.appendChild(clayObjectsList);
+
+  function refreshClayObjectsList() {
+    const selectedDestId = destinationList.value;
+    // IMPORTANT: Preserve the currently selected clay object ID before clearing
+    const selectedClayId = clayObjectsList.value;
+
+    clayObjectsList.innerHTML = '';
+
+    if (!selectedDestId || !window.destinationAuthoring) {
+      const option = document.createElement('option');
+      option.textContent = '(select a destination)';
+      option.disabled = true;
+      clayObjectsList.appendChild(option);
+      return;
+    }
+
+    const clayObjects = window.destinationAuthoring.getClayObjectsForDestination(selectedDestId);
+
+    if (clayObjects.length === 0) {
+      const option = document.createElement('option');
+      option.textContent = '(no clay objects)';
+      option.disabled = true;
+      clayObjectsList.appendChild(option);
+      return;
+    }
+
+    clayObjects.forEach(clayObj => {
+      const option = document.createElement('option');
+      option.value = clayObj.id;
+      option.textContent = `${clayObj.name} (${clayObj.shapes?.length || 0} shapes)`;
+      clayObjectsList.appendChild(option);
+    });
+
+    // Restore the previously selected clay object if it still exists
+    if (selectedClayId && clayObjects.some(obj => obj.id === selectedClayId)) {
+      clayObjectsList.value = selectedClayId;
+    }
+  }
+
+  // Refresh clay objects list when destination selection changes
+  destinationList.addEventListener('change', refreshClayObjectsList);
+
+  // Delete button for clay objects
+  const deleteClayButton = document.createElement('button');
+  deleteClayButton.textContent = '✖ Delete Clay Object';
+  deleteClayButton.style.cssText = `
+    width: 100%;
+    padding: 8px;
+    background: #aa0000;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+  `;
+  deleteClayButton.addEventListener('click', () => {
+    console.log('🗑️ Delete button clicked!');
+
+    const selectedDestId = destinationList.value;
+    const selectedClayId = clayObjectsList.value;
+
+    console.log('🗑️ Selected destination ID:', selectedDestId);
+    console.log('🗑️ Selected clay object ID:', selectedClayId);
+    console.log('🗑️ window.destinationAuthoring exists:', !!window.destinationAuthoring);
+
+    if (!selectedDestId) {
+      console.warn('🗑️ No destination selected');
+      alert('⚠️ Please select a destination first from the "Select Destination" dropdown above.');
+      return;
+    }
+
+    if (!selectedClayId) {
+      console.warn('🗑️ No clay object selected');
+      alert('⚠️ Please select a clay object to delete.');
+      return;
+    }
+
+    if (!window.destinationAuthoring) {
+      console.error('🗑️ window.destinationAuthoring not available');
+      alert('⚠️ Destination authoring system not available.');
+      return;
+    }
+
+    const dest = window.destinationAuthoring.getDestination(selectedDestId);
+    console.log('🗑️ Destination found:', dest);
+    console.log('🗑️ Clay objects in destination:', dest?.clayObjects);
+
+    const clayObj = dest?.clayObjects?.find(obj => obj.id === selectedClayId);
+    console.log('🗑️ Clay object found:', clayObj);
+
+    if (clayObj) {
+      console.log('🗑️ Showing delete confirmation dialog for:', clayObj.name);
+      showDeleteConfirmDialog(clayObj.name, () => {
+        console.log('🗑️ Delete confirmed! Removing clay object...');
+        window.destinationAuthoring.removeClayObjectFromDestination(selectedDestId, selectedClayId);
+        console.log('🗑️ Refreshing clay objects list...');
+        refreshClayObjectsList();
+        console.log('🗑️ Delete complete!');
+      });
+    } else {
+      console.error('🗑️ Clay object not found - cannot delete');
+    }
+  });
+
+  function showDeleteConfirmDialog(clayObjectName, onConfirm) {
+    console.log('🗑️ showDeleteConfirmDialog called for:', clayObjectName);
+
+    // Create modal overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+    `;
+
+    // Create modal content
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      background: #1a1a1a;
+      border: 2px solid #aa0000;
+      border-radius: 8px;
+      padding: 20px;
+      max-width: 400px;
+      box-shadow: 0 0 30px rgba(170, 0, 0, 0.5);
+    `;
+
+    const message = document.createElement('p');
+    message.textContent = `Delete clay object "${clayObjectName}"?`;
+    message.style.cssText = `
+      color: #fff;
+      margin: 0 0 20px 0;
+      font-size: 14px;
+      font-family: 'Courier New', monospace;
+    `;
+    modal.appendChild(message);
+
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = `
+      display: flex;
+      gap: 10px;
+    `;
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = 'Delete';
+    deleteBtn.style.cssText = `
+      background: #aa0000;
+      border: none;
+      color: #fff;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-family: 'Courier New', monospace;
+      cursor: pointer;
+      border-radius: 4px;
+      flex: 1;
+    `;
+    deleteBtn.onclick = () => {
+      console.log('🗑️ Delete button in modal clicked!');
+      document.body.removeChild(overlay);
+      console.log('🗑️ Modal removed, calling onConfirm callback...');
+      onConfirm();
+    };
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.cssText = `
+      background: #333;
+      border: 1px solid #666;
+      color: #fff;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-family: 'Courier New', monospace;
+      cursor: pointer;
+      border-radius: 4px;
+      flex: 1;
+    `;
+    cancelBtn.onclick = () => {
+      console.log('🗑️ Cancel button clicked - closing modal');
+      document.body.removeChild(overlay);
+    };
+
+    buttonContainer.appendChild(deleteBtn);
+    buttonContainer.appendChild(cancelBtn);
+    modal.appendChild(buttonContainer);
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    console.log('🗑️ Modal added to DOM');
+  }
+  clayObjectsSection.appendChild(deleteClayButton);
+
+  section.appendChild(clayObjectsSection);
+
+  // Listen for clay object events
+  window.addEventListener('clayObjectAdded', () => {
+    refreshClayObjectsList();
+  });
+  window.addEventListener('clayObjectRemoved', () => {
+    refreshClayObjectsList();
+  });
 
   // === EXPORT/IMPORT ===
   const ioButtons = document.createElement('div');
@@ -379,6 +614,31 @@ export function createDestinationHUD(container) {
     }
   });
   section.appendChild(clearButton);
+
+  // === CLAY MODELER ===
+  const clayModelerButton = document.createElement('button');
+  clayModelerButton.textContent = '🏗️ Open Clay Modeler';
+  clayModelerButton.style.cssText = `
+    width: 100%;
+    padding: 10px;
+    background: linear-gradient(135deg, #4CAF50, #2196F3);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    margin-top: 16px;
+  `;
+  clayModelerButton.addEventListener('click', async () => {
+    // Lazy load Clay Modeler
+    if (!window.ClayModeler) {
+      const { clayModeler } = await import('./clayModeler.js');
+      window.ClayModeler = clayModeler;
+    }
+    window.ClayModeler.toggle();
+  });
+  section.appendChild(clayModelerButton);
 
   container.appendChild(section);
   console.log("🎨 Destination HUD created");

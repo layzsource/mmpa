@@ -57,6 +57,9 @@ export class AuthoredDestination extends SignalDestination {
     this.createdAt = config.createdAt || Date.now();
     this.lastModified = config.lastModified || Date.now();
 
+    // Clay Model Objects (Phase 13.22 - Clay Object Integration)
+    this.clayObjects = config.clayObjects || [];
+
     // 3D marker mesh (created on demand)
     this.markerMesh = null;
   }
@@ -111,6 +114,9 @@ export class AuthoredDestination extends SignalDestination {
       createdBy: this.createdBy,
       createdAt: this.createdAt,
       lastModified: this.lastModified,
+
+      // Clay Objects (Phase 13.22)
+      clayObjects: this.clayObjects,
 
       // Signal properties
       signalWeight: this.signalWeight,
@@ -461,6 +467,107 @@ export class DestinationAuthoringSystem {
     }
 
     return { destination: nearest, distance: minDistance };
+  }
+
+  /**
+   * Phase 13.22 - Clay Object Integration
+   * Add a clay object to the nearest destination
+   */
+  addClayObjectToNearestDestination(clayObjectData) {
+    const { destination } = this.findNearestDestination(this.camera.position);
+
+    if (!destination) {
+      console.warn('🏗️ No destination found to add clay object');
+      return null;
+    }
+
+    return this.addClayObjectToDestination(destination.id, clayObjectData);
+  }
+
+  /**
+   * Add a clay object to a specific destination
+   */
+  addClayObjectToDestination(destinationId, clayObjectData) {
+    const destination = this.authoredDestinations.get(destinationId);
+    if (!destination) {
+      console.warn(`🏗️ Destination not found: ${destinationId}`);
+      return null;
+    }
+
+    // Add unique ID to clay object
+    const clayObject = {
+      ...clayObjectData,
+      id: `clay_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      createdAt: Date.now()
+    };
+
+    destination.clayObjects.push(clayObject);
+    destination.lastModified = Date.now();
+
+    this.saveToStorage();
+
+    console.log(`🏗️ Added clay object "${clayObject.name}" to destination "${destination.name}"`);
+
+    // Emit event
+    window.dispatchEvent(new CustomEvent('clayObjectAdded', {
+      detail: { destinationId, clayObject }
+    }));
+
+    return clayObject;
+  }
+
+  /**
+   * Remove a clay object from a destination
+   */
+  removeClayObjectFromDestination(destinationId, clayObjectId) {
+    const destination = this.authoredDestinations.get(destinationId);
+    if (!destination) {
+      console.warn(`🏗️ Destination not found: ${destinationId}`);
+      return false;
+    }
+
+    const initialLength = destination.clayObjects.length;
+    destination.clayObjects = destination.clayObjects.filter(obj => obj.id !== clayObjectId);
+
+    if (destination.clayObjects.length === initialLength) {
+      console.warn(`🏗️ Clay object not found: ${clayObjectId}`);
+      return false;
+    }
+
+    destination.lastModified = Date.now();
+    this.saveToStorage();
+
+    console.log(`🏗️ Removed clay object ${clayObjectId} from destination "${destination.name}"`);
+
+    // Emit event
+    window.dispatchEvent(new CustomEvent('clayObjectRemoved', {
+      detail: { destinationId, clayObjectId }
+    }));
+
+    return true;
+  }
+
+  /**
+   * Get all clay objects for a destination
+   */
+  getClayObjectsForDestination(destinationId) {
+    const destination = this.authoredDestinations.get(destinationId);
+    return destination ? destination.clayObjects : [];
+  }
+
+  /**
+   * Clear all clay objects from a destination
+   */
+  clearClayObjectsFromDestination(destinationId) {
+    const destination = this.authoredDestinations.get(destinationId);
+    if (!destination) return false;
+
+    destination.clayObjects = [];
+    destination.lastModified = Date.now();
+    this.saveToStorage();
+
+    console.log(`🏗️ Cleared all clay objects from destination "${destination.name}"`);
+    return true;
   }
 
   /**

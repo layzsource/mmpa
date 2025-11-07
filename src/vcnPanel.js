@@ -23,6 +23,11 @@ export class VCNPanel {
     this.nearestByCategory = {};
     this.overallNearest = null;
 
+    // Drag state
+    this.isDragging = false;
+    this.dragOffset = { x: 0, y: 0 };
+    this.panelPosition = { x: null, y: null }; // null = use CSS default positioning
+
     // Conflat-6 face configuration (6 directional axes)
     // Canvas angles: 0°=right, 90°=down, 180°=left, 270°=up
     // North is +Z (1), South is -Z (-1)
@@ -48,23 +53,49 @@ export class VCNPanel {
     // Create panel container
     this.panel = document.createElement('div');
     this.panel.id = 'vcnPanel';
-    this.panel.style.cssText = `
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 380px;
-      height: 480px;
-      background: rgba(0, 0, 0, 0.9);
-      border: 2px solid #6644aa;
-      border-radius: 8px;
-      padding: 15px;
-      z-index: 1000;
-      font-family: 'Courier New', monospace;
-      color: #fff;
-      box-shadow: 0 0 30px rgba(102, 68, 170, 0.7);
-    `;
 
-    // Title
+    // Use stored position or default to fixed bottom-right
+    if (this.panelPosition.x !== null && this.panelPosition.y !== null) {
+      this.panel.style.cssText = `
+        position: absolute;
+        left: ${this.panelPosition.x}px;
+        top: ${this.panelPosition.y}px;
+        width: 380px;
+        height: 480px;
+        background: rgba(0, 0, 0, 0.9);
+        border: 2px solid #6644aa;
+        border-radius: 8px;
+        padding: 15px;
+        z-index: 1000;
+        font-family: 'Courier New', monospace;
+        color: #fff;
+        box-shadow: 0 0 30px rgba(102, 68, 170, 0.7);
+        overflow-y: auto;
+        overflow-x: hidden;
+        box-sizing: border-box;
+      `;
+    } else {
+      this.panel.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 380px;
+        height: 480px;
+        background: rgba(0, 0, 0, 0.9);
+        border: 2px solid #6644aa;
+        border-radius: 8px;
+        padding: 15px;
+        z-index: 1000;
+        font-family: 'Courier New', monospace;
+        color: #fff;
+        box-shadow: 0 0 30px rgba(102, 68, 170, 0.7);
+        overflow-y: auto;
+        overflow-x: hidden;
+        box-sizing: border-box;
+      `;
+    }
+
+    // Title (draggable)
     const title = document.createElement('div');
     title.style.cssText = `
       font-size: 14px;
@@ -74,8 +105,65 @@ export class VCNPanel {
       color: #6644aa;
       text-transform: uppercase;
       letter-spacing: 2px;
+      cursor: move;
+      user-select: none;
     `;
     title.textContent = '🧭 Vessel Compass Navigator';
+
+    // Drag handlers
+    const onMouseDown = (e) => {
+      this.isDragging = true;
+
+      // Calculate offset from panel top-left corner
+      const rect = this.panel.getBoundingClientRect();
+      this.dragOffset.x = e.clientX - rect.left;
+      this.dragOffset.y = e.clientY - rect.top;
+
+      // Switch to absolute positioning if currently fixed
+      if (this.panel.style.position === 'fixed') {
+        this.panel.style.position = 'absolute';
+        this.panel.style.left = rect.left + 'px';
+        this.panel.style.top = rect.top + 'px';
+        this.panel.style.bottom = 'auto';
+        this.panel.style.right = 'auto';
+      }
+
+      e.preventDefault();
+    };
+
+    const onMouseMove = (e) => {
+      if (!this.isDragging) return;
+
+      // Calculate new position
+      const newX = e.clientX - this.dragOffset.x;
+      const newY = e.clientY - this.dragOffset.y;
+
+      // Update panel position
+      this.panel.style.left = newX + 'px';
+      this.panel.style.top = newY + 'px';
+
+      // Store position
+      this.panelPosition.x = newX;
+      this.panelPosition.y = newY;
+
+      e.preventDefault();
+    };
+
+    const onMouseUp = (e) => {
+      if (this.isDragging) {
+        this.isDragging = false;
+        e.preventDefault();
+      }
+    };
+
+    // Attach drag listeners
+    title.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+
+    // Store listeners for cleanup
+    this._dragListeners = { onMouseMove, onMouseUp };
+
     this.panel.appendChild(title);
 
     // Compass canvas (Conflat-6 geometry)
@@ -105,25 +193,25 @@ export class VCNPanel {
     `;
     flightTelemetry.innerHTML = `
       <div style="font-size: 10px; color: #6644aa; margin-bottom: 6px; font-weight: bold;">🛩️ Flight Telemetry</div>
-      <div style="display: flex; justify-content: space-between; margin-bottom: 2px; font-size: 10px;">
-        <span>Position:</span>
-        <span id="vcnPosition" style="font-family: monospace;">--</span>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 2px; font-size: 10px; gap: 8px;">
+        <span style="flex-shrink: 0;">Position:</span>
+        <span id="vcnPosition" style="font-family: monospace; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">--</span>
       </div>
-      <div style="display: flex; justify-content: space-between; margin-bottom: 2px; font-size: 10px;">
-        <span>Direction:</span>
-        <span id="vcnDirection" style="font-family: monospace;">--</span>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 2px; font-size: 10px; gap: 8px;">
+        <span style="flex-shrink: 0;">Direction:</span>
+        <span id="vcnDirection" style="font-family: monospace; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">--</span>
       </div>
-      <div style="display: flex; justify-content: space-between; margin-bottom: 2px; font-size: 10px;">
-        <span>Speed:</span>
-        <span id="vcnSpeed" style="font-family: monospace; color: #00ff00;">--</span>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 2px; font-size: 10px; gap: 8px;">
+        <span style="flex-shrink: 0;">Speed:</span>
+        <span id="vcnSpeed" style="font-family: monospace; color: #00ff00; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">--</span>
       </div>
-      <div style="display: flex; justify-content: space-between; margin-bottom: 2px; font-size: 10px;">
-        <span>Thrust:</span>
-        <span id="vcnThrust" style="font-family: monospace; color: #ffaa00;">--</span>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 2px; font-size: 10px; gap: 8px;">
+        <span style="flex-shrink: 0;">Thrust:</span>
+        <span id="vcnThrust" style="font-family: monospace; color: #ffaa00; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">--</span>
       </div>
-      <div style="display: flex; justify-content: space-between; font-size: 10px;">
-        <span>Mode:</span>
-        <span id="vcnMode" style="font-family: monospace; color: #ff00ff;">--</span>
+      <div style="display: flex; justify-content: space-between; font-size: 10px; gap: 8px;">
+        <span style="flex-shrink: 0;">Mode:</span>
+        <span id="vcnMode" style="font-family: monospace; color: #ff00ff; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">--</span>
       </div>
     `;
     this.panel.appendChild(flightTelemetry);
@@ -137,29 +225,29 @@ export class VCNPanel {
     `;
     metrics.innerHTML = `
       <div style="font-size: 10px; color: #888; margin-bottom: 6px; font-weight: bold;">🎯 Nearest Destination</div>
-      <div style="display: flex; justify-content: space-between; margin-bottom: 4px; color: #aaa;">
-        <span>Type:</span>
-        <span id="vcnType">--</span>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 4px; color: #aaa; gap: 8px;">
+        <span style="flex-shrink: 0;">Type:</span>
+        <span id="vcnType" style="text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">--</span>
       </div>
-      <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-        <span>Distance:</span>
-        <span id="vcnDistance">--</span>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 4px; gap: 8px;">
+        <span style="flex-shrink: 0;">Distance:</span>
+        <span id="vcnDistance" style="text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">--</span>
       </div>
-      <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-        <span>Bearing:</span>
-        <span id="vcnBearing">--</span>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 4px; gap: 8px;">
+        <span style="flex-shrink: 0;">Bearing:</span>
+        <span id="vcnBearing" style="text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">--</span>
       </div>
-      <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-        <span>Signal:</span>
-        <span id="vcnSignal">--</span>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 4px; gap: 8px;">
+        <span style="flex-shrink: 0;">Signal:</span>
+        <span id="vcnSignal" style="text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">--</span>
       </div>
-      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-        <span>Category:</span>
-        <span id="vcnCategory">--</span>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px; gap: 8px;">
+        <span style="flex-shrink: 0;">Category:</span>
+        <span id="vcnCategory" style="text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">--</span>
       </div>
       <div style="border-top: 1px solid #333; padding-top: 8px; margin-top: 8px;">
         <div style="font-size: 10px; color: #888; margin-bottom: 4px;">Active Destinations</div>
-        <div id="vcnStats" style="font-size: 10px; color: #aaa;"></div>
+        <div id="vcnStats" style="font-size: 10px; color: #aaa; word-wrap: break-word;"></div>
       </div>
     `;
     this.panel.appendChild(metrics);
@@ -208,11 +296,19 @@ export class VCNPanel {
   close() {
     if (!this.isOpen || !this.panel) return;
 
+    // Clean up drag listeners
+    if (this._dragListeners) {
+      document.removeEventListener('mousemove', this._dragListeners.onMouseMove);
+      document.removeEventListener('mouseup', this._dragListeners.onMouseUp);
+      this._dragListeners = null;
+    }
+
     document.body.removeChild(this.panel);
     this.panel = null;
     this.canvas = null;
     this.ctx = null;
     this.isOpen = false;
+    this.isDragging = false;
     console.log("🧭 VCN Panel closed");
   }
 

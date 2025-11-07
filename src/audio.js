@@ -121,6 +121,42 @@ class AudioCore {
     }
   }
 
+  // 🎹 Connect external audio source (e.g., synth) to analyzer
+  async connectExternalSource(sourceNode) {
+    await this._ensureContext();
+
+    // Disconnect mic and test tone if active
+    try { this.source?.disconnect(this.inputGain); } catch {}
+    if (this.testToneActive) {
+      await this.toggleTestTone(false);
+    }
+
+    // Store reference to external source
+    this.externalSource = sourceNode;
+
+    // Connect external source to analyzer chain
+    sourceNode.connect(this.inputGain);
+
+    console.log("🎹 AudioEngine: External source connected to analyzer");
+  }
+
+  // Disconnect external source and restore mic input
+  disconnectExternalSource() {
+    if (this.externalSource) {
+      try {
+        this.externalSource.disconnect(this.inputGain);
+      } catch {}
+      this.externalSource = null;
+
+      // Restore mic chain if available
+      if (this.source && this.inputGain) {
+        try { this.source.connect(this.inputGain); } catch {}
+      }
+
+      console.log("🎹 AudioEngine: External source disconnected, mic restored");
+    }
+  }
+
   // List audio input devices (mics, loopbacks)
   async listInputs() {
     if (!navigator.mediaDevices?.enumerateDevices) return [];
