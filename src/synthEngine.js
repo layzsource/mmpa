@@ -19,6 +19,7 @@ export class SynthEngine {
       oscType: 'sine', // sine, square, sawtooth, triangle, noise
       detune: 0,
       octave: 0,
+      tuningOffset: 0, // Hz adjustment for calibration (-10 to +10)
 
       // ADSR Envelope
       attack: 0.01,
@@ -246,7 +247,8 @@ class SynthVoice {
     } else {
       this.osc = this.audioContext.createOscillator();
       this.osc.type = params.oscType;
-      this.osc.frequency.value = frequency * Math.pow(2, params.octave);
+      // Apply tuning offset for calibration
+      this.osc.frequency.value = (frequency + params.tuningOffset) * Math.pow(2, params.octave);
       this.osc.detune.value = params.detune;
     }
 

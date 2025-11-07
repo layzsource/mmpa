@@ -1,0 +1,286 @@
+// MIDI Synth Integration
+// Web MIDI API integration for MMPA Synth Engine
+// Enables live performance, DAW routing, and parameter automation
+
+class MIDISynthManager {
+  constructor(synthEngine) {
+    this.synth = synthEngine;
+    this.midiAccess = null;
+    this.activeInputs = new Map();
+    this.activeNotes = new Map(); // Track active note voices
+    this.ccMappings = new Map(); // MIDI CC → synth parameter mappings
+    this.learnMode = false;
+    this.learnTarget = null;
+    this.onDeviceChange = null;
+    this.onMIDIMessage = null;
+
+    // Initialize default CC mappings
+    this.initDefaultCCMappings();
+
+    console.log("🎹 MIDI Synth Manager initialized");
+  }
+
+  // Initialize Web MIDI API
+  async init() {
+    if (!navigator.requestMIDIAccess) {
+      console.error("❌ Web MIDI API not supported in this browser");
+      return false;
+    }
+
+    try {
+      this.midiAccess = await navigator.requestMIDIAccess();
+      console.log("✅ MIDI Access granted");
+
+      // Listen for device changes
+      this.midiAccess.onstatechange = (e) => {
+        console.log(`🎹 MIDI device ${e.port.state}: ${e.port.name}`);
+        this.updateInputs();
+        if (this.onDeviceChange) {
+          this.onDeviceChange(this.getInputList());
+        }
+      };
+
+      this.updateInputs();
+      return true;
+    } catch (error) {
+      console.error("❌ MIDI initialization failed:", error);
+      return false;
+    }
+  }
+
+  // Update available MIDI inputs
+  updateInputs() {
+    if (!this.midiAccess) return;
+
+    // Clear existing inputs
+    this.activeInputs.forEach((input) => {
+      input.onmidimessage = null;
+    });
+    this.activeInputs.clear();
+
+    // Register all available inputs
+    for (const input of this.midiAccess.inputs.values()) {
+      this.activeInputs.set(input.id, input);
+      input.onmidimessage = (msg) => this.handleMIDIMessage(msg);
+      console.log(`🎹 MIDI Input connected: ${input.name}`);
+    }
+  }
+
+  // Get list of available MIDI inputs
+  getInputList() {
+    const inputs = [];
+    this.activeInputs.forEach((input) => {
+      inputs.push({
+        id: input.id,
+        name: input.name,
+        manufacturer: input.manufacturer,
+        state: input.state
+      });
+    });
+    return inputs;
+  }
+
+  // Handle incoming MIDI messages
+  handleMIDIMessage(message) {
+    const [status, note, velocity] = message.data;
+    const command = status & 0xf0;
+    const channel = status & 0x0f;
+
+    // Notify listeners
+    if (this.onMIDIMessage) {
+      this.onMIDIMessage({ command, channel, note, velocity });
+    }
+
+    // MIDI Learn mode
+    if (this.learnMode && this.learnTarget) {
+      if (command === 0xb0) { // CC message
+        this.ccMappings.set(note, this.learnTarget);
+        console.log(`✅ MIDI Learn: CC ${note} → ${this.learnTarget}`);
+        this.learnMode = false;
+        this.learnTarget = null;
+        return;
+      }
+    }
+
+    switch (command) {
+      case 0x90: // Note On
+        if (velocity > 0) {
+          this.noteOn(note, velocity);
+        } else {
+          this.noteOff(note);
+        }
+        break;
+
+      case 0x80: // Note Off
+        this.noteOff(note);
+        break;
+
+      case 0xb0: // Control Change
+        this.handleCC(note, velocity);
+        break;
+
+      case 0xe0: // Pitch Bend
+        this.handlePitchBend(note, velocity);
+        break;
+    }
+  }
+
+  // MIDI note on
+  noteOn(midiNote, velocity) {
+    const frequency = this.midiNoteToFrequency(midiNote);
+    const normalizedVelocity = velocity / 127;
+
+    const voice = this.synth.noteOn(frequency, normalizedVelocity);
+    this.activeNotes.set(midiNote, voice);
+
+    console.log(`🎵 Note On: ${midiNote} (${frequency.toFixed(2)} Hz) vel=${velocity}`);
+  }
+
+  // MIDI note off
+  noteOff(midiNote) {
+    const voice = this.activeNotes.get(midiNote);
+    if (voice) {
+      voice.release();
+      this.activeNotes.delete(midiNote);
+      console.log(`🎵 Note Off: ${midiNote}`);
+    }
+  }
+
+  // Handle MIDI CC messages
+  handleCC(ccNumber, value) {
+    const paramName = this.ccMappings.get(ccNumber);
+    if (!paramName) return;
+
+    const normalizedValue = value / 127;
+    this.updateParameter(paramName, normalizedValue);
+
+    console.log(`🎛️ CC ${ccNumber} → ${paramName}: ${normalizedValue.toFixed(3)}`);
+  }
+
+  // Handle pitch bend
+  handlePitchBend(lsb, msb) {
+    const bend = ((msb << 7) | lsb) - 8192; // -8192 to +8191
+    const normalizedBend = bend / 8192; // -1 to +1
+
+    // Apply pitch bend to all active notes
+    // This would require adding pitch bend support to the synth engine
+    console.log(`🎚️ Pitch Bend: ${normalizedBend.toFixed(3)}`);
+  }
+
+  // Update synth parameter from CC
+  updateParameter(paramName, normalizedValue) {
+    const param = this.synth.params[paramName];
+    if (param === undefined) return;
+
+    // Map normalized value to parameter range
+    let value;
+    switch (paramName) {
+      case 'filterFreq':
+        value = 20 + normalizedValue * 19980; // 20Hz to 20kHz
+        break;
+      case 'filterQ':
+        value = 0.1 + normalizedValue * 19.9; // 0.1 to 20
+        break;
+      case 'lfoRate':
+        value = 0.1 + normalizedValue * 19.9; // 0.1 to 20 Hz
+        break;
+      case 'lfoAmount':
+        value = normalizedValue * 1000; // 0 to 1000
+        break;
+      case 'attack':
+      case 'decay':
+      case 'release':
+        value = 0.001 + normalizedValue * 4.999; // 0.001 to 5s
+        break;
+      case 'sustain':
+      case 'volume':
+      case 'reverbMix':
+      case 'delayMix':
+      case 'distortion':
+      case 'glide':
+        value = normalizedValue; // 0 to 1
+        break;
+      default:
+        value = normalizedValue;
+    }
+
+    this.synth.updateParam(paramName, value);
+  }
+
+  // Convert MIDI note number to frequency
+  midiNoteToFrequency(note) {
+    // A4 (MIDI note 69) = 440 Hz
+    return 440 * Math.pow(2, (note - 69) / 12);
+  }
+
+  // Enable MIDI learn mode
+  startLearn(parameterName) {
+    this.learnMode = true;
+    this.learnTarget = parameterName;
+    console.log(`🎓 MIDI Learn: Waiting for CC for "${parameterName}"...`);
+  }
+
+  // Cancel MIDI learn
+  cancelLearn() {
+    this.learnMode = false;
+    this.learnTarget = null;
+    console.log(`❌ MIDI Learn cancelled`);
+  }
+
+  // Get current CC mappings
+  getCCMappings() {
+    const mappings = {};
+    this.ccMappings.forEach((param, cc) => {
+      mappings[cc] = param;
+    });
+    return mappings;
+  }
+
+  // Set CC mapping
+  setCCMapping(ccNumber, parameterName) {
+    this.ccMappings.set(ccNumber, parameterName);
+    console.log(`✅ CC ${ccNumber} → ${parameterName}`);
+  }
+
+  // Clear CC mapping
+  clearCCMapping(ccNumber) {
+    this.ccMappings.delete(ccNumber);
+    console.log(`🗑️ Cleared CC ${ccNumber}`);
+  }
+
+  // Initialize default CC mappings (General MIDI standard)
+  initDefaultCCMappings() {
+    // GM Standard CC assignments
+    this.ccMappings.set(1, 'lfoAmount');      // Modulation Wheel
+    this.ccMappings.set(7, 'volume');         // Volume
+    this.ccMappings.set(10, 'pan');           // Pan (not implemented yet)
+    this.ccMappings.set(11, 'expression');    // Expression (not implemented yet)
+    this.ccMappings.set(71, 'filterQ');       // Resonance
+    this.ccMappings.set(74, 'filterFreq');    // Cutoff Frequency
+    this.ccMappings.set(91, 'reverbMix');     // Reverb
+    this.ccMappings.set(93, 'delayMix');      // Chorus/Delay
+
+    console.log("🎛️ Default MIDI CC mappings loaded");
+  }
+
+  // All notes off (panic button)
+  allNotesOff() {
+    this.synth.allNotesOff();
+    this.activeNotes.clear();
+    console.log("🛑 All notes off");
+  }
+
+  // Disconnect all MIDI inputs
+  disconnect() {
+    this.activeInputs.forEach((input) => {
+      input.onmidimessage = null;
+    });
+    this.activeInputs.clear();
+    this.activeNotes.clear();
+    console.log("🎹 MIDI disconnected");
+  }
+}
+
+export { MIDISynthManager };
+
+console.log("🎹 midiSynth.js loaded");

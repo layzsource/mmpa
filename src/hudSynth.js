@@ -4,9 +4,11 @@
 import { SynthEngine } from './synthEngine.js';
 import { SYNTH_PRESETS, getAllPresets, getCategories } from './synthPresets.js';
 import { AudioEngine, getAudioContext } from './audio.js';
+import { MIDISynthManager } from './midiSynth.js';
 
 let synthInstance = null;
 let currentPreset = null;
+let midiManager = null;
 
 export async function createSynthHudSection(container) {
   const section = document.createElement('div');
@@ -128,9 +130,13 @@ export async function createSynthHudSection(container) {
 
     addSlider(controls, 'Volume', 'volume', 0, 1, 0.7, 0.01);
     addSlider(controls, 'Glide (Portamento)', 'glide', 0, 1, 0, 0.01);
+    addSlider(controls, 'Tuning Offset (Hz)', 'tuningOffset', -10, 10, 0, 0.1);
 
     return controls;
   });
+
+  // ===== MIDI CONTROL =====
+  createMIDISection(section);
 
   // ===== INFO PANEL =====
   createInfoPanel(section);
@@ -392,6 +398,252 @@ function loadPreset(presetName) {
   console.log(`🎹 Loaded preset: ${presetName}`);
 }
 
+// MIDI Control Section
+function createMIDISection(parent) {
+  const midiDiv = document.createElement('div');
+  midiDiv.style.cssText = 'margin-bottom: 15px; background: rgba(102, 68, 170, 0.15); border: 1px solid #6644aa; border-radius: 4px; padding: 10px;';
+
+  const header = document.createElement('div');
+  header.style.cssText = 'color: #00ffff; font-size: 11px; font-weight: 500; margin-bottom: 10px; cursor: pointer; user-select: none;';
+  header.textContent = '▼ 🎹 MIDI Control';
+
+  const content = document.createElement('div');
+  content.style.display = 'block';
+
+  // Toggle collapse
+  let collapsed = false;
+  header.addEventListener('click', () => {
+    collapsed = !collapsed;
+    content.style.display = collapsed ? 'none' : 'block';
+    header.textContent = (collapsed ? '▶ ' : '▼ ') + '🎹 MIDI Control';
+  });
+
+  // Enable MIDI button
+  const enableBtn = document.createElement('button');
+  enableBtn.textContent = '🎹 Enable MIDI';
+  enableBtn.style.cssText = 'width: 100%; padding: 8px; margin-bottom: 10px; background: #2a7a2a; color: #fff; border: 1px solid #3a9a3a; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 500;';
+
+  const statusDiv = document.createElement('div');
+  statusDiv.id = 'midi-status';
+  statusDiv.style.cssText = 'color: #888; font-size: 10px; margin-bottom: 10px; min-height: 20px;';
+  statusDiv.textContent = 'MIDI not initialized';
+
+  const deviceSelectDiv = document.createElement('div');
+  deviceSelectDiv.style.cssText = 'margin-bottom: 10px; display: none;';
+
+  const deviceLabel = document.createElement('label');
+  deviceLabel.textContent = '🎛️ MIDI Input Device';
+  deviceLabel.style.cssText = 'display: block; color: #00ffff; font-size: 10px; margin-bottom: 4px;';
+
+  const deviceSelect = document.createElement('select');
+  deviceSelect.id = 'midi-device-select';
+  deviceSelect.style.cssText = 'width: 100%; padding: 4px; background: #1a1a1a; color: #00ffff; border: 1px solid #333; border-radius: 3px; font-size: 10px; margin-bottom: 8px;';
+
+  deviceSelectDiv.appendChild(deviceLabel);
+  deviceSelectDiv.appendChild(deviceSelect);
+
+  // MIDI Learn section
+  const learnDiv = document.createElement('div');
+  learnDiv.id = 'midi-learn-section';
+  learnDiv.style.cssText = 'margin-top: 10px; padding: 8px; background: rgba(0, 255, 255, 0.05); border: 1px solid #333; border-radius: 3px; display: none;';
+
+  const learnTitle = document.createElement('div');
+  learnTitle.textContent = '🎓 MIDI Learn';
+  learnTitle.style.cssText = 'color: #00ffff; font-size: 10px; margin-bottom: 6px; font-weight: 500;';
+
+  const learnDesc = document.createElement('div');
+  learnDesc.textContent = 'Map MIDI CC controls to synth parameters:';
+  learnDesc.style.cssText = 'color: #888; font-size: 9px; margin-bottom: 6px;';
+
+  const learnButtons = document.createElement('div');
+  learnButtons.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr; gap: 4px;';
+
+  // Key parameters for MIDI learn
+  const learnParams = [
+    { param: 'filterFreq', label: 'Filter Cutoff' },
+    { param: 'filterQ', label: 'Resonance' },
+    { param: 'attack', label: 'Attack' },
+    { param: 'release', label: 'Release' },
+    { param: 'lfoRate', label: 'LFO Rate' },
+    { param: 'lfoAmount', label: 'LFO Amount' }
+  ];
+
+  learnParams.forEach(({ param, label }) => {
+    const btn = document.createElement('button');
+    btn.textContent = label;
+    btn.style.cssText = 'padding: 4px; background: #333; color: #888; border: 1px solid #444; border-radius: 3px; cursor: pointer; font-size: 9px;';
+    btn.addEventListener('click', () => {
+      if (midiManager && midiManager.midiAccess) {
+        midiManager.startLearn(param);
+        statusDiv.textContent = `🎓 MIDI Learn: Move a knob/slider for "${label}"...`;
+        statusDiv.style.color = '#ffff00';
+
+        // Reset status after timeout
+        setTimeout(() => {
+          if (midiManager.learnMode) {
+            midiManager.cancelLearn();
+            statusDiv.textContent = 'MIDI Learn cancelled (timeout)';
+            statusDiv.style.color = '#888';
+          }
+        }, 10000);
+      }
+    });
+    learnButtons.appendChild(btn);
+  });
+
+  learnDiv.appendChild(learnTitle);
+  learnDiv.appendChild(learnDesc);
+  learnDiv.appendChild(learnButtons);
+
+  // CC Mappings display
+  const mappingsDiv = document.createElement('div');
+  mappingsDiv.id = 'midi-mappings';
+  mappingsDiv.style.cssText = 'margin-top: 10px; padding: 8px; background: rgba(0, 0, 0, 0.3); border: 1px solid #333; border-radius: 3px; display: none;';
+
+  const mappingsTitle = document.createElement('div');
+  mappingsTitle.textContent = '🎛️ Active CC Mappings';
+  mappingsTitle.style.cssText = 'color: #00ffff; font-size: 10px; margin-bottom: 6px; font-weight: 500;';
+
+  const mappingsList = document.createElement('div');
+  mappingsList.id = 'midi-mappings-list';
+  mappingsList.style.cssText = 'color: #888; font-size: 9px; font-family: monospace;';
+
+  mappingsDiv.appendChild(mappingsTitle);
+  mappingsDiv.appendChild(mappingsList);
+
+  // Panic button
+  const panicBtn = document.createElement('button');
+  panicBtn.textContent = '🛑 All Notes Off (Panic)';
+  panicBtn.style.cssText = 'width: 100%; padding: 6px; margin-top: 10px; background: #7a2a2a; color: #fff; border: 1px solid #9a3a3a; border-radius: 4px; cursor: pointer; font-size: 10px; display: none;';
+  panicBtn.addEventListener('click', () => {
+    if (midiManager) {
+      midiManager.allNotesOff();
+      statusDiv.textContent = '🛑 All notes off';
+      statusDiv.style.color = '#ff6666';
+      setTimeout(() => {
+        statusDiv.style.color = '#888';
+      }, 2000);
+    }
+  });
+
+  // Enable MIDI button handler
+  enableBtn.addEventListener('click', async () => {
+    if (!midiManager) {
+      midiManager = new MIDISynthManager(synthInstance);
+
+      // Set up callbacks
+      midiManager.onDeviceChange = (devices) => {
+        updateDeviceList(devices);
+      };
+
+      midiManager.onMIDIMessage = (msg) => {
+        // Show MIDI activity
+        const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        if (msg.command === 0x90 && msg.velocity > 0) { // Note On
+          const noteName = noteNames[msg.note % 12] + Math.floor(msg.note / 12 - 1);
+          statusDiv.textContent = `🎵 Note: ${noteName} (${msg.note}) vel=${msg.velocity}`;
+          statusDiv.style.color = '#00ff00';
+        } else if (msg.command === 0x80 || (msg.command === 0x90 && msg.velocity === 0)) { // Note Off
+          statusDiv.textContent = 'MIDI active - waiting for input...';
+          statusDiv.style.color = '#888';
+        } else if (msg.command === 0xb0) { // CC
+          const paramName = midiManager.ccMappings.get(msg.note);
+          if (paramName) {
+            statusDiv.textContent = `🎛️ CC ${msg.note} → ${paramName}: ${msg.velocity}`;
+            statusDiv.style.color = '#00ffff';
+            updateMappingsDisplay();
+          }
+        }
+      };
+    }
+
+    const success = await midiManager.init();
+
+    if (success) {
+      // Connect synth to audio output for MIDI playback
+      await AudioEngine.start();
+      const audioContext = getAudioContext();
+
+      // Connect to BOTH analyzer (for MMPA) AND destination (for audio output)
+      await AudioEngine.connectExternalSource(synthInstance.masterGain);
+      synthInstance.masterGain.connect(audioContext.destination);
+
+      console.log("🎹 MIDI enabled - synth connected to speakers and analyzer");
+
+      statusDiv.textContent = '✅ MIDI enabled - waiting for input...';
+      statusDiv.style.color = '#00ff00';
+      enableBtn.textContent = '✅ MIDI Enabled';
+      enableBtn.style.background = '#1a5a1a';
+      enableBtn.disabled = true;
+      enableBtn.style.opacity = '0.7';
+      enableBtn.style.cursor = 'not-allowed';
+
+      deviceSelectDiv.style.display = 'block';
+      learnDiv.style.display = 'block';
+      mappingsDiv.style.display = 'block';
+      panicBtn.style.display = 'block';
+
+      updateDeviceList(midiManager.getInputList());
+      updateMappingsDisplay();
+    } else {
+      statusDiv.textContent = '❌ MIDI not supported or permission denied';
+      statusDiv.style.color = '#ff6666';
+    }
+  });
+
+  function updateDeviceList(devices) {
+    deviceSelect.innerHTML = '';
+
+    if (devices.length === 0) {
+      const option = document.createElement('option');
+      option.textContent = 'No MIDI devices connected';
+      deviceSelect.appendChild(option);
+      deviceSelect.disabled = true;
+    } else {
+      deviceSelect.disabled = false;
+      devices.forEach(device => {
+        const option = document.createElement('option');
+        option.value = device.id;
+        option.textContent = `${device.name} ${device.state === 'connected' ? '🟢' : '🔴'}`;
+        deviceSelect.appendChild(option);
+      });
+      statusDiv.textContent = `✅ ${devices.length} MIDI device(s) connected`;
+      statusDiv.style.color = '#00ff00';
+    }
+  }
+
+  function updateMappingsDisplay() {
+    if (!midiManager) return;
+
+    const mappings = midiManager.getCCMappings();
+    const entries = Object.entries(mappings);
+
+    if (entries.length === 0) {
+      mappingsList.textContent = 'No CC mappings yet. Use MIDI Learn above.';
+      return;
+    }
+
+    mappingsList.innerHTML = '';
+    entries.forEach(([cc, param]) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'padding: 2px 0; display: flex; justify-content: space-between;';
+      row.innerHTML = `<span>CC ${cc}</span> <span>→ ${param}</span>`;
+      mappingsList.appendChild(row);
+    });
+  }
+
+  content.appendChild(enableBtn);
+  content.appendChild(statusDiv);
+  content.appendChild(deviceSelectDiv);
+  content.appendChild(learnDiv);
+  content.appendChild(mappingsDiv);
+  content.appendChild(panicBtn);
+
+  midiDiv.appendChild(header);
+  midiDiv.appendChild(content);
+  parent.appendChild(midiDiv);
+}
+
 // Info panel
 function createInfoPanel(parent) {
   const infoDiv = document.createElement('div');
@@ -407,7 +659,9 @@ function createInfoPanel(parent) {
     '• Use "Export MMPA Training Data" (Audio tab) to save test results',
     '• Musical presets are DAW-ready for production use',
     '• Adjust envelope and filter for different archetype responses',
-    '• Connect MIDI controller for live performance (coming soon)'
+    '• Enable MIDI Control to play synth with MIDI keyboard or controller',
+    '• Use MIDI Learn to map CC knobs to synth parameters',
+    '• Adjust Tuning Offset in Global section to calibrate frequency accuracy'
   ];
 
   tips.forEach(tip => {
