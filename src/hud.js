@@ -123,6 +123,9 @@ import { createPortalHUD } from './hudPortal.js'; // Portal Builder
 import { createTextSignalHUD } from './hudText.js'; // Text/NLP Signals
 import { createRecorderHudSection } from './hudRecorder.js'; // Video Recording
 import { createFinancialHUD } from './hudFinancial.js'; // Phase 13.27: Financial Data Pipeline
+import { initTimeline } from './timelineIntegration.js'; // Phase 13.16: Timeline & Playback System
+import { createSettingsHudSection } from './hudSettings.js'; // Settings Configuration
+import { initSettings } from './settings.js'; // Settings Manager
 
 // Phase 13.4.2: Register refresh callbacks for modules that export them
 // (Most modules removed registerHUDCallback to avoid circular dependencies)
@@ -138,9 +141,12 @@ hudCSSLink.rel = 'stylesheet';
 hudCSSLink.href = new URL('./hud-rams.css', import.meta.url).href;
 document.head.appendChild(hudCSSLink);
 
-export function initHUD() {
+export async function initHUD() {
   // Initialize MMPA Anchor System
   initAnchors();
+
+  // Initialize Settings
+  await initSettings();
 
   const hudPanel = createHUDPanel();
   document.body.appendChild(hudPanel);
@@ -212,7 +218,7 @@ function createHUDPanel() {
   const tabNav = document.createElement('div');
   tabNav.className = 'hud-tabs';
 
-  const tabs = ['Morph', 'Presets', 'Audio', 'Visual', 'Advanced', 'MIDI', 'VCN', 'Destinations', 'Signals', 'Myth', 'Learn', 'AI', 'Camera', 'Portal', 'Text'];
+  const tabs = ['Morph', 'Presets', 'Audio', 'Visual', 'Advanced', 'Settings', 'MIDI', 'VCN', 'Destinations', 'Signals', 'Myth', 'Learn', 'AI', 'Camera', 'Portal', 'Text'];
   let activeTab = 'Morph';
   const tabButtons = {};
   const tabContainers = {};
@@ -264,6 +270,9 @@ function createHUDPanel() {
   // Video Recording HUD section
   createRecorderHudSection(tabContainers['Audio']);
 
+  // Phase 13.16: Timeline & Playback System
+  initTimeline(tabContainers['Audio']);
+
   // Phase 13.27: Financial Data Pipeline HUD section
   const financialSection = createFinancialHUD();
   tabContainers['Audio'].appendChild(financialSection);
@@ -275,7 +284,11 @@ function createHUDPanel() {
   createAnchorsHudSection(tabContainers['Audio']);
 
   // === MMPA Community - Ecosystem ===
-  createCommunityHudSection(tabContainers['Audio']);
+  try {
+    createCommunityHudSection(tabContainers['Audio']);
+  } catch (error) {
+    console.error('❌ Failed to create Community HUD section:', error);
+  }
 
   // === MMPA Sequences - Composition ===
   createSequencesHudSection(tabContainers['Audio']);
@@ -1203,7 +1216,11 @@ function createHUDPanel() {
   tabContainers['Visual'].appendChild(customPatternInput);
 
   // === Phase 11.7.21/11.7.50: Emoji Mandalas (Modular) ===
-  createMandalaHudSection(tabContainers['Visual'], notifyHUDUpdate, createToggleControl, createSliderControl);
+  try {
+    createMandalaHudSection(tabContainers['Visual'], notifyHUDUpdate, createToggleControl, createSliderControl);
+  } catch (error) {
+    console.error('❌ Failed to create Mandala HUD section:', error);
+  }
 
   // === Phase 12.0: Geometry (Morph Shape Controls) ===
   createGeometryHudSection(tabContainers['Visual'], { camera: null, renderer: null, controls: null });
@@ -1648,6 +1665,9 @@ function createHUDPanel() {
 
   // Phase 13.30: MMPA V2.0 Predictions HUD section
   createMMPAHudSection(tabContainers['Advanced'], notifyHUDUpdate);
+
+  // Settings Configuration HUD section
+  createSettingsHudSection(tabContainers['Settings']);
 
   // Phase 11.7.50: Modular MIDI HUD section
   createMidiHudSection(tabContainers['MIDI'], notifyHUDUpdate);

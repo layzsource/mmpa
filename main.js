@@ -1,9 +1,26 @@
 // Electron Main (Phase 13.0)
-const { app, BrowserWindow, session, ipcMain } = require("electron");
+const { app, BrowserWindow, session, ipcMain, dialog } = require("electron");
 const path = require("path");
 const { spawn } = require("child_process");
 const fs = require("fs");
 const os = require("os");
+
+// Settings file path
+const SETTINGS_PATH = path.join(app.getPath('userData'), 'settings.json');
+
+// Default settings
+const DEFAULT_SETTINGS = {
+  savePaths: {
+    timelines: path.join(os.homedir(), 'MMPA_Data', 'timelines'),
+    trainingData: path.join(os.homedir(), 'MMPA_Data', 'training_data'),
+    experiments: path.join(os.homedir(), 'MMPA_Data', 'experiments')
+  },
+  filenamePatterns: {
+    presets: 'presets_{date}',
+    chains: 'chains_{date}',
+    training: 'training_{date}'
+  }
+};
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -121,6 +138,74 @@ ipcMain.handle('convert-to-mp4', async (event, webmData) => {
       reject(error);
     }
   });
+});
+
+// IPC Handler: Load settings
+ipcMain.handle('load-settings', async () => {
+  try {
+    if (fs.existsSync(SETTINGS_PATH)) {
+      const data = fs.readFileSync(SETTINGS_PATH, 'utf8');
+      return JSON.parse(data);
+    }
+    return DEFAULT_SETTINGS;
+  } catch (error) {
+    console.error('Failed to load settings:', error);
+    return DEFAULT_SETTINGS;
+  }
+});
+
+// IPC Handler: Save settings
+ipcMain.handle('save-settings', async (event, settings) => {
+  try {
+    fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2), 'utf8');
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to save settings:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// IPC Handler: Save file to custom path
+ipcMain.handle('save-file', async (event, { filePath, content, type = 'json' }) => {
+  try {
+    // Ensure directory exists
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    // Write file
+    if (type === 'json') {
+      fs.writeFileSync(filePath, JSON.stringify(content, null, 2), 'utf8');
+    } else {
+      fs.writeFileSync(filePath, content, 'utf8');
+    }
+
+    console.log(`✅ Saved file: ${filePath}`);
+    return { success: true, path: filePath };
+  } catch (error) {
+    console.error('Failed to save file:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// IPC Handler: Choose directory
+ipcMain.handle('choose-directory', async (event, defaultPath) => {
+  try {
+    const result = await dialog.showOpenDialog({
+      properties: ['openDirectory', 'createDirectory'],
+      defaultPath: defaultPath || os.homedir()
+    });
+
+    if (result.canceled) {
+      return { canceled: true };
+    }
+
+    return { canceled: false, path: result.filePaths[0] };
+  } catch (error) {
+    console.error('Failed to choose directory:', error);
+    return { canceled: true, error: error.message };
+  }
 });
 
 app.whenReady().then(() => {

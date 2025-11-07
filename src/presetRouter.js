@@ -395,7 +395,7 @@ function handlePresetAction(action, presetName, category, tags) {
 }
 
 // Phase 11.2.5: Export presets as JSON file
-function exportPresets() {
+async function exportPresets() {
   const presets = {};
   const presetNames = listPresets();
 
@@ -407,25 +407,47 @@ function exportPresets() {
     }
   });
 
-  const json = JSON.stringify(presets, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
+  let filename = `presets_${new Date().toISOString().slice(0, 10)}.json`;
+  let savedPath = null;
 
-  // Create download link
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `presets_${new Date().toISOString().slice(0, 10)}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // Try to use Electron API for direct file save
+  if (window.electronAPI && window.electronAPI.saveFile) {
+    try {
+      const { saveToFile } = await import('./settings.js');
+      const result = await saveToFile('presets', presets, 'json');
+      if (result.success) {
+        savedPath = result.path;
+        filename = result.path.split('/').pop();
+        console.log(`💾 ✅ Exported ${presetNames.length} presets to ${savedPath}`);
+      } else {
+        console.warn(`💾 ⚠️ Electron save failed, falling back to browser download:`, result.error);
+      }
+    } catch (error) {
+      console.warn(`💾 ⚠️ Error using Electron API:`, error);
+    }
+  }
 
-  console.log(`💾 ✅ Exported ${presetNames.length} presets to ${a.download}`);
+  // Fallback to browser download if Electron not available or save failed
+  if (!savedPath) {
+    const json = JSON.stringify(presets, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    console.log(`💾 ✅ Exported ${presetNames.length} presets to Downloads/${filename}`);
+  }
 
   // Phase 11.2.5: Emit CustomEvent for external hooks
   try {
     document.dispatchEvent(new CustomEvent('presetsExported', {
-      detail: { presetCount: presetNames.length, filename: a.download }
+      detail: { presetCount: presetNames.length, filename, path: savedPath }
     }));
   } catch (e) {
     // Silently fail if document not available
@@ -1196,7 +1218,7 @@ export function getChainProgress() {
 }
 
 // Phase 11.4.0: Export/Import Chains
-export function exportChains() {
+export async function exportChains() {
   const chains = getChainsFromStorage();
   const chainNames = Object.keys(chains);
 
@@ -1205,25 +1227,47 @@ export function exportChains() {
     return;
   }
 
-  const json = JSON.stringify(chains, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
+  let filename = `chains_${new Date().toISOString().slice(0, 10)}.json`;
+  let savedPath = null;
 
-  // Create download link
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `chains_${new Date().toISOString().slice(0, 10)}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // Try to use Electron API for direct file save
+  if (window.electronAPI && window.electronAPI.saveFile) {
+    try {
+      const { saveToFile } = await import('./settings.js');
+      const result = await saveToFile('chains', chains, 'json');
+      if (result.success) {
+        savedPath = result.path;
+        filename = result.path.split('/').pop();
+        console.log(`💾 ✅ Exported ${chainNames.length} chains to ${savedPath}`);
+      } else {
+        console.warn(`💾 ⚠️ Electron save failed, falling back to browser download:`, result.error);
+      }
+    } catch (error) {
+      console.warn(`💾 ⚠️ Error using Electron API:`, error);
+    }
+  }
 
-  console.log(`💾 Chains exported: ${a.download} (${chainNames.length} chains)`);
+  // Fallback to browser download if Electron not available or save failed
+  if (!savedPath) {
+    const json = JSON.stringify(chains, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    console.log(`💾 ✅ Exported ${chainNames.length} chains to Downloads/${filename}`);
+  }
 
   // Emit CustomEvent
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('chainsExported', {
-      detail: { chainCount: chainNames.length, filename: a.download }
+      detail: { chainCount: chainNames.length, filename, path: savedPath }
     }));
   }
 }

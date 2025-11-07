@@ -1,0 +1,128 @@
+// Settings Manager (Phase 13.0)
+// Manages user-configurable save paths and filename patterns
+
+let settings = null;
+
+// Initialize settings (call on app start)
+export async function initSettings() {
+  if (window.electronAPI) {
+    settings = await window.electronAPI.loadSettings();
+    console.log('✅ Settings loaded:', settings);
+  } else {
+    // Fallback for web mode
+    const stored = localStorage.getItem('mmpa_settings');
+    settings = stored ? JSON.parse(stored) : getDefaultSettings();
+    console.log('⚠️ Running in web mode, using localStorage');
+  }
+  return settings;
+}
+
+// Get current settings
+export function getSettings() {
+  return settings || getDefaultSettings();
+}
+
+// Update settings
+export async function updateSettings(newSettings) {
+  settings = { ...settings, ...newSettings };
+
+  if (window.electronAPI) {
+    const result = await window.electronAPI.saveSettings(settings);
+    if (result.success) {
+      console.log('✅ Settings saved');
+    } else {
+      console.error('❌ Failed to save settings:', result.error);
+    }
+  } else {
+    localStorage.setItem('mmpa_settings', JSON.stringify(settings));
+  }
+
+  return settings;
+}
+
+// Get default settings
+function getDefaultSettings() {
+  return {
+    savePaths: {
+      timelines: '~/MMPA_Data/timelines',
+      trainingData: '~/MMPA_Data/training_data',
+      experiments: '~/MMPA_Data/experiments'
+    },
+    filenamePatterns: {
+      presets: 'presets_{date}',
+      chains: 'chains_{date}',
+      training: 'training_{date}'
+    }
+  };
+}
+
+// Build full file path with pattern substitution
+export function buildFilePath(category, extension = 'json') {
+  const settings = getSettings();
+  const date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+  let basePath, pattern;
+
+  switch (category) {
+    case 'presets':
+      basePath = settings.savePaths.timelines;
+      pattern = settings.filenamePatterns.presets;
+      break;
+    case 'chains':
+      basePath = settings.savePaths.timelines;
+      pattern = settings.filenamePatterns.chains;
+      break;
+    case 'training':
+      basePath = settings.savePaths.trainingData;
+      pattern = settings.filenamePatterns.training;
+      break;
+    default:
+      basePath = settings.savePaths.timelines;
+      pattern = `${category}_{date}`;
+  }
+
+  // Replace placeholders
+  const filename = pattern
+    .replace('{date}', date)
+    .replace('{timestamp}', Date.now())
+    + '.' + extension;
+
+  // Handle tilde expansion
+  if (basePath.startsWith('~')) {
+    // Electron will handle this, but we need to expand for display
+    basePath = basePath.replace('~', '/Users/' + (window.navigator.userInfo?.username || 'user'));
+  }
+
+  return `${basePath}/${filename}`;
+}
+
+// Choose directory using native dialog
+export async function chooseDirectory(currentPath) {
+  if (window.electronAPI) {
+    const result = await window.electronAPI.chooseDirectory(currentPath);
+    if (!result.canceled) {
+      return result.path;
+    }
+  }
+  return null;
+}
+
+// Save file using Electron API
+export async function saveToFile(category, content, extension = 'json') {
+  const filePath = buildFilePath(category, extension);
+
+  if (window.electronAPI) {
+    const result = await window.electronAPI.saveFile(filePath, content, extension === 'json' ? 'json' : 'text');
+    if (result.success) {
+      console.log(`✅ Saved ${category} to: ${result.path}`);
+      return { success: true, path: result.path };
+    } else {
+      console.error(`❌ Failed to save ${category}:`, result.error);
+      return { success: false, error: result.error };
+    }
+  } else {
+    // Fallback to browser download
+    console.warn('⚠️ Electron API not available, falling back to browser download');
+    return { success: false, error: 'Electron API not available' };
+  }
+}
