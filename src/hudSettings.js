@@ -2,6 +2,7 @@
 // User-configurable save paths and filename patterns
 
 import { getSettings, updateSettings, chooseDirectory } from './settings.js';
+import { COLOR_PALETTES, applyColorPalette, getCurrentPalette } from './colorPalettes.js';
 
 export function createSettingsHudSection(container) {
   const section = document.createElement('div');
@@ -119,6 +120,43 @@ export function createSettingsHudSection(container) {
     patternGroup.appendChild(patternInput);
     section.appendChild(patternGroup);
   });
+
+  // Color Palette Section
+  const colorPaletteTitle = document.createElement('h4');
+  colorPaletteTitle.textContent = '🎨 Synesthetic Color Mapping';
+  colorPaletteTitle.style.cssText = 'margin: 20px 0 10px 0; color: #00ffff; font-size: 13px; font-weight: 500;';
+  section.appendChild(colorPaletteTitle);
+
+  const colorPaletteDesc = document.createElement('p');
+  colorPaletteDesc.textContent = 'Choose how archetypes map to colors. Each palette has different empirical or artistic basis.';
+  colorPaletteDesc.style.cssText = 'margin: 0 0 15px 0; color: #888; font-size: 11px;';
+  section.appendChild(colorPaletteDesc);
+
+  const paletteSelector = document.createElement('select');
+  paletteSelector.style.cssText = 'width: 100%; padding: 6px; background: #1a1a1a; color: #00ffff; border: 1px solid #6644aa; border-radius: 3px; font-size: 11px; margin-bottom: 10px; cursor: pointer;';
+
+  Object.keys(COLOR_PALETTES).forEach(paletteName => {
+    const option = document.createElement('option');
+    option.value = paletteName;
+    option.textContent = paletteName;
+    paletteSelector.appendChild(option);
+  });
+
+  paletteSelector.value = getCurrentPalette();
+
+  paletteSelector.addEventListener('change', (e) => {
+    applyColorPalette(e.target.value);
+    paletteDescDisplay.textContent = COLOR_PALETTES[e.target.value].description;
+    console.log(`🎨 Color palette changed to: ${e.target.value}`);
+  });
+
+  section.appendChild(paletteSelector);
+
+  // Description of selected palette
+  const paletteDescDisplay = document.createElement('div');
+  paletteDescDisplay.style.cssText = 'padding: 10px; background: rgba(0, 255, 255, 0.05); border: 1px solid #333; border-radius: 4px; font-size: 10px; color: #888; font-style: italic; margin-bottom: 20px;';
+  paletteDescDisplay.textContent = COLOR_PALETTES[getCurrentPalette()].description;
+  section.appendChild(paletteDescDisplay);
 
   // Status indicator
   const status = document.createElement('div');

@@ -202,6 +202,18 @@ export function updateTheoryRenderer(mmpaFeatures, deltaTime = 0.016) {
     logSample(stability, flux, recognition.archetype);
   }
 
+  // 2.5. Update π/φ Synchronicity Panel (if available)
+  if (window.piPhiPanel) {
+    const analysisData = {
+      archetype: recognition.archetype,
+      confidence: getConfidence(),
+      flux: getFluxMetric(),
+      stability: getStabilityMetric(),
+      harmonicStrength: mmpaFeatures.relationship?.consonance || 0
+    };
+    window.piPhiPanel.update(analysisData);
+  }
+
   // 3. Calculate vortex synchronization from features
   const synchronization = calculateSynchronizationFromFeatures(mmpaFeatures);
   setVortexSynchronization(theoryState.vortexData, synchronization);

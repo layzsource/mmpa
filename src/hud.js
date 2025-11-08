@@ -127,6 +127,8 @@ import { initTimeline } from './timelineIntegration.js'; // Phase 13.16: Timelin
 import { createSettingsHudSection } from './hudSettings.js'; // Settings Configuration
 import { initSettings } from './settings.js'; // Settings Manager
 import { createSynthHudSection, getSynthInstance } from './hudSynth.js'; // MMPA Synth Engine
+import { createPiPhiPanel } from './hudPiPhi.js'; // π/φ Synchronicity Detector
+import { loadSavedPalette } from './colorPalettes.js'; // Color Palette System
 
 // Phase 13.4.2: Register refresh callbacks for modules that export them
 // (Most modules removed registerHUDCallback to avoid circular dependencies)
@@ -148,6 +150,9 @@ export async function initHUD() {
 
   // Initialize Settings
   await initSettings();
+
+  // Load saved color palette
+  loadSavedPalette();
 
   const hudPanel = await createHUDPanel();
   document.body.appendChild(hudPanel);
@@ -219,7 +224,7 @@ async function createHUDPanel() {
   const tabNav = document.createElement('div');
   tabNav.className = 'hud-tabs';
 
-  const tabs = ['Morph', 'Presets', 'Audio', 'Synth', 'Visual', 'Advanced', 'Settings', 'MIDI', 'VCN', 'Destinations', 'Signals', 'Myth', 'Learn', 'AI', 'Camera', 'Portal', 'Text'];
+  const tabs = ['Morph', 'Presets', 'Audio', 'Synth', 'π/φ', 'Visual', 'Advanced', 'Settings', 'MIDI', 'VCN', 'Destinations', 'Signals', 'Myth', 'Learn', 'AI', 'Camera', 'Portal', 'Text'];
   let activeTab = 'Morph';
   const tabButtons = {};
   const tabContainers = {};
@@ -299,6 +304,10 @@ async function createHUDPanel() {
 
   // === MMPA Synth Engine ===
   await createSynthHudSection(tabContainers['Synth']);
+
+  // === π/φ Synchronicity Detector ===
+  const piPhiPanel = createPiPhiPanel(tabContainers['π/φ']);
+  window.piPhiPanel = piPhiPanel; // Global reference for audio analysis updates
 
   // === Phase 4.8.1/11.7.50: Particles (Modular) ===
   createParticlesHudSection(tabContainers['Visual'], notifyHUDUpdate, createToggleControl, createSliderControl);
