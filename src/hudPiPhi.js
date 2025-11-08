@@ -4,8 +4,17 @@
 
 import { getPiPhiColors } from './colorPalettes.js';
 
-let syncHistory = [];
-const MAX_HISTORY = 60; // Keep last 60 frames (1 second at 60 FPS)
+// Enhanced timeline data structure
+let timelineHistory = [];
+const MAX_HISTORY_SECONDS = 120; // Keep 120 seconds of history
+const MAX_HISTORY_FRAMES = MAX_HISTORY_SECONDS * 60; // Assume 60 FPS
+let timelineStartTime = Date.now();
+
+// Peak detection
+let synchronicityPeaks = [];
+const PEAK_THRESHOLD = 0.6; // Minimum sync to register as peak
+const PEAK_COOLDOWN = 30; // Frames between peaks (0.5 seconds)
+let framesSinceLastPeak = 0;
 
 export function createPiPhiPanel(container) {
   const panel = document.createElement('div');
@@ -101,20 +110,77 @@ export function createPiPhiPanel(container) {
       <div id="event-type" style="color: #ffff00; font-size: 11px; font-family: monospace;">Monitoring...</div>
     </div>
 
-    <!-- History Graph (Simple ASCII-style) -->
-    <div style="margin-top: 15px; background: rgba(0, 0, 0, 0.3); padding: 12px; border: 1px solid #333; border-radius: 4px;">
-      <div style="color: #888; font-size: 10px; margin-bottom: 8px;">Synchronicity Timeline (last 60 frames):</div>
-      <div id="sync-timeline" style="height: 40px; position: relative; background: #1a1a1a; border: 1px solid #333; border-radius: 2px; overflow: hidden;">
-        <!-- Will be populated with bars -->
+    <!-- Enhanced Synchronicity Timeline -->
+    <div style="margin-top: 15px; background: rgba(0, 0, 0, 0.3); padding: 15px; border: 1px solid #6644aa; border-radius: 4px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <div style="color: #00ffff; font-size: 12px; font-weight: 500;">⏱️ Synchronicity Timeline</div>
+        <div style="display: flex; gap: 15px; font-size: 9px;">
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <div style="width: 12px; height: 2px; background: #ff4444;"></div>
+            <span style="color: #888;">π (Chaos)</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <div style="width: 12px; height: 2px; background: #00ffff;"></div>
+            <span style="color: #888;">φ (Harmony)</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <div style="width: 12px; height: 8px; background: rgba(128, 0, 128, 0.3);"></div>
+            <span style="color: #888;">Sync Area</span>
+          </div>
+        </div>
       </div>
-      <div style="display: flex; justify-content: space-between; margin-top: 4px;">
-        <span style="font-size: 9px; color: #666;">60 frames ago</span>
-        <span style="font-size: 9px; color: #666;">Now</span>
+
+      <!-- Canvas Timeline -->
+      <div style="position: relative; background: #1a1a1a; border: 1px solid #333; border-radius: 3px; overflow: hidden;">
+        <canvas id="sync-timeline-canvas" width="800" height="120" style="display: block; width: 100%; height: 120px; cursor: crosshair;"></canvas>
+
+        <!-- Hover Tooltip -->
+        <div id="timeline-tooltip" style="
+          position: absolute;
+          display: none;
+          background: rgba(0, 0, 0, 0.9);
+          border: 1px solid #6644aa;
+          border-radius: 3px;
+          padding: 8px;
+          font-size: 10px;
+          color: white;
+          pointer-events: none;
+          z-index: 1000;
+          white-space: nowrap;
+        "></div>
+
+        <!-- Playhead -->
+        <div id="timeline-playhead" style="
+          position: absolute;
+          right: 0;
+          top: 0;
+          bottom: 0;
+          width: 2px;
+          background: rgba(255, 255, 255, 0.6);
+          pointer-events: none;
+        "></div>
+      </div>
+
+      <!-- Time Scale -->
+      <div style="display: flex; justify-content: space-between; margin-top: 6px;">
+        <span style="font-size: 9px; color: #666;">-120s</span>
+        <span style="font-size: 9px; color: #666;">-90s</span>
+        <span style="font-size: 9px; color: #666;">-60s</span>
+        <span style="font-size: 9px; color: #666;">-30s</span>
+        <span style="font-size: 9px; color: #00ffff;">Now</span>
+      </div>
+
+      <!-- Peak Events Log -->
+      <div id="peak-events-log" style="margin-top: 12px; max-height: 80px; overflow-y: auto; font-size: 9px; color: #888;">
+        <div style="color: #666; font-style: italic;">Synchronicity peaks will appear here...</div>
       </div>
     </div>
   `;
 
   container.appendChild(panel);
+
+  // Initialize canvas interaction
+  initializeTimelineInteraction();
 
   // Return update function
   return {
@@ -122,6 +188,76 @@ export function createPiPhiPanel(container) {
       updatePiPhiPanel(analysis);
     }
   };
+}
+
+function initializeTimelineInteraction() {
+  const canvas = document.getElementById('sync-timeline-canvas');
+  const tooltip = document.getElementById('timeline-tooltip');
+
+  if (!canvas || !tooltip) return;
+
+  // Hover interaction
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Calculate which data point we're hovering over
+    const canvasWidth = canvas.width;
+    const timelineLength = timelineHistory.length;
+
+    if (timelineLength === 0) return;
+
+    const dataIndex = Math.floor((x / rect.width) * timelineLength);
+
+    if (dataIndex >= 0 && dataIndex < timelineLength) {
+      const dataPoint = timelineHistory[dataIndex];
+      const secondsAgo = Math.floor((Date.now() - dataPoint.timestamp) / 1000);
+
+      // Show tooltip
+      tooltip.style.display = 'block';
+      tooltip.style.left = `${e.clientX - rect.left + 10}px`;
+      tooltip.style.top = `${e.clientY - rect.top - 60}px`;
+
+      tooltip.innerHTML = `
+        <div style="color: #00ffff; font-weight: bold; margin-bottom: 4px;">${secondsAgo}s ago</div>
+        <div style="color: #ff4444;">π: ${(dataPoint.pi * 100).toFixed(1)}%</div>
+        <div style="color: #00ffff;">φ: ${(dataPoint.phi * 100).toFixed(1)}%</div>
+        <div style="color: #ff00ff;">Sync: ${(dataPoint.synchronicity * 100).toFixed(1)}%</div>
+        ${dataPoint.archetype ? `<div style="color: #ffff00; margin-top: 4px;">${dataPoint.archetype}</div>` : ''}
+        ${dataPoint.confidence ? `<div style="color: #888; font-size: 9px;">Confidence: ${(dataPoint.confidence * 100).toFixed(1)}%</div>` : ''}
+      `;
+    }
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    tooltip.style.display = 'none';
+  });
+
+  // Click to log details
+  canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const timelineLength = timelineHistory.length;
+
+    if (timelineLength === 0) return;
+
+    const dataIndex = Math.floor((x / rect.width) * timelineLength);
+
+    if (dataIndex >= 0 && dataIndex < timelineLength) {
+      const dataPoint = timelineHistory[dataIndex];
+      const secondsAgo = Math.floor((Date.now() - dataPoint.timestamp) / 1000);
+
+      console.log(`📊 Timeline Data Point (${secondsAgo}s ago):`, {
+        timestamp: new Date(dataPoint.timestamp).toLocaleTimeString(),
+        pi: (dataPoint.pi * 100).toFixed(2) + '%',
+        phi: (dataPoint.phi * 100).toFixed(2) + '%',
+        synchronicity: (dataPoint.synchronicity * 100).toFixed(2) + '%',
+        archetype: dataPoint.archetype,
+        confidence: (dataPoint.confidence * 100).toFixed(2) + '%'
+      });
+    }
+  });
 }
 
 function calculatePiPhiMetrics(analysis) {
@@ -240,56 +376,206 @@ function updatePiPhiPanel(analysis) {
     eventType.textContent = eventText;
   }
 
-  // Update timeline
-  updateSyncTimeline(synchronicity);
+  // Update timeline with full data
+  updateEnhancedTimeline(pi, phi, synchronicity, analysis);
 }
 
-function updateSyncTimeline(synchronicity) {
-  // Add to history
-  syncHistory.push(synchronicity);
-  if (syncHistory.length > MAX_HISTORY) {
-    syncHistory.shift();
+function updateEnhancedTimeline(pi, phi, synchronicity, analysis) {
+  // Add data point to history
+  const dataPoint = {
+    timestamp: Date.now(),
+    pi: pi,
+    phi: phi,
+    synchronicity: synchronicity,
+    archetype: analysis.archetype,
+    confidence: analysis.confidence || 0
+  };
+
+  timelineHistory.push(dataPoint);
+
+  // Trim old data (keep last MAX_HISTORY_FRAMES)
+  if (timelineHistory.length > MAX_HISTORY_FRAMES) {
+    timelineHistory.shift();
   }
 
-  const timeline = document.getElementById('sync-timeline');
-  if (!timeline) return;
+  // Peak detection
+  framesSinceLastPeak++;
 
-  // Clear existing bars
-  timeline.innerHTML = '';
+  if (synchronicity > PEAK_THRESHOLD && framesSinceLastPeak > PEAK_COOLDOWN) {
+    const peak = {
+      timestamp: dataPoint.timestamp,
+      synchronicity: synchronicity,
+      archetype: analysis.archetype,
+      pi: pi,
+      phi: phi,
+      confidence: analysis.confidence || 0
+    };
 
-  // Calculate bar width
-  const barWidth = timeline.clientWidth / MAX_HISTORY;
-
-  // Render bars
-  syncHistory.forEach((sync, index) => {
-    const bar = document.createElement('div');
-    const height = sync * 100; // 0-100%
-
-    // Color based on sync value
-    let color;
-    if (sync > 0.7) {
-      color = '#00ff00'; // Green - high sync
-    } else if (sync > 0.4) {
-      color = '#ffff00'; // Yellow - medium sync
-    } else if (sync > 0.2) {
-      color = '#ff8800'; // Orange - low sync
-    } else {
-      color = '#333333'; // Gray - minimal sync
+    synchronicityPeaks.unshift(peak); // Add to front
+    if (synchronicityPeaks.length > 10) {
+      synchronicityPeaks.pop(); // Keep only last 10 peaks
     }
 
-    bar.style.cssText = `
-      position: absolute;
-      bottom: 0;
-      left: ${index * barWidth}px;
-      width: ${barWidth}px;
-      height: ${height}%;
-      background: ${color};
-      opacity: 0.8;
-      transition: height 0.3s ease;
-    `;
+    framesSinceLastPeak = 0;
 
-    timeline.appendChild(bar);
+    // Update peak events log
+    updatePeakEventsLog();
+  }
+
+  // Render canvas
+  renderTimelineCanvas();
+}
+
+function renderTimelineCanvas() {
+  const canvas = document.getElementById('sync-timeline-canvas');
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  const width = canvas.width;
+  const height = canvas.height;
+
+  // Clear canvas
+  ctx.clearRect(0, 0, width, height);
+
+  if (timelineHistory.length === 0) return;
+
+  // Draw grid lines (every 30 seconds)
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+  ctx.lineWidth = 1;
+
+  for (let i = 0; i <= 4; i++) {
+    const x = (i / 4) * width;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+    ctx.stroke();
+  }
+
+  // Middle line (50%)
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+  ctx.beginPath();
+  ctx.moveTo(0, height / 2);
+  ctx.lineTo(width, height / 2);
+  ctx.stroke();
+
+  // Draw synchronicity area (filled)
+  ctx.fillStyle = 'rgba(128, 0, 128, 0.3)';
+  ctx.beginPath();
+  ctx.moveTo(0, height);
+
+  for (let i = 0; i < timelineHistory.length; i++) {
+    const x = (i / Math.max(MAX_HISTORY_FRAMES - 1, 1)) * width;
+    const y = height - (timelineHistory[i].synchronicity * height);
+    if (i === 0) {
+      ctx.lineTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  }
+
+  ctx.lineTo(width, height);
+  ctx.closePath();
+  ctx.fill();
+
+  // Draw π line (chaos - red)
+  ctx.strokeStyle = '#ff4444';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+
+  for (let i = 0; i < timelineHistory.length; i++) {
+    const x = (i / Math.max(MAX_HISTORY_FRAMES - 1, 1)) * width;
+    const y = height - (timelineHistory[i].pi * height);
+    if (i === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  }
+
+  ctx.stroke();
+
+  // Draw φ line (harmony - cyan)
+  ctx.strokeStyle = '#00ffff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+
+  for (let i = 0; i < timelineHistory.length; i++) {
+    const x = (i / Math.max(MAX_HISTORY_FRAMES - 1, 1)) * width;
+    const y = height - (timelineHistory[i].phi * height);
+    if (i === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  }
+
+  ctx.stroke();
+
+  // Draw peak markers
+  ctx.font = '10px monospace';
+  ctx.textAlign = 'center';
+
+  synchronicityPeaks.forEach(peak => {
+    // Find position in timeline
+    const peakAge = Date.now() - peak.timestamp;
+    const peakAgeSeconds = peakAge / 1000;
+
+    if (peakAgeSeconds <= MAX_HISTORY_SECONDS) {
+      const timelineIndex = timelineHistory.findIndex(d => d.timestamp >= peak.timestamp);
+
+      if (timelineIndex !== -1) {
+        const x = (timelineIndex / Math.max(MAX_HISTORY_FRAMES - 1, 1)) * width;
+        const y = height - (peak.synchronicity * height);
+
+        // Draw marker line
+        ctx.strokeStyle = 'rgba(255, 255, 0, 0.6)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Draw archetype label (if room)
+        if (peak.archetype && x > 30 && x < width - 30) {
+          ctx.fillStyle = 'rgba(255, 255, 0, 0.8)';
+          ctx.fillText(peak.archetype, x, Math.max(y - 5, 12));
+        }
+
+        // Draw peak dot
+        ctx.fillStyle = '#ffff00';
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
   });
+}
+
+function updatePeakEventsLog() {
+  const logContainer = document.getElementById('peak-events-log');
+  if (!logContainer) return;
+
+  if (synchronicityPeaks.length === 0) {
+    logContainer.innerHTML = '<div style="color: #666; font-style: italic;">Synchronicity peaks will appear here...</div>';
+    return;
+  }
+
+  logContainer.innerHTML = synchronicityPeaks.map(peak => {
+    const secondsAgo = Math.floor((Date.now() - peak.timestamp) / 1000);
+    const timeStr = secondsAgo < 60 ? `${secondsAgo}s ago` : `${Math.floor(secondsAgo / 60)}m ${secondsAgo % 60}s ago`;
+
+    return `
+      <div style="display: flex; justify-content: space-between; padding: 4px 6px; margin-bottom: 3px; background: rgba(255, 255, 0, 0.05); border-left: 2px solid #ffff00; border-radius: 2px;">
+        <div>
+          <span style="color: #ffff00; font-weight: bold;">${(peak.synchronicity * 100).toFixed(0)}%</span>
+          <span style="color: #888; margin-left: 6px;">${peak.archetype || 'Unknown'}</span>
+        </div>
+        <div style="color: #666;">${timeStr}</div>
+      </div>
+    `;
+  }).join('');
 }
 
 // Listen for color palette changes
