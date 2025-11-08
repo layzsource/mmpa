@@ -778,9 +778,10 @@ console.log("✅ Phase 13.4 HUD System Ready (Signal Bridge)");
   }
 
   function toggleHUD() {
-    const on = document.body.classList.toggle('hud-hidden');
-    document.documentElement.classList.toggle('hud-hidden', on);
-    console.log(`🧰 HUD ${on ? 'hidden' : 'visible'}`);
+    const hudPanel = document.getElementById('hud-panel');
+    if (!hudPanel) return console.warn('⚠️ HUD panel not found');
+    const isHidden = hudPanel.classList.toggle('hud-hidden');
+    console.log(`🧰 HUD ${isHidden ? 'hidden' : 'visible'}`);
   }
 
   function toggleWireframe() {

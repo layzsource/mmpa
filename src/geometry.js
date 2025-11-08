@@ -16,6 +16,10 @@ import { mapFeaturesToVisuals } from './mappingLayer.js'; // MMPA Phase 2: Featu
 import { initPeriaktos } from './periaktos.js'; // Phase 13.1.0: Periaktos mirror geometry
 import { updateHumanoid } from './humanoid.js'; // Humanoid dancer animation
 import { initArchetypeMorph, updateArchetypeMorph } from './archetypeMorph.js'; // Chestahedron ↔ Bell morph
+import { getCurrentGeometryColors, updateColorState } from './archetypeColors.js'; // MMPA archetype color integration
+import { getPiPhiMetrics } from './hudPiPhi.js'; // π/φ synchronicity metrics
+import { recordPerformanceMetrics } from './colorPalettes.js'; // ML performance tracking
+import { getCurrentArchetype, getConfidence } from './archetypeRecognizer.js'; // Archetype detection
 
 console.log("🔺 geometry.js loaded");
 
@@ -436,25 +440,56 @@ function updateGeometryFromState() {
     updateMorphTargets(state);
   }
 
-  // Phase 11.2.1: Update material color using layered system
-  const layerConfig = state.colorLayers.geometry;
-  const audioData = getEffectiveAudio();
-  const audioLevel = (audioData.bass + audioData.mid + audioData.treble) / 3;
+  // MMPA Archetype Colors: Update π/φ metrics for color blending
+  let finalColor = 0x888888; // Default gray
 
-  let finalColor = layerConfig.baseColor;
+  try {
+    const piPhiMetrics = getPiPhiMetrics();
+    const archetype = getCurrentArchetype();
+    const confidence = getConfidence();
 
-  if (state.audioReactive) {
-    finalColor = blendColors(
-      layerConfig.baseColor,
-      layerConfig.audioColor,
-      layerConfig.audioIntensity,
-      audioLevel
-    );
+    updateColorState({
+      pi: piPhiMetrics.pi,
+      phi: piPhiMetrics.phi,
+      synchronicity: piPhiMetrics.synchronicity
+    });
 
-    // Debug logging (2% sample rate)
-    if (Math.random() < 0.02) {
-      console.log(`🎨 Geometry: base=${layerConfig.baseColor} audio=${layerConfig.audioColor} final=${finalColor}`);
+    // Record performance metrics for ML training (sampled 1% to reduce overhead)
+    if (Math.random() < 0.01) {
+      recordPerformanceMetrics({
+        archetype,
+        confidence,
+        pi: piPhiMetrics.pi,
+        phi: piPhiMetrics.phi,
+        synchronicity: piPhiMetrics.synchronicity,
+        isSyncEvent: piPhiMetrics.synchronicity > 0.6
+      });
     }
+
+    // Get archetype-based colors from palette system
+    const archetypeColors = getCurrentGeometryColors();
+    const audioData = getEffectiveAudio();
+    const audioLevel = (audioData.bass + audioData.mid + audioData.treble) / 3;
+
+    // Use archetype colors instead of layerConfig
+    finalColor = archetypeColors.baseColor;
+
+    if (state.audioReactive) {
+      finalColor = blendColors(
+        archetypeColors.baseColor,
+        archetypeColors.audioColor,
+        state.colorLayers.geometry.audioIntensity || 0.5,
+        audioLevel
+      );
+
+      // Debug logging (2% sample rate)
+      if (Math.random() < 0.02) {
+        console.log(`🎨 Geometry: archetype base=${archetypeColors.baseColor.toString(16)} audio=${archetypeColors.audioColor.toString(16)} final=${finalColor}`);
+      }
+    }
+  } catch (error) {
+    // Silently fall back to default color if color system fails
+    // Don't spam console - just use gray
   }
 
   // Phase 13.7: Apply texture to morph if toggle ON (use morphTexture or fallback to texture)

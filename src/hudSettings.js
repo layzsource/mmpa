@@ -15,7 +15,15 @@ import {
   getPersonalizedRecommendations,
   suggestPalette,
   setTrackingEnabled,
-  clearUsageData
+  clearUsageData,
+  downloadPalettesJSON,
+  importPalettes,
+  savePaletteVersion,
+  restorePaletteVersion,
+  getPaletteVersions,
+  deletePaletteVersion,
+  exportVersionHistory,
+  importVersionHistory
 } from './colorPalettes.js';
 
 export function createSettingsHudSection(container) {
@@ -149,19 +157,44 @@ export function createSettingsHudSection(container) {
   const paletteSelector = document.createElement('select');
   paletteSelector.style.cssText = 'width: 100%; padding: 6px; background: #1a1a1a; color: #00ffff; border: 1px solid #6644aa; border-radius: 3px; font-size: 11px; margin-bottom: 10px; cursor: pointer;';
 
-  // Add preset palettes
+  // Group palettes by category
+  const palettesByCategory = {};
   Object.keys(COLOR_PALETTES).forEach(paletteName => {
-    const option = document.createElement('option');
-    option.value = paletteName;
-    option.textContent = paletteName;
-    paletteSelector.appendChild(option);
+    const palette = COLOR_PALETTES[paletteName];
+    const category = palette.category || 'Other';
+    if (!palettesByCategory[category]) {
+      palettesByCategory[category] = [];
+    }
+    palettesByCategory[category].push(paletteName);
   });
 
-  // Add Custom option
+  // Add palettes grouped by category
+  Object.keys(palettesByCategory).sort().forEach(category => {
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = category;
+    optgroup.style.cssText = 'color: #6644aa; font-weight: bold;';
+
+    palettesByCategory[category].forEach(paletteName => {
+      const option = document.createElement('option');
+      option.value = paletteName;
+      option.textContent = paletteName;
+      option.style.cssText = 'color: #00ffff;';
+      optgroup.appendChild(option);
+    });
+
+    paletteSelector.appendChild(optgroup);
+  });
+
+  // Add Custom option in its own group
+  const customGroup = document.createElement('optgroup');
+  customGroup.label = 'Custom';
+  customGroup.style.cssText = 'color: #6644aa; font-weight: bold;';
   const customOption = document.createElement('option');
   customOption.value = 'Custom';
   customOption.textContent = 'Custom (User-Defined)';
-  paletteSelector.appendChild(customOption);
+  customOption.style.cssText = 'color: #00ffff;';
+  customGroup.appendChild(customOption);
+  paletteSelector.appendChild(customGroup);
 
   paletteSelector.value = getCurrentPalette();
 
@@ -609,6 +642,302 @@ function createCustomColorEditor(container) {
 
   archetypeSection.appendChild(archetypeGrid);
   container.appendChild(archetypeSection);
+
+  // ===== PALETTE SHARING SECTION =====
+  const sharingDivider = document.createElement('div');
+  sharingDivider.style.cssText = 'border-top: 1px solid #333; margin: 20px 0;';
+  container.appendChild(sharingDivider);
+
+  const sharingTitle = document.createElement('h5');
+  sharingTitle.textContent = '💾 Share & Backup Palettes';
+  sharingTitle.style.cssText = 'color: #00ffff; font-size: 11px; margin: 0 0 10px 0;';
+  container.appendChild(sharingTitle);
+
+  const sharingDesc = document.createElement('div');
+  sharingDesc.textContent = 'Export your custom palettes to share with others or backup. Import palettes to restore previous configurations.';
+  sharingDesc.style.cssText = 'color: #666; font-size: 9px; margin-bottom: 12px;';
+  container.appendChild(sharingDesc);
+
+  const sharingButtons = document.createElement('div');
+  sharingButtons.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr; gap: 8px;';
+
+  // Export button
+  const exportBtn = document.createElement('button');
+  exportBtn.textContent = '💾 Export Palettes';
+  exportBtn.style.cssText = 'padding: 8px; background: rgba(0, 255, 255, 0.1); color: #00ffff; border: 1px solid #00ffff; border-radius: 4px; font-size: 10px; cursor: pointer; transition: all 0.2s;';
+
+  exportBtn.addEventListener('mouseover', () => {
+    exportBtn.style.background = 'rgba(0, 255, 255, 0.2)';
+    exportBtn.style.transform = 'scale(1.02)';
+  });
+
+  exportBtn.addEventListener('mouseout', () => {
+    exportBtn.style.background = 'rgba(0, 255, 255, 0.1)';
+    exportBtn.style.transform = 'scale(1)';
+  });
+
+  exportBtn.addEventListener('click', () => {
+    downloadPalettesJSON();
+    exportBtn.textContent = '✅ Exported!';
+    setTimeout(() => {
+      exportBtn.textContent = '💾 Export Palettes';
+    }, 2000);
+  });
+
+  sharingButtons.appendChild(exportBtn);
+
+  // Import button
+  const importBtn = document.createElement('button');
+  importBtn.textContent = '📂 Import Palettes';
+  importBtn.style.cssText = 'padding: 8px; background: rgba(102, 68, 170, 0.1); color: #6644aa; border: 1px solid #6644aa; border-radius: 4px; font-size: 10px; cursor: pointer; transition: all 0.2s;';
+
+  importBtn.addEventListener('mouseover', () => {
+    importBtn.style.background = 'rgba(102, 68, 170, 0.2)';
+    importBtn.style.transform = 'scale(1.02)';
+  });
+
+  importBtn.addEventListener('mouseout', () => {
+    importBtn.style.background = 'rgba(102, 68, 170, 0.1)';
+    importBtn.style.transform = 'scale(1)';
+  });
+
+  // Hidden file input for import
+  const paletteFileInput = document.createElement('input');
+  paletteFileInput.type = 'file';
+  paletteFileInput.accept = '.json';
+  paletteFileInput.style.display = 'none';
+  container.appendChild(paletteFileInput);
+
+  importBtn.addEventListener('click', () => {
+    paletteFileInput.click();
+  });
+
+  paletteFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = JSON.parse(event.target.result);
+          const success = importPalettes(data);
+
+          if (success) {
+            importBtn.textContent = '✅ Imported!';
+            alert('✅ Palettes imported successfully!');
+            createCustomColorEditor(container); // Rebuild UI with imported colors
+
+            setTimeout(() => {
+              importBtn.textContent = '📂 Import Palettes';
+            }, 2000);
+          } else {
+            importBtn.textContent = '❌ Import Failed';
+            alert('❌ Failed to import palettes. Invalid format.');
+            setTimeout(() => {
+              importBtn.textContent = '📂 Import Palettes';
+            }, 2000);
+          }
+        } catch (error) {
+          console.error('❌ Palette import error:', error);
+          importBtn.textContent = '❌ Import Failed';
+          alert('❌ Failed to parse palette file: ' + error.message);
+          setTimeout(() => {
+            importBtn.textContent = '📂 Import Palettes';
+          }, 2000);
+        }
+      };
+      reader.readAsText(file);
+      paletteFileInput.value = ''; // Reset input
+    }
+  });
+
+  sharingButtons.appendChild(importBtn);
+  container.appendChild(sharingButtons);
+
+  // ===== VERSION CONTROL SECTION =====
+  const versionDivider = document.createElement('div');
+  versionDivider.style.cssText = 'border-top: 1px solid #333; margin: 20px 0;';
+  container.appendChild(versionDivider);
+
+  const versionTitle = document.createElement('h5');
+  versionTitle.textContent = '📚 Version History';
+  versionTitle.style.cssText = 'color: #00ffff; font-size: 11px; margin: 0 0 10px 0;';
+  container.appendChild(versionTitle);
+
+  const versionDesc = document.createElement('div');
+  versionDesc.textContent = 'Save and restore different versions of your custom palette. Track changes over time.';
+  versionDesc.style.cssText = 'color: #888; font-size: 9px; margin-bottom: 12px; line-height: 1.4;';
+  container.appendChild(versionDesc);
+
+  // Save version button
+  const saveVersionBtn = document.createElement('button');
+  saveVersionBtn.textContent = '💾 Save Current Version';
+  saveVersionBtn.style.cssText = 'width: 100%; padding: 8px; background: rgba(0, 255, 0, 0.15); border: 1px solid #00ff00; border-radius: 4px; color: #00ff00; cursor: pointer; margin-bottom: 12px; font-size: 10px;';
+  saveVersionBtn.addEventListener('click', () => {
+    const versionName = prompt('Enter version name (or leave empty for auto-generated):');
+    if (versionName !== null) {
+      const description = prompt('Enter description (optional):') || '';
+      savePaletteVersion(versionName || undefined, description);
+      saveVersionBtn.textContent = '✅ Version Saved!';
+      setTimeout(() => {
+        saveVersionBtn.textContent = '💾 Save Current Version';
+        renderVersionList();
+      }, 1500);
+    }
+  });
+  container.appendChild(saveVersionBtn);
+
+  // Version list container
+  const versionListContainer = document.createElement('div');
+  versionListContainer.id = 'version-list-container';
+  versionListContainer.style.cssText = 'max-height: 200px; overflow-y: auto; margin-bottom: 12px;';
+  container.appendChild(versionListContainer);
+
+  // Render version list
+  function renderVersionList() {
+    const versions = getPaletteVersions();
+    versionListContainer.innerHTML = '';
+
+    if (versions.length === 0) {
+      versionListContainer.innerHTML = '<div style="color: #666; font-size: 9px; font-style: italic;">No saved versions yet. Save your current palette to create the first version!</div>';
+      return;
+    }
+
+    versions.forEach(version => {
+      const versionItem = document.createElement('div');
+      versionItem.style.cssText = 'background: rgba(102, 68, 170, 0.1); border: 1px solid #6644aa; border-radius: 4px; padding: 8px; margin-bottom: 6px;';
+
+      const versionHeader = document.createElement('div');
+      versionHeader.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;';
+
+      const versionNameEl = document.createElement('div');
+      versionNameEl.textContent = version.name;
+      versionNameEl.style.cssText = 'color: #00ffff; font-size: 10px; font-weight: 500;';
+      versionHeader.appendChild(versionNameEl);
+
+      const versionActions = document.createElement('div');
+      versionActions.style.cssText = 'display: flex; gap: 4px;';
+
+      // Restore button
+      const restoreBtn = document.createElement('button');
+      restoreBtn.textContent = '♻️';
+      restoreBtn.title = 'Restore this version';
+      restoreBtn.style.cssText = 'background: rgba(0, 255, 0, 0.2); border: 1px solid #00ff00; border-radius: 3px; color: #00ff00; cursor: pointer; padding: 2px 6px; font-size: 9px;';
+      restoreBtn.addEventListener('click', () => {
+        if (confirm(`Restore version "${version.name}"?\n\nThis will replace your current palette.`)) {
+          if (restorePaletteVersion(version.id)) {
+            alert(`✅ Restored version: ${version.name}`);
+            createCustomColorEditor(container); // Rebuild UI
+          } else {
+            alert('❌ Failed to restore version');
+          }
+        }
+      });
+      versionActions.appendChild(restoreBtn);
+
+      // Delete button
+      const deleteBtn = document.createElement('button');
+      deleteBtn.textContent = '🗑️';
+      deleteBtn.title = 'Delete this version';
+      deleteBtn.style.cssText = 'background: rgba(255, 0, 0, 0.2); border: 1px solid #ff0000; border-radius: 3px; color: #ff0000; cursor: pointer; padding: 2px 6px; font-size: 9px;';
+      deleteBtn.addEventListener('click', () => {
+        if (confirm(`Delete version "${version.name}"?\n\nThis cannot be undone.`)) {
+          if (deletePaletteVersion(version.id)) {
+            renderVersionList();
+          }
+        }
+      });
+      versionActions.appendChild(deleteBtn);
+
+      versionHeader.appendChild(versionActions);
+      versionItem.appendChild(versionHeader);
+
+      const versionInfo = document.createElement('div');
+      versionInfo.style.cssText = 'color: #888; font-size: 8px;';
+      versionInfo.innerHTML = `${version.date}${version.description ? `<br><span style="color: #aaa;">${version.description}</span>` : ''}`;
+      versionItem.appendChild(versionInfo);
+
+      versionListContainer.appendChild(versionItem);
+    });
+  }
+
+  // Initial render
+  renderVersionList();
+
+  // Export/Import version history buttons
+  const versionHistoryButtons = document.createElement('div');
+  versionHistoryButtons.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr; gap: 8px;';
+
+  const exportHistoryBtn = document.createElement('button');
+  exportHistoryBtn.textContent = '💾 Export History';
+  exportHistoryBtn.style.cssText = 'padding: 6px; background: rgba(0, 255, 255, 0.1); border: 1px solid #00ffff; border-radius: 4px; color: #00ffff; cursor: pointer; font-size: 9px;';
+  exportHistoryBtn.addEventListener('click', () => {
+    const data = exportVersionHistory();
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mmpa-version-history-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    exportHistoryBtn.textContent = '✅ Exported!';
+    setTimeout(() => {
+      exportHistoryBtn.textContent = '💾 Export History';
+    }, 1500);
+  });
+  versionHistoryButtons.appendChild(exportHistoryBtn);
+
+  const importHistoryBtn = document.createElement('button');
+  importHistoryBtn.textContent = '📂 Import History';
+  importHistoryBtn.style.cssText = 'padding: 6px; background: rgba(255, 0, 255, 0.1); border: 1px solid #ff00ff; border-radius: 4px; color: #ff00ff; cursor: pointer; font-size: 9px;';
+
+  const historyFileInput = document.createElement('input');
+  historyFileInput.type = 'file';
+  historyFileInput.accept = '.json';
+  historyFileInput.style.display = 'none';
+
+  importHistoryBtn.addEventListener('click', () => {
+    historyFileInput.click();
+  });
+
+  historyFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = JSON.parse(event.target.result);
+          const merge = confirm('Merge with existing versions?\n\nYes = Merge (keep both)\nNo = Replace (delete existing)');
+          if (importVersionHistory(data, merge)) {
+            importHistoryBtn.textContent = '✅ Imported!';
+            alert('✅ Version history imported successfully!');
+            renderVersionList();
+            setTimeout(() => {
+              importHistoryBtn.textContent = '📂 Import History';
+            }, 1500);
+          } else {
+            importHistoryBtn.textContent = '❌ Import Failed';
+            alert('❌ Failed to import version history. Invalid format.');
+            setTimeout(() => {
+              importHistoryBtn.textContent = '📂 Import History';
+            }, 1500);
+          }
+        } catch (error) {
+          console.error('❌ History import error:', error);
+          importHistoryBtn.textContent = '❌ Import Failed';
+          alert('❌ Failed to parse version history file: ' + error.message);
+          setTimeout(() => {
+            importHistoryBtn.textContent = '📂 Import History';
+          }, 1500);
+        }
+      };
+      reader.readAsText(file);
+      historyFileInput.value = '';
+    }
+  });
+
+  versionHistoryButtons.appendChild(importHistoryBtn);
+  container.appendChild(versionHistoryButtons);
 }
 
 // Helper to create a color input row

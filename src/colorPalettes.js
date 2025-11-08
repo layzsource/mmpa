@@ -4,6 +4,7 @@
 
 export const COLOR_PALETTES = {
   'Arousal Theory (Default)': {
+    category: 'Scientific',
     description: 'Based on color psychology: warm colors for high arousal (chaos), cool colors for low arousal (harmony)',
     pi: '#ff0000',      // Red - high arousal, energy, chaos
     phi: '#00ffff',     // Cyan - low arousal, calm, stability
@@ -23,6 +24,7 @@ export const COLOR_PALETTES = {
   },
 
   'Scriabin Synesthesia': {
+    category: 'Artistic',
     description: 'Based on composer Alexander Scriabin\'s documented chromesthesia (personal synesthetic mappings)',
     pi: '#ff0000',      // C = Red
     phi: '#0066ff',     // F# = Bright Blue
@@ -42,6 +44,7 @@ export const COLOR_PALETTES = {
   },
 
   'Newton Rainbow (1704)': {
+    category: 'Scientific',
     description: 'Isaac Newton\'s color wheel mapped to musical scale (historical, theoretical)',
     pi: '#ff0000',      // Red (C)
     phi: '#4b0082',     // Indigo (G)
@@ -61,6 +64,7 @@ export const COLOR_PALETTES = {
   },
 
   'High Contrast (Accessibility)': {
+    category: 'Functional',
     description: 'Maximum contrast for visual impairment, colorblindness, or high-visibility needs',
     pi: '#ffffff',      // White
     phi: '#000000',     // Black
@@ -80,6 +84,7 @@ export const COLOR_PALETTES = {
   },
 
   'Ocean Depths (Cool Theme)': {
+    category: 'Natural Themes',
     description: 'Cool palette inspired by ocean and water - calming, meditative',
     pi: '#00aaff',      // Light blue (surface)
     phi: '#003366',     // Deep blue (depths)
@@ -99,6 +104,7 @@ export const COLOR_PALETTES = {
   },
 
   'Sunset Fire (Warm Theme)': {
+    category: 'Natural Themes',
     description: 'Warm palette inspired by fire and sunset - energetic, passionate',
     pi: '#ff6600',      // Orange
     phi: '#ffcc00',     // Yellow
@@ -118,6 +124,7 @@ export const COLOR_PALETTES = {
   },
 
   'Inverted (Experimental)': {
+    category: 'Experimental',
     description: 'Inverted arousal mapping - cool colors for chaos, warm for harmony (experimental)',
     pi: '#00ffff',      // Cyan (inverted from red)
     phi: '#ff0000',     // Red (inverted from cyan)
@@ -137,6 +144,7 @@ export const COLOR_PALETTES = {
   },
 
   'Monochrome Purple': {
+    category: 'Minimalist',
     description: 'Single hue with varying saturation/lightness - for focus on brightness over color',
     pi: '#800080',      // Purple
     phi: '#e6d6ff',     // Pale purple
@@ -368,12 +376,13 @@ export function resetCustomPalette(presetName) {
 
 // ===== PHASE 4: ML-ASSISTED PALETTE SUGGESTION =====
 
-// Usage tracking
+// Usage tracking with performance metrics
 let usageTracking = {
   enabled: true,  // Opt-in by default (privacy-conscious)
   palettes: {},   // { paletteName: { usageCount, totalDuration, lastUsed } }
   colors: {},     // { hexColor: frequency }
-  sessions: []    // Recent session data
+  sessions: [],   // Recent session data
+  performance: {} // { paletteName: { syncEvents, totalConfidence, totalSynchronicity, sampleCount, avgPi, avgPhi } }
 };
 
 let currentSessionStart = null;
@@ -502,49 +511,81 @@ function getAveragePreferredColor(colors) {
   return rgbToHex(avgR, avgG, avgB);
 }
 
-// Suggest palette based on user preferences
+// Suggest palette based on performance data AND user preferences
 export function suggestPalette() {
   if (!usageTracking.enabled) return null;
 
+  // Check if we have performance data
+  const topPerforming = getTopPerformingPalettes(3);
+
+  if (topPerforming.length > 0) {
+    // We have enough performance data - suggest best performing palette
+    const best = topPerforming[0];
+
+    // Build detailed reason
+    const avgConf = (best.avgConfidence * 100).toFixed(1);
+    const avgSync = (best.avgSynchronicity * 100).toFixed(1);
+    const eventRate = ((best.syncEvents / best.sampleCount) * 100).toFixed(1);
+
+    return {
+      type: 'performance',
+      paletteName: best.paletteName,
+      score: best.score,
+      category: best.category,
+      reason: `Best MMPA performance: ${avgConf}% avg confidence, ${avgSync}% sync, ${eventRate}% high sync events`,
+      stats: {
+        avgConfidence: best.avgConfidence,
+        avgSynchronicity: best.avgSynchronicity,
+        syncEvents: best.syncEvents,
+        sampleCount: best.sampleCount
+      },
+      alternatives: topPerforming.slice(1).map(p => ({
+        paletteName: p.paletteName,
+        score: p.score,
+        category: p.category
+      }))
+    };
+  }
+
+  // Fallback to color preference analysis
   const mostUsedColors = getMostUsedColors(10);
   if (mostUsedColors.length < 3) {
-    // Not enough data, suggest a popular preset
+    // Not enough data, suggest scientifically-backed preset
     return {
       type: 'preset',
       paletteName: 'Arousal Theory (Default)',
-      reason: 'Not enough usage data yet. Try this popular preset!'
+      reason: 'Not enough usage data yet. This palette uses color psychology research for archetype mapping.',
+      category: 'Scientific'
     };
   }
 
   // Calculate average preferred color
   const avgColor = getAveragePreferredColor(mostUsedColors);
 
-  // Find closest matching rule based on color preferences
-  let bestRule = 'Consonance Gradient';
-  let bestDistance = Infinity;
+  // Find best matching preset palette based on color similarity
+  let bestPreset = 'Arousal Theory (Default)';
+  let bestMatch = 0;
 
-  Object.entries(COLOR_GENERATION_RULES).forEach(([ruleName, rule]) => {
-    const ruleStartRgb = hexToRgb(rule.colorStart);
-    const ruleEndRgb = hexToRgb(rule.colorEnd);
-    const avgRgb = hexToRgb(avgColor);
+  Object.entries(COLOR_PALETTES).forEach(([paletteName, palette]) => {
+    if (paletteName === 'Custom') return;
 
-    // Distance to rule's color space
-    const distStart = Math.sqrt(
-      Math.pow(ruleStartRgb.r - avgRgb.r, 2) +
-      Math.pow(ruleStartRgb.g - avgRgb.g, 2) +
-      Math.pow(ruleStartRgb.b - avgRgb.b, 2)
-    );
-    const distEnd = Math.sqrt(
-      Math.pow(ruleEndRgb.r - avgRgb.r, 2) +
-      Math.pow(ruleEndRgb.g - avgRgb.g, 2) +
-      Math.pow(ruleEndRgb.b - avgRgb.b, 2)
-    );
+    // Calculate similarity to user's preferred colors
+    let totalSimilarity = 0;
+    let colorCount = 0;
 
-    const avgDist = (distStart + distEnd) / 2;
+    Object.values(palette).forEach(color => {
+      if (typeof color === 'string' && color.startsWith('#')) {
+        const similarity = 1 - (colorDistance(color, avgColor) / 441.67); // Normalize to 0-1
+        totalSimilarity += similarity;
+        colorCount++;
+      }
+    });
 
-    if (avgDist < bestDistance) {
-      bestDistance = avgDist;
-      bestRule = ruleName;
+    const avgSimilarity = colorCount > 0 ? totalSimilarity / colorCount : 0;
+
+    if (avgSimilarity > bestMatch) {
+      bestMatch = avgSimilarity;
+      bestPreset = paletteName;
     }
   });
 
@@ -556,31 +597,32 @@ export function suggestPalette() {
 
   const preferWarm = warmColors > mostUsedColors.length / 2;
 
-  // Adjust suggestion based on preference
-  let suggestedStart = avgColor;
-  let suggestedEnd = preferWarm ? '#0000ff' : '#ff0000'; // Opposite temperature
-
   return {
-    type: 'generated',
-    rule: bestRule,
-    startColor: suggestedStart,
-    endColor: suggestedEnd,
-    reason: `Based on your ${preferWarm ? 'warm' : 'cool'} color preferences`
+    type: 'preset',
+    paletteName: bestPreset,
+    category: COLOR_PALETTES[bestPreset]?.category || 'Unknown',
+    reason: `Matches your ${preferWarm ? 'warm' : 'cool'} color preferences (${(bestMatch * 100).toFixed(0)}% similar)`,
+    temperature: preferWarm ? 'warm' : 'cool',
+    matchScore: bestMatch
   };
 }
 
-// Get personalized recommendations
+// Get personalized recommendations with performance insights
 export function getPersonalizedRecommendations() {
   loadUsageData();
 
   const mostUsed = getMostUsedPalettes(3);
+  const topPerforming = getTopPerformingPalettes(3);
   const suggestion = suggestPalette();
 
   return {
     mostUsed,
+    topPerforming,
     suggestion,
     totalSessions: Object.keys(usageTracking.palettes).length,
-    colorsDefined: Object.keys(usageTracking.colors).length
+    colorsDefined: Object.keys(usageTracking.colors).length,
+    performanceDataAvailable: topPerforming.length > 0,
+    totalSamplesAnalyzed: Object.values(usageTracking.performance).reduce((sum, p) => sum + (p.sampleCount || 0), 0)
   };
 }
 
@@ -591,13 +633,109 @@ export function setTrackingEnabled(enabled) {
   console.log(`🔒 Palette usage tracking ${enabled ? 'enabled' : 'disabled'}`);
 }
 
+/**
+ * Record MMPA performance metrics for current palette
+ * Called from main analysis loop to build performance training data
+ * @param {object} metrics - { archetype, confidence, pi, phi, synchronicity, isSyncEvent }
+ */
+export function recordPerformanceMetrics(metrics) {
+  if (!usageTracking.enabled || !currentPalette) return;
+
+  const paletteName = currentPalette;
+
+  // Initialize performance tracking for this palette if needed
+  if (!usageTracking.performance[paletteName]) {
+    usageTracking.performance[paletteName] = {
+      syncEvents: 0,
+      totalConfidence: 0,
+      totalSynchronicity: 0,
+      totalPi: 0,
+      totalPhi: 0,
+      sampleCount: 0,
+      category: COLOR_PALETTES[paletteName]?.category || 'Unknown'
+    };
+  }
+
+  const perf = usageTracking.performance[paletteName];
+
+  // Accumulate metrics
+  perf.sampleCount++;
+  perf.totalConfidence += metrics.confidence || 0;
+  perf.totalSynchronicity += metrics.synchronicity || 0;
+  perf.totalPi += metrics.pi || 0;
+  perf.totalPhi += metrics.phi || 0;
+
+  // Count high synchronicity events
+  if (metrics.isSyncEvent || metrics.synchronicity > 0.6) {
+    perf.syncEvents++;
+  }
+
+  // Save periodically (every 100 samples to reduce I/O)
+  if (perf.sampleCount % 100 === 0) {
+    saveUsageData();
+  }
+}
+
+/**
+ * Get performance score for a palette
+ * Combines multiple metrics into a single quality score (0-1)
+ */
+function getPalettePerformanceScore(paletteName) {
+  const perf = usageTracking.performance[paletteName];
+  if (!perf || perf.sampleCount < 50) {
+    return 0; // Not enough data
+  }
+
+  const avgConfidence = perf.totalConfidence / perf.sampleCount;
+  const avgSynchronicity = perf.totalSynchronicity / perf.sampleCount;
+  const syncEventRate = perf.syncEvents / perf.sampleCount;
+
+  // Weighted score: confidence 30%, synchronicity 40%, sync events 30%
+  const score = (
+    avgConfidence * 0.3 +
+    avgSynchronicity * 0.4 +
+    syncEventRate * 0.3
+  );
+
+  return score;
+}
+
+/**
+ * Get top performing palettes based on MMPA analysis quality
+ * @param {number} limit - Number of palettes to return
+ * @returns {Array} - Array of { paletteName, score, avgConfidence, syncEvents, category }
+ */
+export function getTopPerformingPalettes(limit = 3) {
+  const palettesWithScores = Object.keys(usageTracking.performance)
+    .map(paletteName => {
+      const perf = usageTracking.performance[paletteName];
+      const score = getPalettePerformanceScore(paletteName);
+
+      return {
+        paletteName,
+        score,
+        avgConfidence: perf.sampleCount > 0 ? perf.totalConfidence / perf.sampleCount : 0,
+        avgSynchronicity: perf.sampleCount > 0 ? perf.totalSynchronicity / perf.sampleCount : 0,
+        syncEvents: perf.syncEvents,
+        sampleCount: perf.sampleCount,
+        category: perf.category
+      };
+    })
+    .filter(p => p.sampleCount >= 50) // Minimum data threshold
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
+
+  return palettesWithScores;
+}
+
 // Clear usage data
 export function clearUsageData() {
   usageTracking = {
     enabled: usageTracking.enabled,
     palettes: {},
     colors: {},
-    sessions: []
+    sessions: [],
+    performance: {}
   };
   saveUsageData();
   console.log('🗑️ Usage data cleared');
@@ -605,6 +743,239 @@ export function clearUsageData() {
 
 // Initialize usage tracking
 loadUsageData();
+
+// ===== PALETTE VERSION CONTROL SYSTEM =====
+
+// Version history storage
+let paletteVersions = [];
+
+// Load version history from localStorage
+function loadVersionHistory() {
+  try {
+    const saved = localStorage.getItem('mmpa_palette_versions');
+    if (saved) {
+      paletteVersions = JSON.parse(saved);
+      console.log(`📚 Loaded ${paletteVersions.length} palette versions`);
+    }
+  } catch (error) {
+    console.warn('⚠️ Failed to load palette versions:', error);
+    paletteVersions = [];
+  }
+}
+
+// Save version history to localStorage
+function saveVersionHistory() {
+  try {
+    localStorage.setItem('mmpa_palette_versions', JSON.stringify(paletteVersions));
+  } catch (error) {
+    console.warn('⚠️ Failed to save palette versions:', error);
+  }
+}
+
+/**
+ * Save current custom palette as a named version
+ * @param {string} versionName - Name for this version (optional, auto-generates if not provided)
+ * @param {string} description - Optional description of changes
+ * @returns {object} - The saved version object
+ */
+export function savePaletteVersion(versionName = null, description = '') {
+  const timestamp = Date.now();
+  const date = new Date(timestamp);
+
+  // Auto-generate name if not provided
+  if (!versionName) {
+    versionName = `Version ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+  }
+
+  const version = {
+    id: `v_${timestamp}`,
+    name: versionName,
+    description,
+    timestamp,
+    palette: JSON.parse(JSON.stringify(customPalette)), // Deep copy
+    archetypeNames: getArchetypeNames()
+  };
+
+  // Add to history (most recent first)
+  paletteVersions.unshift(version);
+
+  // Limit to 50 versions to avoid storage bloat
+  if (paletteVersions.length > 50) {
+    paletteVersions = paletteVersions.slice(0, 50);
+  }
+
+  saveVersionHistory();
+  console.log(`💾 Saved palette version: ${versionName}`);
+
+  return version;
+}
+
+/**
+ * Restore a specific version
+ * @param {string} versionId - ID of version to restore
+ * @returns {boolean} - Success status
+ */
+export function restorePaletteVersion(versionId) {
+  const version = paletteVersions.find(v => v.id === versionId);
+
+  if (!version) {
+    console.error(`❌ Version ${versionId} not found`);
+    return false;
+  }
+
+  // Restore palette
+  customPalette = JSON.parse(JSON.stringify(version.palette)); // Deep copy
+  saveCustomPalette(customPalette);
+
+  // Switch to custom palette
+  applyColorPalette('Custom');
+
+  console.log(`♻️ Restored palette version: ${version.name}`);
+  return true;
+}
+
+/**
+ * Get all saved versions
+ * @returns {Array} - Array of version objects with metadata
+ */
+export function getPaletteVersions() {
+  return paletteVersions.map(v => ({
+    id: v.id,
+    name: v.name,
+    description: v.description,
+    timestamp: v.timestamp,
+    date: new Date(v.timestamp).toLocaleString(),
+    archetypeCount: v.archetypeNames ? v.archetypeNames.length : 0
+  }));
+}
+
+/**
+ * Delete a specific version
+ * @param {string} versionId - ID of version to delete
+ * @returns {boolean} - Success status
+ */
+export function deletePaletteVersion(versionId) {
+  const index = paletteVersions.findIndex(v => v.id === versionId);
+
+  if (index === -1) {
+    console.error(`❌ Version ${versionId} not found`);
+    return false;
+  }
+
+  const version = paletteVersions[index];
+  paletteVersions.splice(index, 1);
+  saveVersionHistory();
+
+  console.log(`🗑️ Deleted palette version: ${version.name}`);
+  return true;
+}
+
+/**
+ * Compare two versions
+ * @param {string} versionId1 - First version ID
+ * @param {string} versionId2 - Second version ID
+ * @returns {object} - Comparison result with differences
+ */
+export function comparePaletteVersions(versionId1, versionId2) {
+  const v1 = paletteVersions.find(v => v.id === versionId1);
+  const v2 = paletteVersions.find(v => v.id === versionId2);
+
+  if (!v1 || !v2) {
+    return { error: 'One or both versions not found' };
+  }
+
+  const differences = [];
+  const archetypes = v1.archetypeNames || Object.keys(v1.palette);
+
+  archetypes.forEach(archetype => {
+    const color1 = v1.palette[archetype];
+    const color2 = v2.palette[archetype];
+
+    if (color1 !== color2) {
+      differences.push({
+        archetype,
+        version1Color: color1,
+        version2Color: color2,
+        changed: true
+      });
+    }
+  });
+
+  return {
+    version1: { id: v1.id, name: v1.name, date: new Date(v1.timestamp).toLocaleString() },
+    version2: { id: v2.id, name: v2.name, date: new Date(v2.timestamp).toLocaleString() },
+    differences,
+    changedCount: differences.length,
+    totalArchetypes: archetypes.length
+  };
+}
+
+/**
+ * Export version history to JSON
+ * @returns {object} - Version history data
+ */
+export function exportVersionHistory() {
+  return {
+    version: '1.0.0',
+    exportDate: new Date().toISOString(),
+    versions: paletteVersions,
+    totalVersions: paletteVersions.length
+  };
+}
+
+/**
+ * Import version history from JSON
+ * @param {object} data - Version history data
+ * @param {boolean} merge - If true, merge with existing. If false, replace.
+ * @returns {boolean} - Success status
+ */
+export function importVersionHistory(data, merge = true) {
+  if (!data || !data.versions) {
+    console.error('❌ Invalid version history data');
+    return false;
+  }
+
+  if (merge) {
+    // Merge, avoiding duplicates by ID
+    const existingIds = new Set(paletteVersions.map(v => v.id));
+    const newVersions = data.versions.filter(v => !existingIds.has(v.id));
+    paletteVersions = [...paletteVersions, ...newVersions];
+
+    // Sort by timestamp (most recent first)
+    paletteVersions.sort((a, b) => b.timestamp - a.timestamp);
+
+    // Limit to 50
+    if (paletteVersions.length > 50) {
+      paletteVersions = paletteVersions.slice(0, 50);
+    }
+
+    console.log(`📚 Merged ${newVersions.length} new versions`);
+  } else {
+    paletteVersions = data.versions;
+    console.log(`📚 Replaced with ${paletteVersions.length} versions`);
+  }
+
+  saveVersionHistory();
+  return true;
+}
+
+/**
+ * Auto-save current palette (for undo/redo functionality)
+ * Called automatically when custom palette changes
+ */
+export function autoSavePaletteVersion() {
+  // Only keep last 10 auto-saves
+  const autoSaves = paletteVersions.filter(v => v.name.startsWith('Auto-save'));
+  if (autoSaves.length >= 10) {
+    const oldestAutoSave = autoSaves[autoSaves.length - 1];
+    deletePaletteVersion(oldestAutoSave.id);
+  }
+
+  savePaletteVersion('Auto-save', 'Automatic backup');
+}
+
+// Initialize version control
+loadVersionHistory();
 
 // ===== PHASE 3: RULE-BASED PALETTE GENERATION =====
 
@@ -871,6 +1242,66 @@ export function applyGeneratedPalette(ruleName, startColor = null, endColor = nu
 
   console.log(`✅ Generated palette from rule: ${ruleName}`);
   return true;
+}
+
+// ===== DATA EXPORT SYSTEM =====
+
+/**
+ * Export all color palettes (presets + custom) to JSON
+ * @returns {object} Complete palette data for backup/sharing
+ */
+export function exportAllPalettes() {
+  return {
+    version: '1.0.0',
+    exportDate: new Date().toISOString(),
+    currentPalette: currentPalette,
+    presets: COLOR_PALETTES,
+    customPalette: customPalette,
+    usageTracking: usageTracking
+  };
+}
+
+/**
+ * Import palettes from exported JSON
+ * @param {object} data - Exported palette data
+ * @returns {boolean} Success status
+ */
+export function importPalettes(data) {
+  if (!data || !data.version) {
+    console.error('❌ Invalid palette data');
+    return false;
+  }
+
+  // Import custom palette
+  if (data.customPalette) {
+    customPalette = data.customPalette;
+    saveCustomPalette(customPalette);
+  }
+
+  // Import usage tracking (optional)
+  if (data.usageTracking) {
+    usageTracking = data.usageTracking;
+    saveUsageData();
+  }
+
+  console.log('✅ Palettes imported successfully');
+  return true;
+}
+
+/**
+ * Download palettes as JSON file
+ */
+export function downloadPalettesJSON() {
+  const data = exportAllPalettes();
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `mmpa-color-palettes-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  console.log('💾 Palettes downloaded');
 }
 
 console.log("🎨 colorPalettes.js loaded");

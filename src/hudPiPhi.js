@@ -2,7 +2,7 @@
 // Real-time visualization of chaos (π) vs. harmony (φ) balance
 // Based on color psychology (arousal theory), not esoteric claims
 
-import { getPiPhiColors } from './colorPalettes.js';
+import { getPiPhiColors, getPaletteColor } from './colorPalettes.js';
 
 // Enhanced timeline data structure
 let timelineHistory = [];
@@ -15,6 +15,9 @@ let synchronicityPeaks = [];
 const PEAK_THRESHOLD = 0.6; // Minimum sync to register as peak
 const PEAK_COOLDOWN = 30; // Frames between peaks (0.5 seconds)
 let framesSinceLastPeak = 0;
+
+// Current π/φ metrics (for color system integration)
+let lastPiPhiMetrics = { pi: 0, phi: 0, synchronicity: 0, balance: 0.5 };
 
 export function createPiPhiPanel(container) {
   const panel = document.createElement('div');
@@ -174,13 +177,181 @@ export function createPiPhiPanel(container) {
       <div id="peak-events-log" style="margin-top: 12px; max-height: 80px; overflow-y: auto; font-size: 9px; color: #888;">
         <div style="color: #666; font-style: italic;">Synchronicity peaks will appear here...</div>
       </div>
+
+      <!-- Data Export -->
+      <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: space-between;">
+        <button id="export-timeline-btn" style="
+          flex: 1;
+          padding: 8px;
+          background: rgba(0, 255, 255, 0.1);
+          border: 1px solid #00ffff;
+          border-radius: 4px;
+          color: #00ffff;
+          font-size: 10px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+        " onmouseover="this.style.background='rgba(0, 255, 255, 0.2)'" onmouseout="this.style.background='rgba(0, 255, 255, 0.1)'">
+          💾 Export Timeline
+        </button>
+        <button id="export-complete-btn" style="
+          flex: 1;
+          padding: 8px;
+          background: rgba(255, 0, 255, 0.1);
+          border: 1px solid #ff00ff;
+          border-radius: 4px;
+          color: #ff00ff;
+          font-size: 10px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+        " onmouseover="this.style.background='rgba(255, 0, 255, 0.2)'" onmouseout="this.style.background='rgba(255, 0, 255, 0.1)'">
+          💾 Export All Data
+        </button>
+      </div>
+
+      <!-- CSV Export -->
+      <div style="margin-top: 8px;">
+        <button id="export-csv-btn" style="
+          width: 100%;
+          padding: 8px;
+          background: rgba(0, 255, 0, 0.1);
+          border: 1px solid #00ff00;
+          border-radius: 4px;
+          color: #00ff00;
+          font-size: 10px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+        " onmouseover="this.style.background='rgba(0, 255, 0, 0.2)'" onmouseout="this.style.background='rgba(0, 255, 0, 0.1)'">
+          📊 Export CSV (Spreadsheet)
+        </button>
+      </div>
+
+      <!-- PNG Snapshot Export -->
+      <div style="margin-top: 8px;">
+        <button id="export-png-btn" style="
+          width: 100%;
+          padding: 8px;
+          background: rgba(255, 165, 0, 0.1);
+          border: 1px solid #ffa500;
+          border-radius: 4px;
+          color: #ffa500;
+          font-size: 10px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+        " onmouseover="this.style.background='rgba(255, 165, 0, 0.2)'" onmouseout="this.style.background='rgba(255, 165, 0, 0.1)'">
+          🖼️ Export Timeline Image (PNG)
+        </button>
+      </div>
+
+      <!-- Data Import -->
+      <div style="margin-top: 8px; display: flex; gap: 8px; justify-content: space-between;">
+        <button id="import-timeline-btn" style="
+          flex: 1;
+          padding: 8px;
+          background: rgba(0, 255, 255, 0.1);
+          border: 1px solid #00ffff;
+          border-radius: 4px;
+          color: #00ffff;
+          font-size: 10px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+        " onmouseover="this.style.background='rgba(0, 255, 255, 0.2)'" onmouseout="this.style.background='rgba(0, 255, 255, 0.1)'">
+          📂 Import Timeline
+        </button>
+        <button id="import-complete-btn" style="
+          flex: 1;
+          padding: 8px;
+          background: rgba(255, 0, 255, 0.1);
+          border: 1px solid #ff00ff;
+          border-radius: 4px;
+          color: #ff00ff;
+          font-size: 10px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+        " onmouseover="this.style.background='rgba(255, 0, 255, 0.2)'" onmouseout="this.style.background='rgba(255, 0, 255, 0.1)'">
+          📂 Import All Data
+        </button>
+      </div>
+
+      <!-- Hidden file inputs -->
+      <input type="file" id="timeline-file-input" accept=".json" style="display: none;">
+      <input type="file" id="complete-file-input" accept=".json" style="display: none;">
     </div>
   `;
 
   container.appendChild(panel);
 
-  // Initialize canvas interaction
-  initializeTimelineInteraction();
+  // Wire up export buttons (use querySelector since panel might not be in DOM yet)
+  const exportTimelineBtn = panel.querySelector('#export-timeline-btn');
+  const exportCompleteBtn = panel.querySelector('#export-complete-btn');
+  const exportCSVBtn = panel.querySelector('#export-csv-btn');
+  const exportPNGBtn = panel.querySelector('#export-png-btn');
+  const importTimelineBtn = panel.querySelector('#import-timeline-btn');
+  const importCompleteBtn = panel.querySelector('#import-complete-btn');
+  const timelineFileInput = panel.querySelector('#timeline-file-input');
+  const completeFileInput = panel.querySelector('#complete-file-input');
+
+  if (exportTimelineBtn) {
+    exportTimelineBtn.addEventListener('click', () => {
+      downloadTimelineJSON();
+    });
+  }
+
+  if (exportCompleteBtn) {
+    exportCompleteBtn.addEventListener('click', () => {
+      downloadCompleteMMPAData();
+    });
+  }
+
+  if (exportCSVBtn) {
+    exportCSVBtn.addEventListener('click', () => {
+      downloadTimelineCSV();
+    });
+  }
+
+  if (exportPNGBtn) {
+    exportPNGBtn.addEventListener('click', () => {
+      downloadTimelinePNG();
+    });
+  }
+
+  if (importTimelineBtn && timelineFileInput) {
+    importTimelineBtn.addEventListener('click', () => {
+      timelineFileInput.click();
+    });
+
+    timelineFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        importTimelineJSON(file);
+        timelineFileInput.value = ''; // Reset for re-import
+      }
+    });
+  }
+
+  if (importCompleteBtn && completeFileInput) {
+    importCompleteBtn.addEventListener('click', () => {
+      completeFileInput.click();
+    });
+
+    completeFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        importCompleteMMPAData(file);
+        completeFileInput.value = ''; // Reset for re-import
+      }
+    });
+  }
+
+  // Initialize canvas interaction (delayed to ensure DOM is ready)
+  setTimeout(() => {
+    initializeTimelineInteraction();
+  }, 0);
 
   // Return update function
   return {
@@ -289,6 +460,9 @@ function calculatePiPhiMetrics(analysis) {
 
 function updatePiPhiPanel(analysis) {
   const { pi, phi, balance, synchronicity } = calculatePiPhiMetrics(analysis);
+
+  // Store metrics for color system integration
+  lastPiPhiMetrics = { pi, phi, synchronicity, balance };
 
   // Get current palette colors
   const colors = getPiPhiColors();
@@ -477,8 +651,11 @@ function renderTimelineCanvas() {
   ctx.closePath();
   ctx.fill();
 
-  // Draw π line (chaos - red)
-  ctx.strokeStyle = '#ff4444';
+  // Get current palette colors for π/φ
+  const piPhiColors = getPiPhiColors();
+
+  // Draw π line (chaos) - use palette color
+  ctx.strokeStyle = piPhiColors.pi;
   ctx.lineWidth = 2;
   ctx.beginPath();
 
@@ -494,8 +671,8 @@ function renderTimelineCanvas() {
 
   ctx.stroke();
 
-  // Draw φ line (harmony - cyan)
-  ctx.strokeStyle = '#00ffff';
+  // Draw φ line (harmony) - use palette color
+  ctx.strokeStyle = piPhiColors.phi;
   ctx.lineWidth = 2;
   ctx.beginPath();
 
@@ -527,8 +704,11 @@ function renderTimelineCanvas() {
         const x = (timelineIndex / Math.max(MAX_HISTORY_FRAMES - 1, 1)) * width;
         const y = height - (peak.synchronicity * height);
 
-        // Draw marker line
-        ctx.strokeStyle = 'rgba(255, 255, 0, 0.6)';
+        // Get archetype color from palette
+        const archetypeColor = peak.archetype ? getPaletteColor(peak.archetype) : '#ffff00';
+
+        // Draw marker line with archetype color
+        ctx.strokeStyle = archetypeColor + '99'; // Add alpha
         ctx.lineWidth = 1;
         ctx.setLineDash([4, 4]);
         ctx.beginPath();
@@ -537,14 +717,14 @@ function renderTimelineCanvas() {
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // Draw archetype label (if room)
+        // Draw archetype label (if room) with archetype color
         if (peak.archetype && x > 30 && x < width - 30) {
-          ctx.fillStyle = 'rgba(255, 255, 0, 0.8)';
+          ctx.fillStyle = archetypeColor;
           ctx.fillText(peak.archetype, x, Math.max(y - 5, 12));
         }
 
-        // Draw peak dot
-        ctx.fillStyle = '#ffff00';
+        // Draw peak dot with archetype color
+        ctx.fillStyle = archetypeColor;
         ctx.beginPath();
         ctx.arc(x, y, 4, 0, Math.PI * 2);
         ctx.fill();
@@ -566,10 +746,13 @@ function updatePeakEventsLog() {
     const secondsAgo = Math.floor((Date.now() - peak.timestamp) / 1000);
     const timeStr = secondsAgo < 60 ? `${secondsAgo}s ago` : `${Math.floor(secondsAgo / 60)}m ${secondsAgo % 60}s ago`;
 
+    // Get archetype color from palette
+    const archetypeColor = peak.archetype ? getPaletteColor(peak.archetype) : '#ffff00';
+
     return `
-      <div style="display: flex; justify-content: space-between; padding: 4px 6px; margin-bottom: 3px; background: rgba(255, 255, 0, 0.05); border-left: 2px solid #ffff00; border-radius: 2px;">
+      <div style="display: flex; justify-content: space-between; padding: 4px 6px; margin-bottom: 3px; background: ${archetypeColor}11; border-left: 2px solid ${archetypeColor}; border-radius: 2px;">
         <div>
-          <span style="color: #ffff00; font-weight: bold;">${(peak.synchronicity * 100).toFixed(0)}%</span>
+          <span style="color: ${archetypeColor}; font-weight: bold;">${(peak.synchronicity * 100).toFixed(0)}%</span>
           <span style="color: #888; margin-left: 6px;">${peak.archetype || 'Unknown'}</span>
         </div>
         <div style="color: #666;">${timeStr}</div>
@@ -582,5 +765,286 @@ function updatePeakEventsLog() {
 window.addEventListener('colorPaletteChanged', () => {
   console.log('🎨 π/φ panel: Color palette changed, will update on next frame');
 });
+
+/**
+ * Get current π/φ metrics for color system integration
+ * @returns {object} { pi, phi, synchronicity, balance }
+ */
+export function getPiPhiMetrics() {
+  return { ...lastPiPhiMetrics };
+}
+
+// ===== DATA EXPORT SYSTEM =====
+
+/**
+ * Export timeline and synchronicity data to JSON
+ * @returns {object} Complete timeline data for analysis/backup
+ */
+export function exportTimelineData() {
+  return {
+    version: '1.0.0',
+    exportDate: new Date().toISOString(),
+    timelineStartTime: timelineStartTime,
+    sessionDuration: Math.floor((Date.now() - timelineStartTime) / 1000), // seconds
+    history: timelineHistory,
+    peaks: synchronicityPeaks,
+    currentMetrics: lastPiPhiMetrics,
+    statistics: {
+      totalDataPoints: timelineHistory.length,
+      peakCount: synchronicityPeaks.length,
+      avgPi: timelineHistory.length > 0 ?
+        timelineHistory.reduce((sum, d) => sum + d.pi, 0) / timelineHistory.length : 0,
+      avgPhi: timelineHistory.length > 0 ?
+        timelineHistory.reduce((sum, d) => sum + d.phi, 0) / timelineHistory.length : 0,
+      avgSync: timelineHistory.length > 0 ?
+        timelineHistory.reduce((sum, d) => sum + d.synchronicity, 0) / timelineHistory.length : 0,
+      maxSync: timelineHistory.length > 0 ?
+        Math.max(...timelineHistory.map(d => d.synchronicity)) : 0
+    }
+  };
+}
+
+/**
+ * Download timeline data as JSON file
+ */
+export function downloadTimelineJSON() {
+  const data = exportTimelineData();
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `mmpa-timeline-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  console.log('💾 Timeline data downloaded');
+}
+
+/**
+ * Download timeline data as CSV file for spreadsheet analysis
+ * Converts timelineHistory to CSV format with headers
+ */
+export function downloadTimelineCSV() {
+  if (timelineHistory.length === 0) {
+    alert('⚠️ No timeline data to export. Start the analysis first!');
+    return;
+  }
+
+  // CSV Headers
+  const headers = [
+    'Timestamp',
+    'Elapsed Time (s)',
+    'Pi Score (Chaos)',
+    'Phi Score (Harmony)',
+    'Synchronicity',
+    'Balance',
+    'Archetype',
+    'Confidence'
+  ];
+
+  // Convert data rows
+  const rows = timelineHistory.map((point, index) => {
+    const timestamp = new Date(timelineStartTime + (index * 100)).toISOString(); // 100ms intervals
+    const elapsedSeconds = ((index * 100) / 1000).toFixed(2);
+
+    return [
+      timestamp,
+      elapsedSeconds,
+      point.pi.toFixed(4),
+      point.phi.toFixed(4),
+      point.synchronicity.toFixed(4),
+      point.balance.toFixed(4),
+      point.archetype || 'NEUTRAL_STATE',
+      point.confidence ? point.confidence.toFixed(4) : '0.0000'
+    ].join(',');
+  });
+
+  // Combine headers and rows
+  const csv = [headers.join(','), ...rows].join('\n');
+
+  // Create and download
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `mmpa-timeline-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  console.log(`📊 CSV exported: ${timelineHistory.length} data points`);
+}
+
+/**
+ * Download timeline canvas as PNG image
+ * Captures the current visual state of the timeline
+ */
+export function downloadTimelinePNG() {
+  const canvas = document.getElementById('sync-timeline-canvas');
+
+  if (!canvas) {
+    alert('⚠️ Timeline canvas not found');
+    return;
+  }
+
+  if (timelineHistory.length === 0) {
+    alert('⚠️ No timeline data to export. Start the analysis first!');
+    return;
+  }
+
+  try {
+    // Convert canvas to data URL (PNG format)
+    const dataURL = canvas.toDataURL('image/png');
+
+    // Create download link
+    const a = document.createElement('a');
+    a.href = dataURL;
+    a.download = `mmpa-timeline-${new Date().toISOString().split('T')[0]}.png`;
+    a.click();
+
+    console.log('🖼️ Timeline PNG exported');
+  } catch (error) {
+    console.error('❌ Failed to export PNG:', error);
+    alert('❌ Failed to export timeline image: ' + error.message);
+  }
+}
+
+/**
+ * Download comprehensive MMPA data (palettes + timeline)
+ */
+export function downloadCompleteMMPAData() {
+  // Import palette export function
+  import('./colorPalettes.js').then(module => {
+    const paletteData = module.exportAllPalettes();
+    const timelineData = exportTimelineData();
+
+    const completeData = {
+      version: '1.0.0',
+      exportDate: new Date().toISOString(),
+      type: 'mmpa-complete-export',
+      palettes: paletteData,
+      timeline: timelineData
+    };
+
+    const json = JSON.stringify(completeData, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mmpa-complete-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    console.log('💾 Complete MMPA data downloaded');
+  });
+}
+
+/**
+ * Import timeline data from JSON file
+ */
+function importTimelineJSON(file) {
+  const reader = new FileReader();
+
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+
+      // Validate data structure
+      if (!data.version || !data.history) {
+        alert('❌ Invalid timeline file format');
+        return;
+      }
+
+      // Restore timeline data
+      timelineHistory = data.history || [];
+      synchronicityPeaks = data.peaks || [];
+
+      if (data.timelineStartTime) {
+        timelineStartTime = data.timelineStartTime;
+      }
+
+      // Update current metrics
+      if (data.currentMetrics) {
+        lastPiPhiMetrics = data.currentMetrics;
+      }
+
+      console.log(`✅ Timeline imported: ${timelineHistory.length} data points, ${synchronicityPeaks.length} peaks`);
+      alert(`✅ Timeline imported successfully!\n\n${timelineHistory.length} data points\n${synchronicityPeaks.length} synchronicity peaks`);
+
+      // Force UI update
+      updatePeakEventsLog();
+      renderTimelineCanvas();
+
+    } catch (error) {
+      console.error('❌ Failed to import timeline:', error);
+      alert('❌ Failed to import timeline: ' + error.message);
+    }
+  };
+
+  reader.readAsText(file);
+}
+
+/**
+ * Import complete MMPA data (palettes + timeline)
+ */
+function importCompleteMMPAData(file) {
+  const reader = new FileReader();
+
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+
+      // Validate data structure
+      if (!data.version || data.type !== 'mmpa-complete-export') {
+        alert('❌ Invalid complete export file format');
+        return;
+      }
+
+      let successMessages = [];
+
+      // Import timeline data
+      if (data.timeline) {
+        timelineHistory = data.timeline.history || [];
+        synchronicityPeaks = data.timeline.peaks || [];
+
+        if (data.timeline.timelineStartTime) {
+          timelineStartTime = data.timeline.timelineStartTime;
+        }
+
+        if (data.timeline.currentMetrics) {
+          lastPiPhiMetrics = data.timeline.currentMetrics;
+        }
+
+        successMessages.push(`Timeline: ${timelineHistory.length} data points, ${synchronicityPeaks.length} peaks`);
+        console.log('✅ Timeline data imported');
+      }
+
+      // Import palette data
+      if (data.palettes) {
+        import('./colorPalettes.js').then(module => {
+          const success = module.importPalettes(data.palettes);
+          if (success) {
+            successMessages.push('Color palettes restored');
+            console.log('✅ Palette data imported');
+          }
+
+          alert(`✅ Complete MMPA data imported!\n\n${successMessages.join('\n')}`);
+
+          // Force UI update
+          updatePeakEventsLog();
+          renderTimelineCanvas();
+        });
+      } else {
+        alert(`✅ Timeline imported!\n\n${successMessages.join('\n')}`);
+        updatePeakEventsLog();
+        renderTimelineCanvas();
+      }
+
+    } catch (error) {
+      console.error('❌ Failed to import complete data:', error);
+      alert('❌ Failed to import complete data: ' + error.message);
+    }
+  };
+
+  reader.readAsText(file);
+}
 
 console.log("🎨 hudPiPhi.js loaded");
