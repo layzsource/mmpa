@@ -22,8 +22,8 @@ export const GLOBAL_CONSTANTS = {
 // Centralized application state for modular signal routing
 export const state = {
   // Geometry transformations
-  rotationX: 0.01,  // Base rotation speed X
-  rotationY: 0.01,  // Base rotation speed Y
+  rotationX: 0,  // Base rotation speed X - Start at 0 to prevent motion before audio
+  rotationY: 0,  // Base rotation speed Y - Start at 0 to prevent motion before audio
   scale: 1.0,       // Global scale multiplier
 
   // Morph target weights (normalized 0-1, auto-normalized if sum > 1)
@@ -42,7 +42,7 @@ export const state = {
   // Visual properties
   color: "#00ff00",  // Current geometry color (legacy)
   hue: 120,          // Current hue in degrees (0-360)
-  idleSpin: true,    // Enable/disable idle rotation
+  idleSpin: false,    // Enable/disable idle rotation - Start disabled to prevent motion before audio
 
   // Phase 11.6.0: Image/Video texture system
   texture: null,            // THREE.Texture or THREE.VideoTexture loaded from image/video
@@ -260,7 +260,7 @@ export const state = {
   // Phase 11.7: Particle motion debug controls
   particleDensity: 2000,
   particleSize: 0.1,
-  particleMotionStrength: 0.5,
+  particleMotionStrength: 0,  // Start at 0 - prevents motion before audio
   useAudioJitter: true,
 
   // Phase 11.7.1: Emoji particles toggle
@@ -449,6 +449,7 @@ export const state = {
   mmpaFeatures: {
     enabled: false,  // Toggle feature extraction system
     source: 'dummy', // 'dummy', 'microphone', 'file', 'simulation'
+    mmpaParticleControl: false,  // TRUE = particles use ONLY MMPA forces, FALSE = raw audio + MMPA
 
     // IDENTITY - "What is it?" (Frequency/pitch)
     identity: {
@@ -472,10 +473,11 @@ export const state = {
     },
 
     // TRANSFORMATION - "How fast is it changing?" (Flux/velocity)
+    // NOTE: Defaults are 0 to prevent motion when no audio present
     transformation: {
-      flux: 0.42,          // Rate of spectral change (0-1)
-      velocity: 0.15,      // Speed of change
-      acceleration: 0.03   // Rate of change of velocity
+      flux: 0,             // Rate of spectral change (0-1)
+      velocity: 0,         // Speed of change
+      acceleration: 0      // Rate of change of velocity
     },
 
     // ALIGNMENT - "How synchronized is it?" (Coherence/phase)
@@ -733,8 +735,8 @@ export function easeInOutCubic(t) {
 
 // Phase 11.4.1: Baseline snapshot + reset
 export const BASELINE = {
-  rotationX: 0.01,
-  rotationY: 0.01,
+  rotationX: 0,  // No auto-rotation by default
+  rotationY: 0,  // No auto-rotation by default
   scale: 1.0,
   morphBaseWeights: [0.0, 1.0, 0.0, 0.0], // [sphere, cube, pyramid, torus] - default cube
   colorLayers: JSON.parse(JSON.stringify(state.colorLayers)),

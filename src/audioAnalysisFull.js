@@ -205,14 +205,23 @@ export class FullSpectrumDropPredictor {
     // Use onset as phase lock when close to beat time
     let beat = false;
 
+    // Calculate rough audio energy to detect silence
+    let roughEnergy = 0;
+    for (let i = 0; i < Math.min(this.fftSize, 100); i++) {
+      roughEnergy += this.frequencyData[i];
+    }
+    roughEnergy = roughEnergy / (255 * 100); // Normalize to 0-1
+    const isSilent = roughEnergy < 0.02; // Very low threshold for silence
+
     if (timeSinceLastBeat >= this.beatInterval * 0.85) {
       // Near beat time - accept onset as beat (phase-locking)
       if (onset && timeSinceLastBeat <= this.beatInterval * 1.15) {
         beat = true;
         // Phase lock: adjust beat time to onset
         this.lastBeatTime = now;
-      } else if (timeSinceLastBeat >= this.beatInterval) {
-        // Fallback: trigger beat based on tempo if no onset detected
+      } else if (timeSinceLastBeat >= this.beatInterval && !isSilent) {
+        // Fallback: trigger beat based on tempo ONLY if there's actual audio
+        // This prevents the "phantom pulse" during silence
         beat = true;
         this.lastBeatTime = now;
       }

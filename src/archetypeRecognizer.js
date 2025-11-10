@@ -21,9 +21,20 @@ import { GLOBAL_CONSTANTS } from './state.js';
 // ARCHETYPE DEFINITIONS
 // ============================================================================
 
+// ANLG-Based Archetype System (π/φ Ratio Classification)
 export const ARCHETYPES = {
-  PERFECT_FIFTH: 'PERFECT_FIFTH',
-  WOLF_FIFTH: 'WOLF_FIFTH',
+  PURE_HARMONY: 'PURE_HARMONY',      // φ/π > 3.0 (Perfect Fifth, sustained consonance)
+  HIGH_HARMONY: 'HIGH_HARMONY',      // φ/π 1.5-3.0 (Consonant but active)
+  BALANCED: 'BALANCED',              // φ/π 0.8-1.5 (Moderate tension/resolution)
+  HIGH_CHAOS: 'HIGH_CHAOS',          // φ/π 0.3-0.8 (Dissonant, turbulent)
+  PURE_CHAOS: 'PURE_CHAOS',          // φ/π < 0.3 (Wolf Fifth, crisis)
+  NEUTRAL_STATE: 'NEUTRAL_STATE'     // Silence (no audible signal)
+};
+
+// Legacy archetype names (for backward compatibility)
+export const LEGACY_ARCHETYPES = {
+  PERFECT_FIFTH: 'PURE_HARMONY',
+  WOLF_FIFTH: 'PURE_CHAOS',
   NEUTRAL_STATE: 'NEUTRAL_STATE'
 };
 
@@ -39,12 +50,30 @@ const RECOGNITION_CONFIG = {
   HISTORY_LENGTH: 60,             // Keep last 60 recognitions (1 second at 60fps)
   TRANSITION_COOLDOWN: 500,       // Milliseconds before allowing another transition
 
-  // Calibration factors (tunable during testing)
+  // ANLG Layer: π/φ Ratio Thresholds (CALIBRATION PARAMETERS)
+  // These thresholds define the archetypal boundaries - adjust during empirical testing
+  PURE_HARMONY_THRESHOLD: 3.0,   // φ/π > 3.0 → PURE_HARMONY
+  HIGH_HARMONY_THRESHOLD: 1.5,   // φ/π 1.5-3.0 → HIGH_HARMONY
+  BALANCED_UPPER: 1.5,            // φ/π 0.8-1.5 → BALANCED
+  BALANCED_LOWER: 0.8,            //
+  HIGH_CHAOS_THRESHOLD: 0.3,     // φ/π 0.3-0.8 → HIGH_CHAOS
+                                  // φ/π < 0.3 → PURE_CHAOS
+
+  // π and φ Calibration Scales (adjust to match musical reality)
+  // Goal: C Major chord → φ ≈ 0.8-0.9, π ≈ 0.1-0.2 (ratio ≈ 4.0-9.0)
+  // Goal: Dissonant cluster → π ≈ 0.8-0.9, φ ≈ 0.1-0.2 (ratio ≈ 0.1-0.25)
+  PI_SCALE: 1.0,                  // Multiplier for chaos component
+  PHI_SCALE: 1.0,                 // Multiplier for harmony component
+
+  // Legacy calibration factors (for backward compatibility)
   STABILITY_SCALE: 2.3,           // Calibrated to reach φ threshold with typical audio levels
   FLUX_NORMALIZATION: 1.0,        // Normalization factor for flux metric
 
   // Hysteresis margins (prevent flip-flopping between states)
-  HYSTERESIS_PERCENT: 0.05        // 5% margin for threshold crossings
+  HYSTERESIS_PERCENT: 0.05,       // 5% margin for threshold crossings
+
+  // Silence detection
+  SILENCE_THRESHOLD: 0.01         // RMS amplitude below this = silence
 };
 
 // ============================================================================
@@ -57,14 +86,23 @@ let recognitionState = {
   confidence: 0,
   lastStabilityMetric: 0,
   lastFluxMetric: 0,
+  lastPi: 0,           // ANLG Layer: Chaos score
+  lastPhi: 0,          // ANLG Layer: Harmony score
+  lastPhiOverPi: 0,    // ANLG Layer: φ/π ratio
   transitionInProgress: false,
   lastTransitionTime: 0,
   history: [],
   callbacks: {
     onArchetypeChange: [],
+    onPureHarmonyEnter: [],
+    onHighHarmonyEnter: [],
+    onBalancedEnter: [],
+    onHighChaosEnter: [],
+    onPureChaosEnter: [],
+    onNeutralStateEnter: [],
+    // Legacy callbacks (for backward compatibility)
     onPerfectFifthEnter: [],
-    onWolfFifthEnter: [],
-    onNeutralStateEnter: []
+    onWolfFifthEnter: []
   }
 };
 
@@ -139,6 +177,129 @@ export function getMetrics(mmpaFeatures) {
 }
 
 // ============================================================================
+// π/φ CALCULATION (ANLG INPUT LAYER)
+// ============================================================================
+
+/**
+ * Calculate π (chaos) and φ (harmony) scores from MMPA features
+ * This is the core of the ANLG system - maps empirical features to universal metrics
+ *
+ * @param {object} mmpaFeatures - The MMPA feature object
+ * @returns {{pi: number, phi: number, piOverPhi: number, phiOverPi: number}}
+ */
+function calculatePiPhi(mmpaFeatures) {
+  // Extract feature values with safe defaults
+  const consonance = mmpaFeatures.relationship?.consonance || 0;
+  const flux = mmpaFeatures.transformation?.flux || 0;
+  const entropy = mmpaFeatures.potential?.entropy || 0;
+  const strength = mmpaFeatures.identity?.strength || 0;
+  const coherence = mmpaFeatures.alignment?.coherence || 0;
+
+  // π component (chaos, transcendence, transformation, unpredictability)
+  // High when: Flux is high, Entropy is high, Coherence is low
+  const piScore = Math.min(1, (
+    (flux * 0.4) +
+    (entropy * 0.3) +
+    ((1 - coherence) * 0.3)
+  ) * RECOGNITION_CONFIG.PI_SCALE);
+
+  // φ component (harmony, order, pattern, beauty, structure)
+  // High when: Consonance is high, Coherence is high, Flux is low
+  const phiScore = Math.min(1, (
+    (consonance * 0.4) +
+    (coherence * 0.3) +
+    ((1 - flux) * 0.3)
+  ) * RECOGNITION_CONFIG.PHI_SCALE);
+
+  // Calculate ratios (avoid division by zero)
+  const piOverPhi = phiScore > 0.01 ? piScore / phiScore : 0;
+  const phiOverPi = piScore > 0.01 ? phiScore / piScore : 10; // Default to high harmony
+
+  // DEBUG: Log π/φ calculation
+  console.log('🔢 ANLG π/φ Calculation:', {
+    inputs: { consonance, flux, entropy, strength, coherence },
+    scores: { pi: piScore?.toFixed(3) || '0.000', phi: phiScore?.toFixed(3) || '0.000' },
+    ratios: { phiOverPi: phiOverPi?.toFixed(2) || '0.00', piOverPhi: piOverPhi?.toFixed(2) || '0.00' }
+  });
+
+  return {
+    pi: piScore,
+    phi: phiScore,
+    piOverPhi,
+    phiOverPi
+  };
+}
+
+/**
+ * Export π/φ metrics for external use
+ */
+export function getPiPhiMetrics(mmpaFeatures) {
+  return calculatePiPhi(mmpaFeatures);
+}
+
+// ============================================================================
+// ANLG DECISION TREE
+// ============================================================================
+
+/**
+ * ANLG Layer: Get archetype from φ/π ratio
+ * This is the explicit, testable mapping from ratio to archetype
+ *
+ * Hypothesis: Musical consonance/dissonance maps to predictable φ/π ratios
+ * - C Major chord → φ/π ≈ 4.0-9.0 → PURE_HARMONY or HIGH_HARMONY
+ * - Dissonant cluster → φ/π ≈ 0.1-0.25 → PURE_CHAOS or HIGH_CHAOS
+ *
+ * @param {number} phi - Harmony score (0-1)
+ * @param {number} pi - Chaos score (0-1)
+ * @param {number} strength - Signal strength (0-1)
+ * @returns {string} Archetype name
+ */
+function getArchetypeFromRatio(phi, pi, strength) {
+  // Silence check first (no signal = no archetype)
+  if (strength < RECOGNITION_CONFIG.SILENCE_THRESHOLD) {
+    console.log('🔇 SILENCE DETECTED → NEUTRAL_STATE:', {
+      strength: strength?.toFixed(4) || '0.0000',
+      threshold: RECOGNITION_CONFIG.SILENCE_THRESHOLD,
+      isSilent: true
+    });
+    return ARCHETYPES.NEUTRAL_STATE;
+  }
+
+  // Calculate φ/π ratio (avoid division by zero)
+  const phiOverPi = pi > 0.01 ? phi / pi : 10; // Default to high harmony if no chaos
+
+  let archetype;
+  // ANLG Decision Tree (explicit thresholds for empirical testing)
+  if (phiOverPi > RECOGNITION_CONFIG.PURE_HARMONY_THRESHOLD) {
+    // φ/π > 3.0: Dominant harmony, minimal chaos
+    archetype = ARCHETYPES.PURE_HARMONY;
+  } else if (phiOverPi > RECOGNITION_CONFIG.HIGH_HARMONY_THRESHOLD) {
+    // φ/π 1.5-3.0: Harmony dominates but chaos is present
+    archetype = ARCHETYPES.HIGH_HARMONY;
+  } else if (phiOverPi > RECOGNITION_CONFIG.BALANCED_LOWER) {
+    // φ/π 0.8-1.5: Balanced tension and resolution
+    archetype = ARCHETYPES.BALANCED;
+  } else if (phiOverPi > RECOGNITION_CONFIG.HIGH_CHAOS_THRESHOLD) {
+    // φ/π 0.3-0.8: Chaos dominates but harmony is present
+    archetype = ARCHETYPES.HIGH_CHAOS;
+  } else {
+    // φ/π < 0.3: Dominant chaos, minimal harmony
+    archetype = ARCHETYPES.PURE_CHAOS;
+  }
+
+  // DEBUG: Log archetype decision
+  console.log('🎯 ANLG Archetype Decision:', {
+    strength: strength?.toFixed(4) || '0.0000',
+    phi: phi?.toFixed(3) || '0.000',
+    pi: pi?.toFixed(3) || '0.000',
+    phiOverPi: phiOverPi?.toFixed(2) || '0.00',
+    archetype: archetype
+  });
+
+  return archetype;
+}
+
+// ============================================================================
 // ARCHETYPE EVALUATION (φ-Based Logic)
 // ============================================================================
 
@@ -151,6 +312,9 @@ export function getMetrics(mmpaFeatures) {
  * @param {string} currentArchetype - Current state (for hysteresis)
  * @returns {string} Archetype name
  */
+// Debug logging state for archetype evaluation
+let archetypeDebugCounter = 0;
+
 function evaluateArchetype(stabilityMetric, fluxMetric, strength, currentArchetype) {
   // REVISED LOGIC v3 (Oct 30, 2025):
   // - Use STRENGTH (RMS amplitude) to detect presence, not flux
@@ -170,16 +334,40 @@ function evaluateArchetype(stabilityMetric, fluxMetric, strength, currentArchety
     ? 0.03 * (1 - hysteresis)  // Exit: 0.0285 (more lenient to stay in)
     : 0.03;                     // Enter: 0.03 (standard threshold)
 
+  // DEBUG LOGGING: Log every 120 frames (every 2 seconds at 60fps)
+  archetypeDebugCounter++;
+  if (archetypeDebugCounter % 120 === 0) {
+    console.log('🔍 ARCHETYPE EVALUATOR:', {
+      current: currentArchetype,
+      stabilityMetric: stabilityMetric.toFixed(3),
+      fluxMetric: fluxMetric.toFixed(4),
+      strength: strength.toFixed(4),
+      phiThreshold: phiThreshold.toFixed(3),
+      fluxThreshold: fluxThreshold.toFixed(4),
+      checks: {
+        perfectFifth: `stability(${stabilityMetric.toFixed(3)}) >= phi(${phiThreshold.toFixed(3)}) && strength(${strength.toFixed(4)}) >= 0.02 = ${stabilityMetric >= phiThreshold && strength >= 0.02}`,
+        silence: `strength(${strength.toFixed(4)}) < 0.01 = ${strength < 0.01}`,
+        wolfFifth: `flux(${fluxMetric.toFixed(4)}) >= ${fluxThreshold.toFixed(4)} && stability(${stabilityMetric.toFixed(3)}) < ${PHI_THRESHOLD.toFixed(3)} = ${fluxMetric >= fluxThreshold && stabilityMetric < PHI_THRESHOLD}`
+      }
+    });
+  }
+
   // 1. High Coherence → Perfect Fifth (Ringing Bell)
   // A sustained, coherent tone (pure sine, ringing bell, harmonic music)
   // STRICT: Requires stability ≥ φ threshold AND audible signal (strength ≥ 0.02)
   if (stabilityMetric >= phiThreshold && strength >= 0.02) {
+    if (archetypeDebugCounter % 120 === 0) {
+      console.log('🔍 → Decision: PERFECT_FIFTH (high coherence + audible)');
+    }
     return ARCHETYPES.PERFECT_FIFTH;
   }
 
   // 2. Very Quiet Field → Neutral (Aether)
   // True silence or near-silence (strength < 0.01)
   if (strength < 0.01) {
+    if (archetypeDebugCounter % 120 === 0) {
+      console.log('🔍 → Decision: NEUTRAL_STATE (silence)');
+    }
     return ARCHETYPES.NEUTRAL_STATE;
   }
 
@@ -187,53 +375,78 @@ function evaluateArchetype(stabilityMetric, fluxMetric, strength, currentArchety
   // High activity/change but low coherence (noise, dissonance, transients)
   // STRICT: Requires flux ≥ threshold AND stability < φ (to prevent overlap with Perfect Fifth)
   if (fluxMetric >= fluxThreshold && stabilityMetric < PHI_THRESHOLD) {
+    if (archetypeDebugCounter % 120 === 0) {
+      console.log('🔍 → Decision: WOLF_FIFTH (high flux + low stability)');
+    }
     return ARCHETYPES.WOLF_FIFTH;
   }
 
   // 4. Moderate/Transitional States → Neutral
   // Some signal present but neither coherent nor chaotic
+  if (archetypeDebugCounter % 120 === 0) {
+    console.log('🔍 → Decision: NEUTRAL_STATE (default/transitional)');
+  }
   return ARCHETYPES.NEUTRAL_STATE;
 }
 
 /**
- * Main recognition function (maintains API compatibility)
+ * Main recognition function (ANLG-based π/φ system)
  *
  * @param {object} mmpaFeatures - Current MMPA feature state
  * @returns {object} Recognition result
  */
 export function recognizeArchetype(mmpaFeatures) {
-  // Calculate metrics
-  const { stabilityMetric, fluxMetric, strength } = calculateMetrics(mmpaFeatures);
+  // Calculate π/φ metrics using ANLG system
+  const { pi, phi, piOverPhi, phiOverPi } = calculatePiPhi(mmpaFeatures);
+  const strength = mmpaFeatures.identity?.strength || 0;
 
-  // Store for external access
+  // Store π/φ values for external access
+  recognitionState.lastPi = pi;
+  recognitionState.lastPhi = phi;
+  recognitionState.lastPhiOverPi = phiOverPi;
+
+  // Legacy metrics (for backward compatibility with old HUD displays)
+  const { stabilityMetric, fluxMetric } = calculateMetrics(mmpaFeatures);
   recognitionState.lastStabilityMetric = stabilityMetric;
   recognitionState.lastFluxMetric = fluxMetric;
 
-  // Evaluate archetype (with hysteresis based on current state)
-  const detectedArchetype = evaluateArchetype(
-    stabilityMetric,
-    fluxMetric,
-    strength,
-    recognitionState.currentArchetype
-  );
+  // Evaluate archetype using ANLG decision tree
+  const detectedArchetype = getArchetypeFromRatio(phi, pi, strength);
 
-  // Debug: Log strength value during archetype changes
+  // Debug: Log π/φ values during archetype changes
+  // Don't log during silence (would show stale/cached values)
   if (detectedArchetype !== recognitionState.currentArchetype) {
-    console.log(`🔍 Archetype evaluation - strength: ${strength.toFixed(4)}, stability: ${stabilityMetric.toFixed(3)}, flux: ${fluxMetric.toFixed(3)}`);
+    // Only log if we have actual signal (not transitioning to/from silence)
+    if (strength >= RECOGNITION_CONFIG.SILENCE_THRESHOLD) {
+      console.log(`🎯 ANLG evaluation - φ/π: ${phiOverPi.toFixed(3)}, π: ${pi.toFixed(3)}, φ: ${phi.toFixed(3)}, strength: ${strength.toFixed(4)}`);
+    }
   }
 
-  // Calculate confidence (proximity to φ for Perfect Fifth, distance for others)
+  // Calculate confidence based on how definitively the archetype is determined
   let confidence = 0;
-  if (detectedArchetype === ARCHETYPES.PERFECT_FIFTH) {
-    // Confidence increases as we approach or exceed φ
-    confidence = Math.min(stabilityMetric / PHI_THRESHOLD, 1.0);
-  } else if (detectedArchetype === ARCHETYPES.WOLF_FIFTH) {
-    // Confidence increases with flux but decreases with stability
-    confidence = fluxMetric * (1.0 - Math.min(stabilityMetric / PHI_THRESHOLD, 1.0));
+  if (detectedArchetype === ARCHETYPES.PURE_HARMONY) {
+    // Confidence increases with φ/π ratio above threshold
+    confidence = Math.min((phiOverPi - RECOGNITION_CONFIG.PURE_HARMONY_THRESHOLD) / 2.0 + 0.7, 1.0);
+  } else if (detectedArchetype === ARCHETYPES.HIGH_HARMONY) {
+    // Confidence is high in the middle of the range
+    const midpoint = (RECOGNITION_CONFIG.PURE_HARMONY_THRESHOLD + RECOGNITION_CONFIG.HIGH_HARMONY_THRESHOLD) / 2;
+    const distance = Math.abs(phiOverPi - midpoint);
+    confidence = Math.max(0.5, 1.0 - distance);
+  } else if (detectedArchetype === ARCHETYPES.BALANCED) {
+    // Confidence is highest near φ/π = 1.0 (perfect balance)
+    const distance = Math.abs(phiOverPi - 1.0);
+    confidence = Math.max(0.4, 1.0 - distance * 2);
+  } else if (detectedArchetype === ARCHETYPES.HIGH_CHAOS) {
+    // Confidence is high in the middle of the range
+    const midpoint = (RECOGNITION_CONFIG.HIGH_CHAOS_THRESHOLD + RECOGNITION_CONFIG.BALANCED_LOWER) / 2;
+    const distance = Math.abs(phiOverPi - midpoint);
+    confidence = Math.max(0.5, 1.0 - distance);
+  } else if (detectedArchetype === ARCHETYPES.PURE_CHAOS) {
+    // Confidence increases as φ/π approaches zero
+    confidence = Math.min((RECOGNITION_CONFIG.HIGH_CHAOS_THRESHOLD - phiOverPi) / 0.3 + 0.7, 1.0);
   } else {
-    // Neutral: confidence based on how quiet the system is
-    // Normalized to realistic flux range (0.01-0.1)
-    confidence = Math.max(0, 1.0 - (fluxMetric / 0.1));
+    // Neutral: confidence based on silence depth
+    confidence = Math.max(0, 1.0 - (strength / RECOGNITION_CONFIG.SILENCE_THRESHOLD));
   }
 
   recognitionState.confidence = confidence;
@@ -242,8 +455,11 @@ export function recognizeArchetype(mmpaFeatures) {
   recognitionState.history.push({
     archetype: detectedArchetype,
     confidence: confidence,
-    stabilityMetric: stabilityMetric,
-    fluxMetric: fluxMetric,
+    pi: pi,
+    phi: phi,
+    phiOverPi: phiOverPi,
+    stabilityMetric: stabilityMetric,  // Legacy
+    fluxMetric: fluxMetric,  // Legacy
     timestamp: performance.now()
   });
 
@@ -258,14 +474,17 @@ export function recognizeArchetype(mmpaFeatures) {
 
   if (detectedArchetype !== recognitionState.currentArchetype &&
       timeSinceLastTransition > RECOGNITION_CONFIG.TRANSITION_COOLDOWN) {
-    handleArchetypeTransition(detectedArchetype, confidence, stabilityMetric, fluxMetric);
+    handleArchetypeTransition(detectedArchetype, confidence, pi, phi, phiOverPi);
   }
 
   return {
     archetype: recognitionState.currentArchetype,
     confidence: recognitionState.confidence,
-    stabilityMetric: stabilityMetric,
-    fluxMetric: fluxMetric,
+    pi: pi,
+    phi: phi,
+    phiOverPi: phiOverPi,
+    stabilityMetric: stabilityMetric,  // Legacy
+    fluxMetric: fluxMetric,  // Legacy
     transitionInProgress: recognitionState.transitionInProgress
   };
 }
@@ -275,14 +494,14 @@ export function recognizeArchetype(mmpaFeatures) {
 // ============================================================================
 
 /**
- * Handle transition to a new archetype
+ * Handle transition to a new archetype (ANLG-based)
  */
-function handleArchetypeTransition(newArchetype, confidence, stabilityMetric, fluxMetric) {
+function handleArchetypeTransition(newArchetype, confidence, pi, phi, phiOverPi) {
   const oldArchetype = recognitionState.currentArchetype;
 
   console.log(
-    `🔄 Archetype transition: ${oldArchetype} → ${newArchetype} ` +
-    `(stability: ${stabilityMetric.toFixed(3)}, flux: ${fluxMetric.toFixed(3)}, ` +
+    `🔄 ANLG Transition: ${oldArchetype} → ${newArchetype} ` +
+    `(φ/π: ${phiOverPi.toFixed(3)}, π: ${pi.toFixed(3)}, φ: ${phi.toFixed(3)}, ` +
     `confidence: ${(confidence * 100).toFixed(1)}%)`
   );
 
@@ -296,20 +515,34 @@ function handleArchetypeTransition(newArchetype, confidence, stabilityMetric, fl
     from: oldArchetype,
     to: newArchetype,
     confidence,
-    stabilityMetric,
-    fluxMetric
+    pi,
+    phi,
+    phiOverPi
   });
 
-  // Trigger specific archetype callbacks
-  if (newArchetype === ARCHETYPES.PERFECT_FIFTH) {
-    console.log(`💎 ✨ PERFECT FIFTH ACHIEVED - The Ringing Bell ✨ (φ-coherence: ${stabilityMetric.toFixed(3)})`);
-    triggerCallbacks('onPerfectFifthEnter', { confidence, stabilityMetric, fluxMetric });
-  } else if (newArchetype === ARCHETYPES.WOLF_FIFTH) {
-    console.log(`💥 ⚡ WOLF FIFTH DETECTED - The Cracked Bell ⚡ (sub-φ crisis: ${stabilityMetric.toFixed(3)})`);
-    triggerCallbacks('onWolfFifthEnter', { confidence, stabilityMetric, fluxMetric });
+  // Trigger specific archetype callbacks (ANLG system)
+  if (newArchetype === ARCHETYPES.PURE_HARMONY) {
+    console.log(`✨💎 PURE HARMONY - Perfect Consonance (φ/π: ${phiOverPi.toFixed(3)} > ${RECOGNITION_CONFIG.PURE_HARMONY_THRESHOLD})`);
+    triggerCallbacks('onPureHarmonyEnter', { confidence, pi, phi, phiOverPi });
+    // Legacy callback for backward compatibility
+    triggerCallbacks('onPerfectFifthEnter', { confidence, pi, phi, phiOverPi });
+  } else if (newArchetype === ARCHETYPES.HIGH_HARMONY) {
+    console.log(`✨ HIGH HARMONY - Strong Consonance (φ/π: ${phiOverPi.toFixed(3)})`);
+    triggerCallbacks('onHighHarmonyEnter', { confidence, pi, phi, phiOverPi });
+  } else if (newArchetype === ARCHETYPES.BALANCED) {
+    console.log(`⚖️ BALANCED - Harmony/Chaos Equilibrium (φ/π: ${phiOverPi.toFixed(3)})`);
+    triggerCallbacks('onBalancedEnter', { confidence, pi, phi, phiOverPi });
+  } else if (newArchetype === ARCHETYPES.HIGH_CHAOS) {
+    console.log(`⚡ HIGH CHAOS - Strong Dissonance (φ/π: ${phiOverPi.toFixed(3)})`);
+    triggerCallbacks('onHighChaosEnter', { confidence, pi, phi, phiOverPi });
+  } else if (newArchetype === ARCHETYPES.PURE_CHAOS) {
+    console.log(`💥⚡ PURE CHAOS - Wolf Fifth Crisis (φ/π: ${phiOverPi.toFixed(3)} < ${RECOGNITION_CONFIG.HIGH_CHAOS_THRESHOLD})`);
+    triggerCallbacks('onPureChaosEnter', { confidence, pi, phi, phiOverPi });
+    // Legacy callback for backward compatibility
+    triggerCallbacks('onWolfFifthEnter', { confidence, pi, phi, phiOverPi });
   } else if (newArchetype === ARCHETYPES.NEUTRAL_STATE) {
-    console.log(`🌫️ Neutral State - The Aether (quiet field: flux ${fluxMetric.toFixed(3)})`);
-    triggerCallbacks('onNeutralStateEnter', { confidence, stabilityMetric, fluxMetric });
+    console.log(`🌫️ NEUTRAL STATE - Silence/Aether (φ/π: ${phiOverPi.toFixed(3)})`);
+    triggerCallbacks('onNeutralStateEnter', { confidence, pi, phi, phiOverPi });
   }
 
   // Transition completes after a delay

@@ -208,6 +208,29 @@ export function createTimelineHudSection(container, timelineManager) {
   section.appendChild(transportContainer);
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // CHRONELIX VIEWER TOGGLE
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  const chronelixViewerButton = document.createElement('button');
+  chronelixViewerButton.textContent = '🧬 View Chronelix';
+  chronelixViewerButton.style.width = '100%';
+  chronelixViewerButton.style.padding = '8px';
+  chronelixViewerButton.style.fontSize = '13px';
+  chronelixViewerButton.style.marginBottom = '10px';
+  chronelixViewerButton.style.background = 'linear-gradient(90deg, rgba(0,206,209,0.3) 0%, rgba(148,0,211,0.3) 100%)';
+  chronelixViewerButton.addEventListener('click', () => {
+    if (timelinePlaybackPanel.isOpen) {
+      timelinePlaybackPanel.close();
+      chronelixViewerButton.textContent = '🧬 View Chronelix';
+    } else {
+      timelinePlaybackPanel.open();
+      chronelixViewerButton.textContent = '✕ Close Chronelix';
+    }
+  });
+
+  section.appendChild(chronelixViewerButton);
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // PLAYBACK CONTROLS
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

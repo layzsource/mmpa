@@ -3,10 +3,11 @@
 // Based on color psychology (arousal theory), not esoteric claims
 
 import { getPiPhiColors, getPaletteColor } from './colorPalettes.js';
+import { logData } from './mmpaDataLogger.js';
 
 // Enhanced timeline data structure
 let timelineHistory = [];
-const MAX_HISTORY_SECONDS = 120; // Keep 120 seconds of history
+const MAX_HISTORY_SECONDS = 60; // Keep 60 seconds of history
 const MAX_HISTORY_FRAMES = MAX_HISTORY_SECONDS * 60; // Assume 60 FPS
 let timelineStartTime = Date.now();
 
@@ -26,10 +27,10 @@ export function createPiPhiPanel(container) {
 
   panel.innerHTML = `
     <h4 style="color: #00ffff; margin: 10px 0; font-size: 14px; font-weight: 500;">
-      π/φ Synchronicity Detector
+      📊 MMPA Analysis
     </h4>
     <p style="color: #888; font-size: 10px; margin: 0 0 15px 0;">
-      Real-time balance of cosmic chaos (π) and earthly harmony (φ)
+      Unified analysis: chaos/transformation (π), harmony/order (φ), and system stability
     </p>
 
     <div style="display: flex; gap: 20px; margin-bottom: 20px;">
@@ -68,6 +69,7 @@ export function createPiPhiPanel(container) {
         <div style="border-top: 1px solid #333; padding-top: 10px; margin-top: 5px;">
           <div style="color: #888; font-size: 10px; margin-bottom: 4px;">Balance:</div>
           <div id="balance-text" style="color: #ffff00; font-size: 11px; font-family: monospace;">50% π / 50% φ</div>
+          <div id="ratio-text" style="color: #888; font-size: 9px; margin-top: 2px; font-family: monospace;">Ratio: 1:1</div>
         </div>
 
         <!-- Current Archetype -->
@@ -75,6 +77,18 @@ export function createPiPhiPanel(container) {
           <div style="color: #888; font-size: 10px; margin-bottom: 4px;">Current Archetype:</div>
           <div id="archetype-name" style="color: #ffff00; font-size: 13px; font-weight: bold;">--</div>
           <div id="archetype-conf" style="color: #888; font-size: 9px; margin-top: 2px;">Confidence: --</div>
+        </div>
+
+        <!-- Stability Meter (Σ*) -->
+        <div style="border-top: 1px solid #333; padding-top: 10px; margin-top: 5px;">
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+            <span style="color: #00ff00; font-size: 11px; font-weight: 500;">Stability (Σ*)</span>
+            <span style="font-size: 10px;">📊</span>
+          </div>
+          <div style="height: 8px; background: #1a1a1a; border-radius: 4px; overflow: hidden; border: 1px solid #333;">
+            <div id="stability-bar" style="height: 100%; background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00); width: 0%; transition: width 0.3s ease;"></div>
+          </div>
+          <div id="stability-value" style="text-align: right; font-size: 10px; color: #888; margin-top: 2px; font-family: monospace;">--</div>
         </div>
       </div>
 
@@ -166,10 +180,10 @@ export function createPiPhiPanel(container) {
 
       <!-- Time Scale -->
       <div style="display: flex; justify-content: space-between; margin-top: 6px;">
-        <span style="font-size: 9px; color: #666;">-120s</span>
-        <span style="font-size: 9px; color: #666;">-90s</span>
         <span style="font-size: 9px; color: #666;">-60s</span>
+        <span style="font-size: 9px; color: #666;">-45s</span>
         <span style="font-size: 9px; color: #666;">-30s</span>
+        <span style="font-size: 9px; color: #666;">-15s</span>
         <span style="font-size: 9px; color: #00ffff;">Now</span>
       </div>
 
@@ -177,6 +191,26 @@ export function createPiPhiPanel(container) {
       <div id="peak-events-log" style="margin-top: 12px; max-height: 80px; overflow-y: auto; font-size: 9px; color: #888;">
         <div style="color: #666; font-style: italic;">Synchronicity peaks will appear here...</div>
       </div>
+
+      <!-- Advanced Diagnostics (collapsible) -->
+      <details style="margin-top: 15px; background: rgba(255, 100, 0, 0.05); padding: 10px; border: 1px solid #ff6400; border-radius: 4px;">
+        <summary style="color: #ff6400; font-size: 11px; font-weight: 500; cursor: pointer; user-select: none;">
+          🔬 Advanced Diagnostics
+        </summary>
+        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #333;">
+          <div id="force-attribution" style="font-size: 10px; margin-bottom: 8px;">
+            <div style="color: #888; margin-bottom: 4px;">Force Attribution:</div>
+            <div style="color: #ff6400; font-family: monospace;">
+              <div>Bass → π: <span id="force-bass">--</span></div>
+              <div>Mid → φ: <span id="force-mid">--</span></div>
+              <div>Treble → sync: <span id="force-treble">--</span></div>
+            </div>
+          </div>
+          <div id="bifurcation-warning" style="font-size: 10px; padding: 6px; background: rgba(0, 255, 0, 0.1); border: 1px solid #00ff00; border-radius: 3px;">
+            <span style="color: #00ff00;">● Bifurcation Risk: LOW</span>
+          </div>
+        </div>
+      </details>
 
       <!-- Data Export -->
       <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: space-between;">
@@ -464,6 +498,15 @@ function updatePiPhiPanel(analysis) {
   // Store metrics for color system integration
   lastPiPhiMetrics = { pi, phi, synchronicity, balance };
 
+  // Log data for empirical analysis
+  logData({
+    ...analysis,
+    pi,
+    phi,
+    balance,
+    synchronicity
+  });
+
   // Get current palette colors
   const colors = getPiPhiColors();
 
@@ -487,10 +530,30 @@ function updatePiPhiPanel(analysis) {
 
   // Update balance text
   const balanceText = document.getElementById('balance-text');
+  const ratioText = document.getElementById('ratio-text');
   if (balanceText) {
     const piPercent = (balance * 100).toFixed(0);
     const phiPercent = ((1 - balance) * 100).toFixed(0);
     balanceText.textContent = `${piPercent}% π / ${phiPercent}% φ`;
+
+    // Calculate and display π:φ ratio
+    if (ratioText) {
+      const piVal = analysis.pi || balance;
+      const phiVal = analysis.phi || (1 - balance);
+      if (phiVal > 0.01) {
+        const ratio = piVal / phiVal;
+        if (ratio >= 1) {
+          ratioText.textContent = `Ratio: ${ratio.toFixed(1)}:1 (π-dominant)`;
+          ratioText.style.color = '#ff4444';
+        } else {
+          ratioText.textContent = `Ratio: 1:${(1/ratio).toFixed(1)} (φ-dominant)`;
+          ratioText.style.color = '#00ffff';
+        }
+      } else {
+        ratioText.textContent = 'Ratio: 1:1';
+        ratioText.style.color = '#888';
+      }
+    }
   }
 
   // Update archetype
@@ -499,6 +562,15 @@ function updatePiPhiPanel(analysis) {
   if (archetypeName && archetypeConf) {
     archetypeName.textContent = analysis.archetype || '--';
     archetypeConf.textContent = `Confidence: ${((analysis.confidence || 0) * 100).toFixed(1)}%`;
+  }
+
+  // Update stability meter (inverse of flux)
+  const stabilityBar = document.getElementById('stability-bar');
+  const stabilityValue = document.getElementById('stability-value');
+  if (stabilityBar && stabilityValue) {
+    const stability = analysis.stability || (1 - (analysis.flux || 0));
+    stabilityBar.style.width = `${stability * 100}%`;
+    stabilityValue.textContent = `${(stability * 100).toFixed(1)}% stable`;
   }
 
   // Update central gauge
@@ -844,8 +916,11 @@ export function downloadTimelineCSV() {
 
   // Convert data rows
   const rows = timelineHistory.map((point, index) => {
-    const timestamp = new Date(timelineStartTime + (index * 100)).toISOString(); // 100ms intervals
-    const elapsedSeconds = ((index * 100) / 1000).toFixed(2);
+    const timestamp = new Date(point.timestamp).toISOString();
+    const elapsedSeconds = ((point.timestamp - timelineStartTime) / 1000).toFixed(2);
+
+    // Calculate balance from pi and phi
+    const balance = (point.pi + point.phi) > 0 ? point.pi / (point.pi + point.phi) : 0.5;
 
     return [
       timestamp,
@@ -853,7 +928,7 @@ export function downloadTimelineCSV() {
       point.pi.toFixed(4),
       point.phi.toFixed(4),
       point.synchronicity.toFixed(4),
-      point.balance.toFixed(4),
+      balance.toFixed(4),
       point.archetype || 'NEUTRAL_STATE',
       point.confidence ? point.confidence.toFixed(4) : '0.0000'
     ].join(',');

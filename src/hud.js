@@ -2047,12 +2047,18 @@ window.hudCallbacks.audioReactive = (audioData) => {
   );
 };
 
+// 🎯 FIX 18: DISABLE audio auto-start
+// Audio now only starts when user explicitly enables it
+// Users can call window.AudioEngine.start() from console or use HUD controls
+/*
 // Arm audio once the HUD finishes setting up (no prompts; safe if device missing)
 setTimeout(() => {
   AudioEngine.start().then(ok => {
     if (ok) console.log("✅ Audio engine running");
   });
 }, 1000);
+*/
+console.log("🎤 Audio engine will NOT auto-start - call AudioEngine.start() manually or via HUD");
 
 // ——— Phase 13.20 Projector Mode toggle button (small, non-intrusive) ———
 (function addProjectorButton() {

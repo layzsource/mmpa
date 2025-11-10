@@ -1,6 +1,7 @@
 // src/sprites.js
 import * as THREE from 'three';
 import { getEffectiveAudio, state } from './state.js';
+import { getCurrentGeometryColors } from './archetypeColors.js'; // Phase 14.0: Palette colors
 
 // ——— Phase 13.28: Sprites audio reactivity (additive) ———
 import { state as appState } from "./state.js";
@@ -100,8 +101,10 @@ export function initSprites(scene) {
   spriteScene = scene;
   spriteGroup = new THREE.Group();
 
+  // Phase 14.0: Get initial color from palette
+  const colors = getCurrentGeometryColors();
   const spriteMaterial = new THREE.SpriteMaterial({
-    color: state.color,
+    color: colors?.baseColor || 0x888888,
     transparent: true,
     opacity: 0.4,
   });
@@ -172,7 +175,10 @@ export function updateSprites() {
     sprite.position.y = Math.cos(angle) * (2 + cubeWeight * 3);
     sprite.position.z = Math.sin(angle * 0.5) * (2 + pyramidWeight * 3);
 
-    sprite.material.color.set(state.color);
+    // Phase 14.0: Use palette colors (alternate between base and audio for variety)
+    const colors = getCurrentGeometryColors();
+    const useAudioColor = i % 2 === 0; // Alternate sprites between two colors
+    sprite.material.color.set(useAudioColor ? colors.audioColor : colors.baseColor);
     // Phase 11.4.3B: Base opacity when audio off, modulated when on
     sprite.material.opacity = state.audioReactive ? (0.2 + audioLevel * 0.8) : 0.2;
   });

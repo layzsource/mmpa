@@ -20,6 +20,7 @@ import { getCurrentGeometryColors, updateColorState } from './archetypeColors.js
 import { getPiPhiMetrics } from './hudPiPhi.js'; // π/φ synchronicity metrics
 import { recordPerformanceMetrics } from './colorPalettes.js'; // ML performance tracking
 import { getCurrentArchetype, getConfidence } from './archetypeRecognizer.js'; // Archetype detection
+import { updateSpatialGrammar, getGeometryMorphFromGrammar, isSpatialGrammarEnabled } from './musicalSpatialGrammar.js'; // Spatial music theory
 
 console.log("🔺 geometry.js loaded");
 
@@ -51,6 +52,13 @@ document.body.appendChild(renderer.domElement);
 
 // Expose renderer globally for recording
 window.renderer = renderer;
+
+// Expose spatial grammar controls globally for console access
+import { enableSpatialGrammar, disableSpatialGrammar, getSpatialGrammarDebugInfo } from './musicalSpatialGrammar.js';
+window.enableSpatialGrammar = enableSpatialGrammar;
+window.disableSpatialGrammar = disableSpatialGrammar;
+window.getSpatialGrammarDebugInfo = getSpatialGrammarDebugInfo;
+console.log("🎼 Spatial Grammar controls: window.enableSpatialGrammar() / window.disableSpatialGrammar()");
 
 // Dual Trail System: Initialize postprocessing composer with AfterimagePass
 const { composer, afterimagePass } = createPostProcessing(renderer, scene, camera);
@@ -185,14 +193,14 @@ function createMorphGeometry() {
 }
 
 // Phase 12.0: Per-face texture materials (6 faces: front/back/left/right/top/bottom)
-// Default: colored faces as fallback when no textures uploaded
+// Phase 14.0: Dynamic palette-based colors (updated from archetype colors each frame)
 const faceMaterials = [
-  new THREE.MeshStandardMaterial({ color: 0xff0000, roughness: 0.7, metalness: 0.3 }), // Right (red)
-  new THREE.MeshStandardMaterial({ color: 0x00ff00, roughness: 0.7, metalness: 0.3 }), // Left (green)
-  new THREE.MeshStandardMaterial({ color: 0x0000ff, roughness: 0.7, metalness: 0.3 }), // Top (blue)
-  new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.7, metalness: 0.3 }), // Bottom (yellow)
-  new THREE.MeshStandardMaterial({ color: 0x00ffff, roughness: 0.7, metalness: 0.3 }), // Front (cyan)
-  new THREE.MeshStandardMaterial({ color: 0xff00ff, roughness: 0.7, metalness: 0.3 })  // Back (magenta)
+  new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.7, metalness: 0.3 }), // Right
+  new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.7, metalness: 0.3 }), // Left
+  new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.7, metalness: 0.3 }), // Top
+  new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.7, metalness: 0.3 }), // Bottom
+  new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.7, metalness: 0.3 }), // Front
+  new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.7, metalness: 0.3 })  // Back
 ];
 
 // Wireframe material for wireframe mode
@@ -345,12 +353,21 @@ function clamp(val, min, max) {
 function updateMorphTargets(state) {
   // Phase 11.2: Use new array-based additive morphing system
   // Read from morphBaseWeights (persistent user values) and morphAudioWeights (from audio.js)
-  const baseWeights = state.morphBaseWeights || [
+  let baseWeights = state.morphBaseWeights || [
     state.morphWeights.sphere || 0,
     state.morphWeights.cube || 0,
     state.morphWeights.pyramid || 0,
     state.morphWeights.torus || 0
   ];
+
+  // === SPATIAL GRAMMAR OVERRIDE ===
+  // If spatial grammar is active, use its harmonic-driven morph weights
+  if (isSpatialGrammarEnabled()) {
+    const grammarWeights = getGeometryMorphFromGrammar();
+    if (grammarWeights) {
+      baseWeights = grammarWeights; // Override with harmonic structure
+    }
+  }
 
   // Phase 11.5.1: Deep trace for audio bleed detection
   const prevInfluences = morphMesh.morphTargetInfluences.slice();
@@ -487,6 +504,11 @@ function updateGeometryFromState() {
         console.log(`🎨 Geometry: archetype base=${archetypeColors.baseColor.toString(16)} audio=${archetypeColors.audioColor.toString(16)} final=${finalColor}`);
       }
     }
+
+    // Phase 14.0: Update face materials and lighting with palette colors
+    updateFaceMaterialColors(archetypeColors);
+    updateLightingColors(archetypeColors);
+
   } catch (error) {
     // Silently fall back to default color if color system fails
     // Don't spam console - just use gray
@@ -538,6 +560,55 @@ function updateDirectionalLightPosition() {
     Math.sin(radX) * 10,
     Math.cos(radY) * Math.cos(radX) * 10
   );
+}
+
+// Phase 14.0: Update face materials with palette colors
+function updateFaceMaterialColors(archetypeColors) {
+  if (!archetypeColors) return;
+
+  // Use baseColor for primary faces, audioColor for secondary faces
+  // This creates visual depth and shows both colors simultaneously
+  const baseColor = archetypeColors.baseColor;
+  const audioColor = archetypeColors.audioColor;
+  const syncPulse = archetypeColors.syncPulse;
+
+  // Blend between base and audio based on sync pulse for dynamic effect
+  const pulseBlend = Math.min(1, syncPulse * 0.7); // Cap at 70% blend
+
+  faceMaterials[0].color.set(baseColor);       // Right: base
+  faceMaterials[1].color.set(audioColor);      // Left: audio (complementary)
+  faceMaterials[2].color.set(blendColors(baseColor, audioColor, 0.3, 1.0)); // Top: blend
+  faceMaterials[3].color.set(blendColors(baseColor, audioColor, 0.7, 1.0)); // Bottom: blend
+  faceMaterials[4].color.set(baseColor);       // Front: base
+  faceMaterials[5].color.set(audioColor);      // Back: audio (complementary)
+
+  // Add pulse glow effect during high synchronicity
+  if (syncPulse > 0.5) {
+    const emissiveIntensity = (syncPulse - 0.5) * 0.4; // 0-0.2 range
+    faceMaterials.forEach(mat => {
+      mat.emissive.set(baseColor);
+      mat.emissiveIntensity = emissiveIntensity;
+    });
+  } else {
+    // No emissive glow when not synced
+    faceMaterials.forEach(mat => {
+      mat.emissiveIntensity = 0;
+    });
+  }
+}
+
+// Phase 14.0: Update lighting colors based on palette
+function updateLightingColors(archetypeColors) {
+  if (!archetypeColors || !ambientLight || !directionalLight) return;
+
+  // Tint ambient light with base archetype color (subtle, 20% influence)
+  const baseColor = new THREE.Color(archetypeColors.baseColor);
+  const white = new THREE.Color(0xffffff);
+  ambientLight.color.lerpColors(white, baseColor, 0.2);
+
+  // Tint directional light with audio color (even more subtle, 15% influence)
+  const audioColor = new THREE.Color(archetypeColors.audioColor);
+  directionalLight.color.lerpColors(white, audioColor, 0.15);
 }
 
 // Phase 12.0: Set texture on specific face (0=right, 1=left, 2=top, 3=bottom, 4=front, 5=back)
@@ -864,8 +935,12 @@ function animate() {
   // VCN Phase 1: Get deltaTime for camera controls
   const fpDelta = fpClock.getDelta();
 
+  // === Spatial Grammar Update ===
+  // Update musical spatial grammar (if enabled, arranges geometry by harmony)
+  updateSpatialGrammar();
+
   // Mouse Controls: Update OrbitControls for smooth damping
-  
+
   // Phase 1.5: Update gamepad state every frame
   if (window.gamepadManager) {
     window.gamepadManager.update();

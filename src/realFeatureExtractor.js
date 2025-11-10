@@ -362,18 +362,69 @@ function estimateHarmonics(fundamental) {
 
 /**
  * Calculate consonance from chroma features
- * Pure intervals (octaves, fifths) have high chroma concentration
+ * POLYPHONY-AWARE: Detects intervals between simultaneous pitches
+ * Perfect Fifth (C+G) = high consonance, Tritone (C+F#) = low consonance
  */
 function calculateConsonance(chroma) {
-  if (!chroma || chroma.length === 0) return 0.5;
+  if (!chroma || chroma.length !== 12) return 0.5;
 
-  // Find maximum chroma value
-  const maxChroma = Math.max(...chroma);
+  // Music theory interval consonance weights (0-11 semitones)
+  // Based on harmonic series and psychoacoustic research
+  const INTERVAL_CONSONANCE = {
+    0: 1.00,   // Unison - perfect consonance
+    1: 0.15,   // Minor second - very dissonant
+    2: 0.25,   // Major second - dissonant
+    3: 0.60,   // Minor third - consonant
+    4: 0.70,   // Major third - consonant
+    5: 0.80,   // Perfect fourth - very consonant
+    6: 0.05,   // Tritone - maximum dissonance (wolf fifth)
+    7: 0.95,   // Perfect fifth - very consonant (ringing bell)
+    8: 0.55,   // Minor sixth - moderately consonant
+    9: 0.65,   // Major sixth - consonant
+    10: 0.20,  // Minor seventh - dissonant
+    11: 0.30   // Major seventh - dissonant
+  };
 
-  // Calculate concentration: how dominant is the strongest pitch class
-  const concentration = maxChroma / (chroma.reduce((a, b) => a + b, 0) / chroma.length);
+  // Find active pitch classes (above threshold)
+  const threshold = Math.max(...chroma) * 0.25; // 25% of strongest pitch
+  const activePitches = [];
+  for (let i = 0; i < 12; i++) {
+    if (chroma[i] > threshold) {
+      activePitches.push({ pitchClass: i, strength: chroma[i] });
+    }
+  }
 
-  return Math.min(1.0, concentration / 3); // Normalize to 0-1
+  // If no clear pitches, return neutral
+  if (activePitches.length === 0) return 0.5;
+
+  // If only one pitch (monophonic), return moderate consonance
+  if (activePitches.length === 1) return 0.6;
+
+  // Calculate weighted consonance from all pitch intervals
+  let totalConsonance = 0;
+  let totalWeight = 0;
+
+  // Check all pairs of active pitches
+  for (let i = 0; i < activePitches.length; i++) {
+    for (let j = i + 1; j < activePitches.length; j++) {
+      const pitch1 = activePitches[i];
+      const pitch2 = activePitches[j];
+
+      // Calculate interval (semitones between pitches)
+      let interval = Math.abs(pitch2.pitchClass - pitch1.pitchClass);
+      if (interval > 6) interval = 12 - interval; // Use smallest interval
+
+      // Weight by product of pitch strengths (louder intervals matter more)
+      const weight = pitch1.strength * pitch2.strength;
+      const consonance = INTERVAL_CONSONANCE[interval];
+
+      totalConsonance += consonance * weight;
+      totalWeight += weight;
+    }
+  }
+
+  // Return weighted average consonance
+  return totalWeight > 0 ? totalConsonance / totalWeight : 0.5;
 }
 
 /**

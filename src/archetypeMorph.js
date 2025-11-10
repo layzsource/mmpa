@@ -255,6 +255,7 @@ export function initArchetypeMorph(scene) {
     });
     plasmaFlashMesh = new THREE.Mesh(flashGeometry, flashMaterial);
     plasmaFlashMesh.position.set(0, 0, APEX_Z); // Position at apex of bell/chestahedron
+    plasmaFlashMesh.visible = false; // Start invisible
 
     // Add meshes to group
     morphGroup.add(chestahedronMesh);
@@ -491,7 +492,7 @@ function registerArchetypeCallbacks() {
             return;
         }
 
-        console.log(`🔔 PERFECT_FIFTH detected - morphing to bell (φ-coherence: ${data.stabilityMetric.toFixed(3)})`);
+        console.log(`🔔 PERFECT_FIFTH detected - morphing to bell (φ-coherence: ${data.stabilityMetric?.toFixed(3) || 'N/A'})`);
         targetMorphValue = MAX_MORPH_VALUE; // Full bell
         console.log(`   → targetMorphValue set to ${targetMorphValue} (full bell)`);
     });
@@ -505,7 +506,7 @@ function registerArchetypeCallbacks() {
             return;
         }
 
-        console.log(`⚡ WOLF_FIFTH detected - partial morph (sub-φ crisis: ${data.stabilityMetric.toFixed(3)})`);
+        console.log(`⚡ WOLF_FIFTH detected - partial morph (sub-φ crisis: ${data.stabilityMetric?.toFixed(3) || 'N/A'})`);
         targetMorphValue = MAX_MORPH_VALUE * 0.5; // Mid-point morph
         console.log(`   → targetMorphValue set to ${targetMorphValue} (mid-point morph)`);
     });
@@ -519,7 +520,7 @@ function registerArchetypeCallbacks() {
             return;
         }
 
-        console.log(`🌫️ NEUTRAL_STATE detected - returning to chestahedron (quiet field: ${data.fluxMetric.toFixed(3)})`);
+        console.log(`🌫️ NEUTRAL_STATE detected - returning to chestahedron (quiet field: ${data.fluxMetric?.toFixed(3) || 'N/A'})`);
         targetMorphValue = 0; // Full chestahedron
         console.log(`   → targetMorphValue set to ${targetMorphValue} (full chestahedron)`);
     });
@@ -778,10 +779,13 @@ export function triggerPlasmaFlash() {
     const flash = plasmaFlashMesh;
     const material = flash.material;
 
-    // Reset
+    // Reset and make visible
+    flash.visible = true;
     flash.scale.set(0.1, 0.1, 0.1);
     material.opacity = 1.0;
     material.color.setHex(0xffffff);
+
+    console.log("🔴 Flash VISIBLE - Starting animation");
 
     // Chaotic color sequence for Wolf Fifth
     const colorSequence = [
@@ -832,8 +836,12 @@ export function triggerPlasmaFlash() {
 
             requestAnimationFrame(animateFlash);
         } else {
+            // Animation complete - hide the flash completely
+            flash.visible = false;
             material.opacity = 0;
+            material.color.setHex(0xffffff); // Reset color to white
             flash.scale.set(0.1, 0.1, 0.1);
+            console.log("⚫ Flash HIDDEN - Animation complete");
         }
     }
 

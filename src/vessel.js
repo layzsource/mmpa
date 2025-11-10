@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { state, blendColors, getEffectiveAudio } from './state.js'; // Phase 11.4.3: Import stable audio gate
 import { morphMesh } from './geometry.js';
 import { SHADOW_LAYER } from './constants.js'; // Phase 2.3.3
+import { getDirectionalColors } from './archetypeColors.js'; // Phase 14.0: Palette-based directional colors
 
 console.log("🚢 vessel.js loaded");
 
@@ -70,14 +71,16 @@ function createShellsLayout() {
 }
 
 function createConflat6Layout() {
-  // Phase 12.0: Conflat 6 - six color-coded directional rings (N/S/E/W/Up/Down)
+  // Phase 14.0: Conflat 6 - six color-coded directional rings (N/S/E/W/Up/Down)
+  // Colors now derived from active palette for consistent theming
+  const dirColors = getDirectionalColors();
   return [
-    { dir: [1, 0, 0], label: 'East', color: 0xff0000 },     // East (red)
-    { dir: [-1, 0, 0], label: 'West', color: 0x00ff00 },    // West (green)
-    { dir: [0, 1, 0], label: 'Up', color: 0x0000ff },       // Up (blue)
-    { dir: [0, -1, 0], label: 'Down', color: 0xffff00 },    // Down (yellow)
-    { dir: [0, 0, 1], label: 'North', color: 0x00ffff },    // North (cyan)
-    { dir: [0, 0, -1], label: 'South', color: 0xff00ff }    // South (magenta)
+    { dir: [1, 0, 0], label: 'East', color: dirColors[0] },     // East
+    { dir: [-1, 0, 0], label: 'West', color: dirColors[1] },    // West
+    { dir: [0, 1, 0], label: 'Up', color: dirColors[2] },       // Up
+    { dir: [0, -1, 0], label: 'Down', color: dirColors[3] },    // Down
+    { dir: [0, 0, 1], label: 'North', color: dirColors[4] },    // North
+    { dir: [0, 0, -1], label: 'South', color: dirColors[5] }    // South
   ];
 }
 

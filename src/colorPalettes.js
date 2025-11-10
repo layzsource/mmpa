@@ -393,7 +393,15 @@ function loadUsageData() {
   try {
     const saved = localStorage.getItem('mmpa_palette_usage');
     if (saved) {
-      usageTracking = JSON.parse(saved);
+      const loaded = JSON.parse(saved);
+      // Merge with defaults to ensure all properties exist (backwards compatibility)
+      usageTracking = {
+        enabled: loaded.enabled ?? true,
+        palettes: loaded.palettes || {},
+        colors: loaded.colors || {},
+        sessions: loaded.sessions || [],
+        performance: loaded.performance || {} // Ensure performance exists
+      };
     }
   } catch (e) {
     console.warn('Could not load usage data:', e);
@@ -1302,6 +1310,66 @@ export function downloadPalettesJSON() {
   a.click();
   URL.revokeObjectURL(url);
   console.log('💾 Palettes downloaded');
+}
+
+/**
+ * Get chromatic color wheel color for a pitch class (0-11)
+ * Maps to chromatic clock: C=0° (red) → B=330° (magenta)
+ * Creates visual coherence between detected pitch and color theory
+ *
+ * @param {number|string} pitchClassOrName - Pitch class (0-11) or note name ('C', 'C#', etc.)
+ * @returns {string} - Hex color string (e.g., '#ff0000')
+ */
+export function getChromaticColor(pitchClassOrName) {
+  // Convert note name to pitch class if string provided
+  let pitchClass = pitchClassOrName;
+  if (typeof pitchClassOrName === 'string') {
+    const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    pitchClass = NOTE_NAMES.indexOf(pitchClassOrName);
+    if (pitchClass === -1) return '#888888'; // Fallback for invalid note
+  }
+
+  // Chromatic clock angles (C=0° through B=330°, each 30° apart)
+  // Map to hue in HSL color space (0-360°)
+  const hue = (pitchClass * 30) % 360;
+
+  // Convert HSL to RGB with full saturation and medium lightness
+  const saturation = 100; // Full color saturation
+  const lightness = 55;   // Medium brightness for visibility
+
+  return hslToHex(hue, saturation, lightness);
+}
+
+/**
+ * Convert HSL to hex color
+ * @param {number} h - Hue (0-360)
+ * @param {number} s - Saturation (0-100)
+ * @param {number} l - Lightness (0-100)
+ * @returns {string} - Hex color ('#rrggbb')
+ */
+function hslToHex(h, s, l) {
+  h = h % 360;
+  s = s / 100;
+  l = l / 100;
+
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  const m = l - c / 2;
+
+  let r = 0, g = 0, b = 0;
+  if (h >= 0 && h < 60) { r = c; g = x; b = 0; }
+  else if (h >= 60 && h < 120) { r = x; g = c; b = 0; }
+  else if (h >= 120 && h < 180) { r = 0; g = c; b = x; }
+  else if (h >= 180 && h < 240) { r = 0; g = x; b = c; }
+  else if (h >= 240 && h < 300) { r = x; g = 0; b = c; }
+  else if (h >= 300 && h < 360) { r = c; g = 0; b = x; }
+
+  const toHex = (val) => {
+    const hex = Math.round((val + m) * 255).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  };
+
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
 console.log("🎨 colorPalettes.js loaded");

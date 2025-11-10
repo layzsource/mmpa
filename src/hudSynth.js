@@ -15,10 +15,18 @@ export async function createSynthHudSection(container) {
   section.className = 'hud-section';
   section.style.cssText = 'max-width: 100%; overflow-y: auto; max-height: calc(100vh - 200px);';
 
+  // 🎯 FIX 19: DISABLE audio auto-start in synth HUD
+  // AudioEngine should only start when user explicitly enables it
+  // Synth will use shared AudioContext regardless of whether AudioEngine is running
+  /*
   // Ensure AudioEngine is initialized
   await AudioEngine.start();
+  */
+  console.log("🎹 Synth HUD initialized - AudioEngine will NOT auto-start");
+  console.log("   → Use HUD controls or call AudioEngine.start() to enable audio");
 
   // Initialize synth engine with shared AudioContext
+  // AudioContext is created lazily by getAudioContext(), independent of AudioEngine.start()
   const audioContext = getAudioContext();
   synthInstance = new SynthEngine(audioContext);
 

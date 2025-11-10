@@ -1,11 +1,15 @@
 // particles.js
 // Phase 4.9.0 — Stable Particle Baseline
 // InstancedMesh particle system with per-particle hue spread, organic motion, audio reactivity
+// Phase 14.0 — Semantic MMPA Coloring: Particles represent archetypes
 
 import * as THREE from 'three';
 import { SHADOW_LAYER } from './constants.js'; // Phase 2.3.3
 import { getEffectiveAudio, state } from './state.js'; // Phase 11.4.3: Stable audio gate + Phase 11.7: state access
 import { AudioEngine } from './audio.js'; // Phase 13.7: Spectrum visualization
+import { getArchetypeHues } from './archetypeColors.js'; // Phase 14.0: Semantic archetype colors
+import { getCurrentArchetype, getConfidence } from './archetypeRecognizer.js'; // Phase 14.0: Live archetype detection
+import { getParticlePositionFromGrammar, isSpatialGrammarEnabled } from './musicalSpatialGrammar.js'; // Spatial music theory mapping
 
 // Phase 11.7.22: Musical scale definitions (intervals from root)
 const MUSICAL_SCALES = {
@@ -34,10 +38,10 @@ export class ParticleSystem {
     this.velocities = new Float32Array(this.count * 3);
     this.targets   = new Float32Array(this.count * 3);
 
-    this.orbitalSpeed    = 0.05;
+    this.orbitalSpeed    = 0;  // Start at 0 - prevents orbital rotation before audio
     this.smoothness      = 0.5;
     this.opacity         = 1.0;
-    this.organicStrength = 0.2;
+    this.organicStrength = 0;  // Start at 0 - prevents drift layers motion before audio
 
     // Phase 11.5.2: Lightweight organic drift (sine+cos jitter, per-axis amp)
     this.driftOffsets = [];
@@ -72,29 +76,29 @@ export class ParticleSystem {
     this.moireEnabled = false;
     this.chladniM = 3;
     this.chladniN = 4;
-    this.chladniFrequency = 1.0;
+    this.chladniFrequency = 0;           // Start at 0 - prevents cymatic motion before audio
     this.chladniPhase = 0;
     this.moireScale = 1.0;
     this.moireRotation = 0;
-    this.moireSpeed = 0.01;
+    this.moireSpeed = 0;                 // Start at 0 - prevents cymatic motion before audio
 
     // Phase 13.6: Advanced cymatic modes
     this.spectrogramEnabled = false;
     this.spectrogramBands = 32;          // Number of frequency bands
     this.spectrogramRadius = 8;          // Radius of mandala
     this.spectrogramRotation = 0;
-    this.spectrogramSpeed = 0.01;
+    this.spectrogramSpeed = 0;           // Start at 0 - prevents cymatic motion before audio
 
     this.phaseShiftEnabled = false;
     this.phaseShiftLayers = 3;           // Number of interference layers
-    this.phaseShiftSpeed = 0.02;
+    this.phaseShiftSpeed = 0;            // Start at 0 - prevents cymatic motion before audio
     this.phaseShiftPhase = 0;
     this.phaseShiftDepth = 1.0;          // Holographic depth
 
     this.diffractionEnabled = false;
     this.diffractionIntensity = 1.0;     // Color intensity
     this.diffractionAngle = 0;           // Prism angle
-    this.diffractionSpeed = 0.01;
+    this.diffractionSpeed = 0;           // Start at 0 - prevents cymatic motion before audio
 
     // MMPA Phase 3: Dynamic particle density control
     this.maxParticleCount = count;       // Maximum allocated particles
@@ -110,8 +114,8 @@ export class ParticleSystem {
     // MMPA Phase 3: Dynamic stability control (ALIGNMENT mapping)
     this.baseSmoothing = 0.5;            // Base smoothness value (from constructor)
     this.targetSmoothing = 0.5;          // Target smoothness from features
-    this.baseOrganicStrength = 0.2;      // Base organic strength (from constructor)
-    this.targetOrganicStrength = 0.2;    // Target organic strength from features
+    this.baseOrganicStrength = 0;        // Start at 0 - prevents MMPA from enabling drift before audio
+    this.targetOrganicStrength = 0;      // Start at 0 - prevents MMPA from enabling drift before audio
     this.stabilitySmoothing = 0.02;      // Smoothing for stability transitions
 
     // MMPA Phase 3: Geometric harmony control (RELATIONSHIP mapping)
@@ -221,8 +225,25 @@ export class ParticleSystem {
     const aBaseHue = new Float32Array(this.count);
     const aPhase   = new Float32Array(this.count);
 
+    // Phase 14.0: Semantic archetype hue assignment
+    // Divide particles into 5 populations representing MMPA archetypes
+    const archetypeHues = getArchetypeHues();
+    const populations = [
+      { name: 'PERFECT_FIFTH', hue: archetypeHues.PERFECT_FIFTH, ratio: 0.25 },  // 25% harmony particles
+      { name: 'WOLF_FIFTH', hue: archetypeHues.WOLF_FIFTH, ratio: 0.25 },        // 25% chaos particles
+      { name: 'NEUTRAL_STATE', hue: archetypeHues.NEUTRAL_STATE, ratio: 0.25 },  // 25% neutral particles
+      { name: 'pi', hue: archetypeHues.pi, ratio: 0.125 },                       // 12.5% π particles
+      { name: 'phi', hue: archetypeHues.phi, ratio: 0.125 }                      // 12.5% φ particles
+    ];
+
+    // Assign each particle to a population
+    let populationIndex = 0;
+    let populationCount = 0;
+    let populationLimit = Math.floor(this.count * populations[0].ratio);
+
     for (let i = 0; i < this.count; i++) {
-      aBaseHue[i] = Math.random() * 360.0;
+      // Phase 14.0: Assign semantic hue based on population
+      aBaseHue[i] = populations[populationIndex].hue;
       aPhase[i]   = Math.random();
 
       this.angles[i] = Math.random() * Math.PI * 2;
@@ -233,7 +254,17 @@ export class ParticleSystem {
       this.velocities[vi]     = (Math.random() - 0.5) * 0.002;
       this.velocities[vi + 1] = (Math.random() - 0.5) * 0.002;
       this.velocities[vi + 2] = (Math.random() - 0.5) * 0.002;
+
+      // Move to next population when limit reached
+      populationCount++;
+      if (populationCount >= populationLimit && populationIndex < populations.length - 1) {
+        populationIndex++;
+        populationLimit = Math.floor(this.count * populations[populationIndex].ratio);
+        populationCount = 0;
+      }
     }
+
+    console.log(`🎨 Phase 14.0: Semantic particles initialized - ${populations.map(p => `${p.name}:${(p.ratio*100).toFixed(0)}%`).join(', ')}`);
 
     this.geometry = baseGeom;
     this.geometry.setAttribute('aBaseHue', new THREE.InstancedBufferAttribute(aBaseHue, 1));
@@ -306,9 +337,10 @@ export class ParticleSystem {
     this.targetDensity = Math.max(0.0, Math.min(1.0, multiplier));
   }
 
-  // MMPA Phase 3: Set animation speed multiplier (0.5x - 2.0x)
+  // MMPA Phase 3: Set animation speed multiplier (0.0x - 3.0x)
+  // Allow 0.0 to fully stop animations during silence
   setAnimationSpeed(multiplier) {
-    this.targetSpeedMultiplier = Math.max(0.1, Math.min(3.0, multiplier));
+    this.targetSpeedMultiplier = Math.max(0.0, Math.min(3.0, multiplier));
   }
 
   // MMPA Phase 3: Set form stability from alignment features
@@ -386,13 +418,56 @@ export class ParticleSystem {
     }
   }
 
+  // Phase 14.0B: Update particle colors when palette changes
+  updatePaletteColors() {
+    try {
+      const archetypeHues = getArchetypeHues();
+      const populations = [
+        { name: 'PERFECT_FIFTH', hue: archetypeHues.PERFECT_FIFTH, ratio: 0.25 },
+        { name: 'WOLF_FIFTH', hue: archetypeHues.WOLF_FIFTH, ratio: 0.25 },
+        { name: 'NEUTRAL_STATE', hue: archetypeHues.NEUTRAL_STATE, ratio: 0.25 },
+        { name: 'pi', hue: archetypeHues.pi, ratio: 0.125 },
+        { name: 'phi', hue: archetypeHues.phi, ratio: 0.125 }
+      ];
+
+      // Re-assign hues based on new palette
+      let populationIndex = 0;
+      let populationCount = 0;
+      let populationLimit = Math.floor(this.count * populations[0].ratio);
+
+      for (let i = 0; i < this.count; i++) {
+        this.particleBaseHues[i] = populations[populationIndex].hue;
+
+        populationCount++;
+        if (populationCount >= populationLimit && populationIndex < populations.length - 1) {
+          populationIndex++;
+          populationLimit = Math.floor(this.count * populations[populationIndex].ratio);
+          populationCount = 0;
+        }
+      }
+
+      // Update GPU attribute
+      const aBaseHue = this.geometry.getAttribute('aBaseHue');
+      aBaseHue.needsUpdate = true;
+
+      console.log(`🎨 Phase 14.0B: Particle colors updated for new palette - ${populations.map(p => `${p.name}:${(p.ratio*100).toFixed(0)}%`).join(', ')}`);
+    } catch (error) {
+      console.warn('Failed to update particle palette colors:', error);
+    }
+  }
+
   update() {
     const t = Date.now() * 0.001;
     const sm = this.smoothness;
 
     // Audio Gating Fix: Get audio data through centralized gating once at top
     const a = getEffectiveAudio();
-    const audioMix = this.audioReactive ? ((a.bass + a.mid + a.treble) / 3) * this.audioGain : 0.0;
+
+    // MMPA Particle Control Toggle:
+    // If mmpaParticleControl is TRUE, particles use ONLY MMPA forces (no raw audio)
+    // If FALSE, use raw audio multiplication for immediate reactivity
+    const useMMPAOnly = state.mmpaFeatures?.mmpaParticleControl === true;
+    const audioMix = (this.audioReactive && !useMMPAOnly) ? ((a.bass + a.mid + a.treble) / 3) * this.audioGain : 0.0;
 
     // MMPA Phase 3: Smooth density interpolation
     this.currentDensity += (this.targetDensity - this.currentDensity) * this.densitySmoothing;
@@ -417,14 +492,46 @@ export class ParticleSystem {
     this.harmonicProportions += (this.targetHarmonicProportions - this.harmonicProportions) * this.harmonySmoothing;
 
     // Phase 13.6: Update cymatic animation phases (with MMPA speed)
-    this.spectrogramRotation += this.spectrogramSpeed * (1 + audioMix * 2);
-    this.phaseShiftPhase += this.phaseShiftSpeed * (1 + audioMix * 2);
-    this.diffractionAngle += this.diffractionSpeed * (1 + audioMix * 2);
-    this.chladniPhase += this.chladniFrequency * 0.05 * (1 + audioMix);
-    this.moireRotation += this.moireSpeed * (1 + audioMix);
+    // SILENCE FIX: Multiply by mmpaSpeedMultiplier to stop animations during silence
+    this.spectrogramRotation += this.spectrogramSpeed * (1 + audioMix * 2) * this.mmpaSpeedMultiplier;
+    this.phaseShiftPhase += this.phaseShiftSpeed * (1 + audioMix * 2) * this.mmpaSpeedMultiplier;
+    this.diffractionAngle += this.diffractionSpeed * (1 + audioMix * 2) * this.mmpaSpeedMultiplier;
+    this.chladniPhase += this.chladniFrequency * 0.05 * (1 + audioMix) * this.mmpaSpeedMultiplier;
+    this.moireRotation += this.moireSpeed * (1 + audioMix) * this.mmpaSpeedMultiplier;
 
     for (let i = 0; i < this.count; i++) {
       const ti = i * 3;
+
+      // === SPATIAL GRAMMAR OVERRIDE ===
+      // If musical spatial grammar is enabled, use its positioning system
+      // This makes particles arrange by harmonic relationships (Circle of Fifths)
+      if (isSpatialGrammarEnabled()) {
+        const grammarPos = getParticlePositionFromGrammar(i, this.count);
+        if (grammarPos) {
+          this.targets[ti] = grammarPos.x;
+          this.targets[ti + 1] = grammarPos.y;
+          this.targets[ti + 2] = grammarPos.z;
+
+          // Skip normal layout calculation - grammar has taken over
+          // Apply smoothing and continue to next particle
+          this.mesh.getMatrixAt(i, this._tmpMatrix);
+          this._tmpMatrix.decompose(this._tmpPos, this._tmpQuat, this._tmpScale);
+
+          const tx = this.targets[ti];
+          const ty = this.targets[ti + 1];
+          const tz = this.targets[ti + 2];
+
+          this._tmpPos.x += (tx - this._tmpPos.x) * this.smoothness;
+          this._tmpPos.y += (ty - this._tmpPos.y) * this.smoothness;
+          this._tmpPos.z += (tz - this._tmpPos.z) * this.smoothness;
+
+          this._tmpMatrix.compose(this._tmpPos, this._tmpQuat, this._tmpScale);
+          this.mesh.setMatrixAt(i, this._tmpMatrix);
+
+          continue; // Skip to next particle
+        }
+      }
+      // === END SPATIAL GRAMMAR OVERRIDE ===
 
       switch (this.currentLayout) {
         case 'orbit': {
@@ -433,14 +540,22 @@ export class ParticleSystem {
           this.angles[i] += this.orbitalSpeed * 0.01 * this.mmpaSpeedMultiplier;
 
           // MMPA Phase 3: Apply harmonic geometry (RELATIONSHIP features)
-          // 1. Symmetry Order: Quantize angle to create n-fold radial symmetry
-          const symmetryAngleStep = (Math.PI * 2) / this.symmetryOrder;
-          const quantizedAngle = Math.round(this.angles[i] / symmetryAngleStep) * symmetryAngleStep;
+          // BUT ONLY when archetype detection has confidence > 0.3
+          // This prevents false structure from noise
+          let harmonicAngle = this.angles[i]; // Default: no quantization
 
-          // Blend between organic (free angle) and harmonic (quantized angle) based on consonance
-          // High consonance = strong quantization, low consonance = more organic
-          const consonanceBlend = Math.max(0, Math.min(1, (this.symmetryOrder - 3) / 9)); // 0-1 from symmetry order
-          const harmonicAngle = this.angles[i] * (1 - consonanceBlend) + quantizedAngle * consonanceBlend;
+          const archetypeConfidence = getConfidence();
+          if (archetypeConfidence > 0.3) {
+            // High confidence: apply symmetry quantization
+            const symmetryAngleStep = (Math.PI * 2) / this.symmetryOrder;
+            const quantizedAngle = Math.round(this.angles[i] / symmetryAngleStep) * symmetryAngleStep;
+
+            // Blend between organic (free angle) and harmonic (quantized angle) based on consonance
+            // High consonance = strong quantization, low consonance = more organic
+            const consonanceBlend = Math.max(0, Math.min(1, (this.symmetryOrder - 3) / 9)); // 0-1 from symmetry order
+            harmonicAngle = this.angles[i] * (1 - consonanceBlend) + quantizedAngle * consonanceBlend;
+          }
+          // Else: low confidence, use natural unquantized angle (organic flow)
 
           // 2. Geometric Subdivision: Create concentric rings based on complexity
           const ringIndex = Math.floor((i / this.count) * this.geometricSubdivision * 3); // 0-3 rings
@@ -1018,6 +1133,14 @@ export class ParticleSystem {
 
 // Legacy compatibility
 let particleSystemInstance = null;
+
+// Phase 14.0B: Listen for palette changes and update particle colors
+window.addEventListener('colorPaletteChanged', (event) => {
+  if (particleSystemInstance && particleSystemInstance.updatePaletteColors) {
+    console.log('🎨 Palette changed, updating particle colors...');
+    particleSystemInstance.updatePaletteColors();
+  }
+});
 
 export function initParticles(scene, count = 5000) {
   if (particleSystemInstance) {
@@ -2133,21 +2256,48 @@ export class EmojiParticles {
   }
 
   // Phase 13.5: Enhanced 3D Chladni cymatic resonance patterns
+  // NOW CONNECTED TO MUSIC THEORY: Uses MMPA consonance + archetype detection
   applyChladni() {
     if (!this.chladniEnabled) return;
 
     const audioLevel = state?.audio?.level ?? 0;
-    const bass = state?.audio?.bass ?? 0;
-    const mid = state?.audio?.mid ?? 0;
-    const treble = state?.audio?.treble ?? 0;
 
-    // Audio-reactive mode numbers with wider range
-    const m = this.chladniM + Math.floor(bass * 5);
-    const n = this.chladniN + Math.floor(mid * 5);
-    const k = Math.floor(treble * 4) + 2; // Third dimension mode
+    // === MUSIC THEORY INTEGRATION ===
+    const archetype = getCurrentArchetype();
+    const confidence = getConfidence();
 
-    // Advance phase for animation
-    this.chladniPhase += this.chladniFrequency * (1 + audioLevel * 3) * 0.015;
+    // Use MMPA symmetry order for resonance modes (consonance drives pattern stability)
+    const symmetryOrder = this.symmetryOrder || 6; // Fallback to hexagonal
+    const harmonicProportion = this.harmonicProportions || 1.0;
+
+    // Archetype-specific mode numbers (Perfect Fifth = stable, Wolf Fifth = chaotic)
+    let m, n, k;
+
+    if (archetype === 'PERFECT_FIFTH' && confidence > 0.5) {
+      // Perfect Fifth: Stable harmonic resonance (pure ratios: 3:2, 5:4)
+      m = Math.floor(symmetryOrder * 0.5); // Half the symmetry (3, 4, 5...)
+      n = Math.floor(symmetryOrder * 0.75); // 3/4 ratio
+      k = Math.floor(symmetryOrder / 3); // Tertiary harmonic
+      console.log(`🎼 Chladni: Perfect Fifth mode (m=${m}, n=${n}, k=${k}) - stable resonance`);
+    } else if (archetype === 'WOLF_FIFTH' && confidence > 0.5) {
+      // Wolf Fifth: Mistuned, chaotic interference patterns
+      m = Math.floor(symmetryOrder * 0.6); // Slightly off ratios create beats
+      n = Math.floor(symmetryOrder * 0.85); // Not quite pure
+      k = Math.floor(symmetryOrder * 0.4); // Asymmetric
+      console.log(`🎼 Chladni: Wolf Fifth mode (m=${m}, n=${n}, k=${k}) - chaotic interference`);
+    } else {
+      // Neutral/low confidence: Use manual controls with subtle audio modulation
+      const bass = state?.audio?.bass ?? 0;
+      const mid = state?.audio?.mid ?? 0;
+      const treble = state?.audio?.treble ?? 0;
+      m = this.chladniM + Math.floor(bass * 2);
+      n = this.chladniN + Math.floor(mid * 2);
+      k = Math.floor(treble * 2) + 2;
+    }
+
+    // Advance phase - faster when consonant (stable), slower when dissonant
+    const phaseSpeed = archetype === 'PERFECT_FIFTH' ? 1.5 : (archetype === 'WOLF_FIFTH' ? 0.7 : 1.0);
+    this.chladniPhase += this.chladniFrequency * phaseSpeed * (1 + audioLevel * 2) * 0.015;
 
     for (let i = 0; i < this.count; i++) {
       const pos = this.positions[i];
@@ -2295,6 +2445,7 @@ export class EmojiParticles {
   }
 
   // Phase 13.6: Spectrogram tessellations - FFT frequency bins mapped to radial mandala
+  // NOW CONNECTED TO MUSIC THEORY: Uses MMPA symmetry + archetype detection
   applySpectrogram() {
     if (!this.spectrogramEnabled) return;
 
@@ -2308,8 +2459,38 @@ export class EmojiParticles {
     const mid = state?.audio?.mid ?? 0;
     const treble = state?.audio?.treble ?? 0;
 
-    // Get FFT data if available (simulated with audio bands for now)
-    const fftBands = this.spectrogramBands;
+    // === MUSIC THEORY INTEGRATION ===
+    const archetype = getCurrentArchetype();
+    const confidence = getConfidence();
+
+    // Use MMPA symmetry order to determine tessellation structure
+    const symmetryOrder = this.symmetryOrder || 6; // Fallback to hexagonal
+
+    // Archetype-specific tessellation parameters
+    let fftBands, ringCount, rotationSpeed, cellRegularity;
+
+    if (archetype === 'PERFECT_FIFTH' && confidence > 0.5) {
+      // Perfect Fifth: Organized cellular structure (harmonic ratios)
+      fftBands = symmetryOrder * 2; // Even divisions based on consonance
+      ringCount = Math.max(4, Math.floor(symmetryOrder * 1.5)); // More organized rings
+      rotationSpeed = 1.2; // Smooth, stable rotation
+      cellRegularity = 0.9; // High regularity (stable grid)
+      console.log(`🎼 Spectrogram: Perfect Fifth mode (bands=${fftBands}, rings=${ringCount}) - organized tessellation`);
+    } else if (archetype === 'WOLF_FIFTH' && confidence > 0.5) {
+      // Wolf Fifth: Chaotic fragmentation (irregular cells)
+      fftBands = Math.floor(symmetryOrder * 1.7); // Irregular divisions
+      ringCount = Math.max(3, Math.floor(symmetryOrder * 0.8)); // Fewer, unstable rings
+      rotationSpeed = 0.6; // Erratic, slower rotation
+      cellRegularity = 0.3; // Low regularity (chaotic fragmentation)
+      console.log(`🎼 Spectrogram: Wolf Fifth mode (bands=${fftBands}, rings=${ringCount}) - chaotic fragmentation`);
+    } else {
+      // Neutral/low confidence: Use manual controls with subtle audio modulation
+      fftBands = this.spectrogramBands;
+      ringCount = 8;
+      rotationSpeed = 1.0;
+      cellRegularity = 0.6;
+    }
+
     const fftData = [];
 
     // Simulate FFT spectrum from bass/mid/treble
@@ -2332,13 +2513,14 @@ export class EmojiParticles {
         amplitude = treble * highPos + mid * (1 - highPos);
       }
 
-      // Add some variation and clamp
-      amplitude = Math.max(0, Math.min(1, amplitude + Math.sin(b * 0.5 + audioLevel * 10) * 0.1));
+      // Add variation - more chaos for Wolf Fifth, less for Perfect Fifth
+      const variationAmount = archetype === 'WOLF_FIFTH' ? 0.2 : (archetype === 'PERFECT_FIFTH' ? 0.05 : 0.1);
+      amplitude = Math.max(0, Math.min(1, amplitude + Math.sin(b * 0.5 + audioLevel * 10) * variationAmount));
       fftData.push(amplitude);
     }
 
-    // Rotate the spectrogram mandala
-    this.spectrogramRotation += this.spectrogramSpeed * (1 + audioLevel * 2);
+    // Rotate the spectrogram mandala - speed varies with consonance
+    this.spectrogramRotation += this.spectrogramSpeed * rotationSpeed * (1 + audioLevel * 2);
 
     for (let i = 0; i < this.count; i++) {
       const pos = this.positions[i];
@@ -2355,13 +2537,16 @@ export class EmojiParticles {
       const bandIndex = Math.floor(normalizedAngle * fftBands) % fftBands;
       const bandAmplitude = fftData[bandIndex];
 
-      // Create radial rings for each frequency band
-      const ringCount = 8;
+      // Create radial rings for each frequency band (count varies with archetype)
       const ringIndex = Math.floor((radius / this.spectrogramRadius) * ringCount) % ringCount;
       const ringPhase = (radius / this.spectrogramRadius) * ringCount - ringIndex;
 
       // Tessellation: particles organize into cellular structures
-      const cellAngle = Math.floor(normalizedAngle * fftBands * 2) / (fftBands * 2) * Math.PI * 2;
+      // Cell regularity: high (Perfect Fifth) = clean grid, low (Wolf Fifth) = chaotic fragmentation
+      const cellDivisions = archetype === 'WOLF_FIFTH' ? fftBands * 1.3 : fftBands * 2; // Irregular vs. even
+      const cellJitter = (1 - cellRegularity) * 0.3; // Chaos factor
+      const cellAngle = Math.floor(normalizedAngle * cellDivisions) / cellDivisions * Math.PI * 2 +
+                        (Math.sin(normalizedAngle * 10 + audioLevel * 5) * cellJitter);
       const cellRadius = (ringIndex + 0.5) * (this.spectrogramRadius / ringCount);
 
       // Target position for this cell

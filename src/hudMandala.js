@@ -244,7 +244,10 @@ export function createMandalaHudSection(container, notifyHUDUpdate, createToggle
 
   const ringLayoutInput = document.createElement("input");
   ringLayoutInput.type = "text";
-  ringLayoutInput.value = state.emojiMandala.layout.join(' ');
+  // Handle both array and string values for layout (presets set strings, user input sets arrays)
+  ringLayoutInput.value = Array.isArray(state.emojiMandala.layout)
+    ? state.emojiMandala.layout.join(' ')
+    : state.emojiMandala.layout;
   ringLayoutInput.placeholder = "🍕 🌶️ 🍄";
   ringLayoutInput.style.cssText = 'width: 100%; padding: 6px; background: rgba(0,0,0,0.5); border: 1px solid #ff66ff; color: #ff66ff; border-radius: 4px; margin-bottom: 10px; font-size: 14px;';
 

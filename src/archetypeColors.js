@@ -2,6 +2,7 @@
 // Connects π/φ color palette system to 3D geometry rendering
 console.log("🎨 archetypeColors.js loaded");
 
+import * as THREE from 'three';
 import { getPaletteColor, getPiPhiColors } from './colorPalettes.js';
 import { getCurrentArchetype, getConfidence } from './archetypeRecognizer.js';
 
@@ -185,9 +186,95 @@ function blendThreeColors(color1Num, color2Num, factor) {
   return (r << 16) | (g << 8) | b;
 }
 
-// Listen for palette changes and log
+/**
+ * Get all archetype colors as hue values (0-360) for particle system
+ * Maps each archetype to its palette color converted to HSL hue
+ * @returns {object} - { PERFECT_FIFTH: hue, WOLF_FIFTH: hue, NEUTRAL_STATE: hue, pi: hue, phi: hue }
+ */
+export function getArchetypeHues() {
+  try {
+    const archetypes = ['PERFECT_FIFTH', 'WOLF_FIFTH', 'NEUTRAL_STATE'];
+    const hues = {};
+
+    archetypes.forEach(archetype => {
+      const hexColor = getPaletteColor(archetype);
+      const color = new THREE.Color(hexColor);
+      const hsl = {};
+      color.getHSL(hsl);
+      hues[archetype] = hsl.h * 360; // Convert 0-1 to 0-360
+    });
+
+    // Also get π/φ colors for synchronicity representation
+    const piPhiColors = getPiPhiColors();
+    const piColor = new THREE.Color(piPhiColors.pi);
+    const phiColor = new THREE.Color(piPhiColors.phi);
+    const piHSL = {};
+    const phiHSL = {};
+    piColor.getHSL(piHSL);
+    phiColor.getHSL(phiHSL);
+
+    hues.pi = piHSL.h * 360;
+    hues.phi = phiHSL.h * 360;
+
+    return hues;
+  } catch (error) {
+    // Fallback to default hues
+    return {
+      PERFECT_FIFTH: 120,  // Green (harmony)
+      WOLF_FIFTH: 0,       // Red (chaos)
+      NEUTRAL_STATE: 240,  // Blue (neutral)
+      pi: 0,               // Red (chaos)
+      phi: 50              // Gold (harmony)
+    };
+  }
+}
+
+/**
+ * Get 6 directional colors for vessel system (N/S/E/W/Up/Down)
+ * Based on current archetype palette, generates complementary variations
+ * @returns {array} - Array of 6 Three.js color hex values
+ */
+export function getDirectionalColors() {
+  try {
+    const colors = getCurrentGeometryColors();
+    const base = new THREE.Color(colors.baseColor);
+    const audio = new THREE.Color(colors.audioColor);
+
+    // Generate 6 variations evenly spaced around color wheel
+    const baseHSL = {};
+    base.getHSL(baseHSL);
+
+    const variations = [];
+    for (let i = 0; i < 6; i++) {
+      // Spread colors evenly: 60° apart (360°/6 = 60°)
+      const hue = (baseHSL.h + (i / 6)) % 1.0;
+      const saturation = 0.7 + (i % 2) * 0.15; // Alternate between 0.7 and 0.85
+      const lightness = 0.55 + (i % 3) * 0.08; // Vary lightness: 0.55, 0.63, 0.71
+      const color = new THREE.Color().setHSL(hue, saturation, lightness);
+      variations.push(color.getHex());
+    }
+
+    return variations;
+  } catch (error) {
+    // Fallback to default rainbow colors
+    return [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0x00ffff, 0xff00ff];
+  }
+}
+
+// Listen for palette changes and log with actual colors
 window.addEventListener('colorPaletteChanged', (event) => {
   console.log('🎨 Archetype colors updated for new palette:', event.detail.palette);
+
+  // Immediately log what colors this palette provides
+  try {
+    const colors = getCurrentGeometryColors();
+    console.log(`🎨 NEW PALETTE COLORS: base=0x${colors.baseColor.toString(16)} audio=0x${colors.audioColor.toString(16)} syncPulse=${colors.syncPulse.toFixed(2)}`);
+
+    const hues = getArchetypeHues();
+    console.log('🎨 ARCHETYPE HUES:', hues);
+  } catch (e) {
+    console.warn('Could not log palette colors:', e);
+  }
 });
 
 console.log("🎨 Archetype color bridge ready");
