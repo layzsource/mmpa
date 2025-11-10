@@ -168,6 +168,9 @@ function updateMMPAFeatures(financialFeatures) {
   notifyHUDUpdate();
 }
 
+// Audio MMPA feature extraction has been moved to audioRouter.js
+// This module now only handles financial MMPA feature extraction
+
 /**
  * Update metric displays
  */
@@ -466,26 +469,28 @@ export function toggleFinancialMode(enabled) {
   financialModeEnabled = enabled;
 
   if (enabled) {
+    // Stop audio mode
+    stopAudioMode();
+
     // Start financial pipeline
     if (!financialPipeline) {
       initFinancialPipeline().then(pipeline => {
         pipeline.start();
-        console.log("💹 Financial mode ACTIVATED");
+        console.log("💹 Financial mode ACTIVATED - using stock market data for archetypes");
       });
     } else {
       financialPipeline.start();
-      console.log("💹 Financial mode ACTIVATED");
+      console.log("💹 Financial mode ACTIVATED - using stock market data for archetypes");
     }
   } else {
-    // Stop financial pipeline and restore audio mode
+    // Stop financial pipeline
     if (financialPipeline) {
       financialPipeline.stop();
     }
 
-    // Reset MMPA features to audio mode
-    state.mmpaFeatures.enabled = false;
-    state.mmpaFeatures.source = 'dummy';
-    console.log("🎵 Audio mode ACTIVATED");
+    // Start audio mode - MMPA features now from audio
+    startAudioMode();
+    console.log("🎵 Audio mode ACTIVATED - using audio harmony for archetypes");
   }
 
   notifyHUDUpdate();
@@ -605,6 +610,17 @@ export function createFinancialHUD() {
     (enabled) => toggleLiveBitcoinData(enabled)
   );
   section.appendChild(liveBitcoinToggle);
+
+  // Toggle: MMPA Particle Control (Pure MMPA vs Hybrid)
+  const mmpaParticleToggle = createToggleControl(
+    '🎵 MMPA-Only Particle Control',
+    false,
+    (enabled) => {
+      state.mmpaFeatures.mmpaParticleControl = enabled;
+      console.log(`🎵 Particle control mode: ${enabled ? 'Pure MMPA (6 forces)' : 'Hybrid (raw audio + MMPA)'}`);
+    }
+  );
+  section.appendChild(mmpaParticleToggle);
 
   // Symbol selector
   const symbolSelect = createSelectControl(
@@ -969,5 +985,21 @@ export function createFinancialHUD() {
 
   return section;
 }
+
+// 🎯 FIX 18: DISABLE audio mode auto-start
+// Audio mode feature extraction now only starts when AudioEngine is manually started
+// Once AudioEngine.start() is called and audio level > 0.01, feature extraction will begin automatically (gated by Fix 17)
+/*
+// Initialize audio mode by default on module load
+// Financial mode disabled by default (financialModeEnabled = false)
+// User can toggle to financial mode via HUD controls
+setTimeout(() => {
+  if (!financialModeEnabled) {
+    startAudioMode();
+    console.log("🎵 Audio mode initialized by default - archetypes will use audio harmony");
+  }
+}, 500);  // Small delay to ensure state is ready
+*/
+console.log("🎵 Audio mode feature extraction ready - waiting for AudioEngine.start() + audio level > 0.01");
 
 console.log("💹 hudFinancial.js loaded");

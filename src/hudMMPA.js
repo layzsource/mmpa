@@ -15,6 +15,7 @@ console.log("🎯 hudMMPA.js loaded");
 
 import { AudioEngine } from './audio.js';
 import { analyzePitchSpectrum } from './pitchDetector.js';
+import { getChromaticColor } from './colorPalettes.js';
 
 // === TRANSIENT DETECTION STATE ===
 const transientDetector = {
@@ -351,14 +352,13 @@ export function createMMPAOverlay() {
     right: 10px;
     background: rgba(0, 0, 0, 0.85);
     color: #00ffff;
-    padding: 15px;
+    padding: 12px;
     border-radius: 10px;
     border: 2px solid #00ffff;
     font-family: 'Courier New', monospace;
     font-size: 12px;
     z-index: 10000;
-    min-width: 300px;
-    max-width: 350px;
+    width: 420px;
     display: none;
     box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
     transition: all 0.3s ease;
@@ -384,9 +384,9 @@ export function createMMPAOverlay() {
 
     <div id="mmpa-content">
 
-    <div id="mmpa-waveform-section" style="margin-bottom: 12px;">
-      <div style="font-weight: bold; color: #00ff00; margin-bottom: 5px;">Live Waveform (Peak/RMS):</div>
-      <canvas id="mmpa-waveform-canvas" width="320" height="60" style="
+    <div id="mmpa-waveform-section" style="margin-bottom: 10px;">
+      <div style="font-weight: bold; color: #00ff00; margin-bottom: 4px; font-size: 11px;">Live Waveform (Peak/RMS):</div>
+      <canvas id="mmpa-waveform-canvas" width="396" height="60" style="
         width: 100%;
         height: 60px;
         background: #000;
@@ -395,9 +395,9 @@ export function createMMPAOverlay() {
       "></canvas>
     </div>
 
-    <div id="mmpa-spectrum-section" style="margin-bottom: 12px;">
-      <div style="font-weight: bold; color: #ff00ff; margin-bottom: 5px;">Spectrum (Frequency Bands):</div>
-      <canvas id="mmpa-spectrum-canvas" width="320" height="80" style="
+    <div id="mmpa-spectrum-section" style="margin-bottom: 10px;">
+      <div style="font-weight: bold; color: #ff00ff; margin-bottom: 4px; font-size: 11px;">Spectrum (Frequency Bands):</div>
+      <canvas id="mmpa-spectrum-canvas" width="396" height="80" style="
         width: 100%;
         height: 80px;
         background: #000;
@@ -414,11 +414,11 @@ export function createMMPAOverlay() {
       </div>
     </div>
 
-    <div id="mmpa-audio-metrics-section" style="margin-bottom: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+    <div id="mmpa-audio-metrics-section" style="margin-bottom: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
       <div>
-        <div style="font-size: 10px; color: #888;">BPM:</div>
-        <div id="mmpa-bpm-value" style="font-weight: bold; color: #ff00ff;">-- bpm</div>
-        <div style="margin-top: 4px; display: flex; gap: 4px;">
+        <div style="font-size: 10px; color: #888; margin-bottom: 2px;">BPM:</div>
+        <div id="mmpa-bpm-value" style="font-weight: bold; color: #ff00ff; font-size: 13px;">-- bpm</div>
+        <div style="margin-top: 5px; display: flex; gap: 4px;">
           <button id="mmpa-tap-btn" style="
             background: #222;
             border: 1px solid #888;
@@ -444,28 +444,28 @@ export function createMMPAOverlay() {
         <div id="mmpa-tap-status" style="font-size: 8px; color: #666; margin-top: 2px; text-align: center;">-</div>
       </div>
       <div>
-        <div style="font-size: 10px; color: #888;">Key:</div>
-        <div id="mmpa-key-value" style="font-weight: bold; color: #ff69b4;">--</div>
+        <div style="font-size: 10px; color: #888; margin-bottom: 2px;">Key:</div>
+        <div id="mmpa-key-value" style="font-weight: bold; color: #ff69b4; font-size: 13px;">--</div>
       </div>
       <div>
-        <div style="font-size: 10px; color: #888;">Amplitude:</div>
-        <div id="mmpa-amplitude-value" style="font-weight: bold; color: #ffff00;">--</div>
+        <div style="font-size: 10px; color: #888; margin-bottom: 2px;">Amplitude:</div>
+        <div id="mmpa-amplitude-value" style="font-weight: bold; color: #ffff00; font-size: 13px;">--</div>
       </div>
       <div>
-        <div style="font-size: 10px; color: #888;">Peak Freq:</div>
-        <div id="mmpa-frequency-value" style="font-weight: bold; color: #00ffff;">-- Hz</div>
+        <div style="font-size: 10px; color: #888; margin-bottom: 2px;">Peak Freq:</div>
+        <div id="mmpa-frequency-value" style="font-weight: bold; color: #00ffff; font-size: 13px;">-- Hz</div>
       </div>
       <div>
-        <div style="font-size: 10px; color: #888;">Confidence:</div>
-        <div id="mmpa-beat-confidence" style="font-weight: bold; color: #ff9900;">--%</div>
+        <div style="font-size: 10px; color: #888; margin-bottom: 2px;">Confidence:</div>
+        <div id="mmpa-beat-confidence" style="font-weight: bold; color: #ff9900; font-size: 13px;">--%</div>
       </div>
       <div>
-        <div style="font-size: 10px; color: #888;">Key Strength:</div>
-        <div id="mmpa-key-confidence" style="font-weight: bold; color: #9370db;">--%</div>
+        <div style="font-size: 10px; color: #888; margin-bottom: 2px;">Key Strength:</div>
+        <div id="mmpa-key-confidence" style="font-weight: bold; color: #9370db; font-size: 13px;">--%</div>
       </div>
     </div>
 
-    <div id="mmpa-stability-section" style="margin-bottom: 12px;">
+    <div id="mmpa-stability-section" style="margin-bottom: 10px;">
       <div style="font-weight: bold; color: #ffff00;">Σ* (Stability):</div>
       <div style="display: flex; align-items: center; margin-top: 5px;">
         <div id="mmpa-stability-bar-bg" style="flex: 1; height: 20px; background: #333; border-radius: 5px; position: relative; overflow: hidden;">
@@ -476,15 +476,15 @@ export function createMMPAOverlay() {
       <div id="mmpa-status" style="margin-top: 5px; font-size: 11px; color: #ff9900;">Status: Initializing...</div>
     </div>
 
-    <div id="mmpa-transition-section" style="margin-bottom: 12px; padding: 8px; background: rgba(100, 100, 100, 0.2); border-radius: 5px; transition: background 0.5s ease, border 0.5s ease; border: 1px solid rgba(100, 100, 100, 0.3);">
+    <div id="mmpa-transition-section" style="margin-bottom: 10px; padding: 8px; background: rgba(100, 100, 100, 0.2); border-radius: 5px; transition: background 0.5s ease, border 0.5s ease; border: 1px solid rgba(100, 100, 100, 0.3);">
       <div id="mmpa-transition-title" style="font-weight: bold; color: #888; transition: color 0.5s ease;">UKF Transition Prediction</div>
       <div id="mmpa-transition-eta" style="margin-top: 5px; font-size: 11px; color: #999;">ETA: --</div>
       <div id="mmpa-transition-confidence" style="font-size: 11px; color: #999;">Confidence: --</div>
     </div>
 
-    <div id="mmpa-risk-section" style="margin-bottom: 12px;">
+    <div id="mmpa-risk-section" style="margin-bottom: 10px;">
       <div style="font-weight: bold; color: #00ffff;">Bifurcation Risk:</div>
-      <div id="mmpa-risk-value" style="margin-top: 5px; font-size: 14px; color: #00ffff;">--% risk</div>
+      <div id="mmpa-risk-value" style="margin-top: 5px; font-size: 13px; color: #00ffff;">--% risk</div>
     </div>
 
     <div id="mmpa-attribution-section">
@@ -504,6 +504,71 @@ export function createMMPAOverlay() {
   `;
 
   document.body.appendChild(overlay);
+
+  // === Drag Functionality (like VCN panel) ===
+  let isDragging = false;
+  let dragOffset = { x: 0, y: 0 };
+
+  // Get the title bar element (first child div)
+  const titleBar = overlay.querySelector('div:first-child');
+  if (titleBar) {
+    titleBar.style.cursor = 'move'; // Visual indicator
+    titleBar.title = 'Click and drag to move panel';
+
+    const onMouseDown = (e) => {
+      // Don't drag if clicking the collapse button
+      if (e.target.id === 'mmpa-collapse-btn' || e.target.closest('#mmpa-collapse-btn')) {
+        return;
+      }
+
+      isDragging = true;
+
+      // Calculate offset from panel top-left corner
+      const rect = overlay.getBoundingClientRect();
+      dragOffset.x = e.clientX - rect.left;
+      dragOffset.y = e.clientY - rect.top;
+
+      // Switch to absolute positioning if currently fixed
+      if (overlay.style.position === 'fixed') {
+        overlay.style.position = 'absolute';
+        overlay.style.left = rect.left + 'px';
+        overlay.style.top = rect.top + 'px';
+        overlay.style.bottom = 'auto'; // Clear bottom positioning
+        overlay.style.right = 'auto';  // Clear right positioning
+      }
+
+      e.preventDefault();
+    };
+
+    const onMouseMove = (e) => {
+      if (!isDragging) return;
+
+      // Calculate new position
+      const newX = e.clientX - dragOffset.x;
+      const newY = e.clientY - dragOffset.y;
+
+      // Update panel position
+      overlay.style.left = newX + 'px';
+      overlay.style.top = newY + 'px';
+
+      e.preventDefault();
+    };
+
+    const onMouseUp = (e) => {
+      if (isDragging) {
+        isDragging = false;
+        e.preventDefault();
+      }
+    };
+
+    // Attach drag listeners
+    titleBar.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+
+    // Store listeners for cleanup (attach to overlay element)
+    overlay._dragListeners = { onMouseMove, onMouseUp, titleBar, onMouseDown };
+  }
 
   // Add collapse/expand functionality
   const collapseBtn = document.getElementById('mmpa-collapse-btn');
@@ -990,9 +1055,16 @@ function startMMPAOverlayUpdates() {
       const strengthPercent = pitchAnalysis.strengthPercent;
       const totalEnergy = pitchAnalysis.totalEnergy;
 
-      // Update display
+      // Update display with chromatic color coordination
       keyValue.textContent = totalEnergy > 0.5 ? detectedKey : '--';
       keyConfidence.textContent = totalEnergy > 0.5 ? `${strengthPercent.toFixed(0)}%` : '--%';
+
+      // Apply chromatic color wheel color (C=red, F#=cyan, etc.)
+      if (totalEnergy > 0.5) {
+        keyValue.style.color = getChromaticColor(detectedKey);
+      } else {
+        keyValue.style.color = '#888888'; // Gray when no key detected
+      }
     }
 
     // Update Σ* (Stability) bar - ACTUAL MMPA DATA

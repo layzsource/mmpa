@@ -6,6 +6,7 @@ import { AudioEngine } from "./audio.js";
 import { notifyHUDUpdate } from "./hud.js";
 import { applyAudioBandsToSprites } from "./sprites.js";
 import { state } from "./state.js";
+import { extractAudioMMPAFeatures } from "./audioFeatureExtractor.js";
 
 console.log("🎶 audioRouter.js loaded (Phase 13.31)");
 
@@ -94,10 +95,18 @@ export function initAudioRouter() {
   console.log("🎧 Initializing audio router event relay...");
 
   let frameCount = 0;
+  let audioFeatureExtractionStarted = false;  // Track if audio MMPA feature extraction has started
+
   AudioEngine.on('frame', (bands) => {
     if (!bands) {
       console.warn("⚠️ audioRouter received null bands");
       return;
+    }
+
+    // Start logging when first frame arrives
+    if (!audioFeatureExtractionStarted) {
+      audioFeatureExtractionStarted = true;
+      console.log("🎵 Audio MMPA feature extraction started (AudioEngine is now running)");
     }
 
     try {
@@ -110,6 +119,42 @@ export function initAudioRouter() {
       audioState.treble = processed.treble;
       audioState.level = processed.level;
       audioState.spectrum = AudioEngine.getSpectrum();
+
+      // Extract MMPA features from audio (bypasses financial module entirely)
+      // Only update if not in financial mode and audio level is above threshold
+      const financialModeEnabled = state.financial?.enabled || false;
+      if (!financialModeEnabled && processed.level >= 0.01) {
+        const audioData = {
+          bands: {
+            bass: processed.bass,
+            mid: processed.mid,
+            treble: processed.treble,
+            level: processed.level
+          },
+          features: state.audioFeatures || {},
+          spectrum: audioState.spectrum
+        };
+
+        // Direct audio → MMPA feature extraction (no financial dependency)
+        state.mmpaFeatures = extractAudioMMPAFeatures(audioData);
+        state.mmpaFeatures.enabled = true;
+
+        // Log every 180 frames (~3 seconds at 60fps)
+        if (frameCount % 180 === 0) {
+          console.log("🎵 Audio MMPA features extracted:", {
+            level: processed.level.toFixed(3),
+            identity_strength: state.mmpaFeatures.identity?.strength?.toFixed(3),
+            relationship_consonance: state.mmpaFeatures.relationship?.consonance?.toFixed(3),
+            transformation_flux: state.mmpaFeatures.transformation?.flux?.toFixed(3)
+          });
+        }
+      } else if (!financialModeEnabled && processed.level < 0.01) {
+        // Disable MMPA features when audio is too quiet (prevents NEUTRAL_STATE spam)
+        if (state.mmpaFeatures.enabled) {
+          state.mmpaFeatures.enabled = false;
+          console.log("🔇 Audio level below threshold - MMPA features disabled");
+        }
+      }
 
       // Signal Multimodality: Feed audio signal to signal router
       if (window?.signalRouter) {
