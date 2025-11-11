@@ -52,6 +52,14 @@ export function extractAudioMMPAFeatures(audioData) {
     enabled: true,
     source: 'audio',
 
+    // Spectral bands (raw audio frequency bands for material physics)
+    spectral: {
+      bass: bands.bass,
+      mid: bands.mid,
+      treble: bands.treble,
+      level: bands.level
+    },
+
     // Identity: fundamental frequency and harmonics
     identity: {
       fundamentalFreq: features.fundamentalFreq || 440,  // Hz

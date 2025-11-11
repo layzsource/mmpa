@@ -2433,6 +2433,16 @@ export function initVisual(scene) {
 
     // Initialize with theory mode disabled (hidden by default)
     window.theoryRenderer.setEnabled(false);
+
+    // Explicitly hide the vortex group to ensure it doesn't interfere with chronelix visualization
+    if (theoryRendererAPI) {
+      const vortex = theoryRendererAPI.getVortex();
+      if (vortex && vortex.group) {
+        vortex.group.visible = false;
+        console.log("👁️ Double Vortex hidden to prevent interference with Chronelix");
+      }
+    }
+
     console.log("👁️ Unified Theory Renderer initialized (Heart/Vortex/Archetype) - Starting hidden");
   } catch (error) {
     console.error("👁️ Failed to initialize Theory Renderer:", error);

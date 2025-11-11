@@ -114,6 +114,7 @@ import { createMandelbulbHudSection } from './hudMandelbulb.js'; // Mandelbulb V
 import { createVCNHudSection } from './hudVCN.js'; // VCN Phase 1: Navigation HUD
 import { createDestinationHUD } from './hudDestinations.js'; // Skybox Destination Authoring
 import { createSignalHUD } from './hudSignals.js'; // Signal Multimodality
+import { createMaterialPhysicsHUD } from './hudMaterialPhysics.js'; // Material Physics Engine
 import { createMythHUD } from './hudMyth.js'; // Myth Layer Compiler
 import { createPedagogicalHUD } from './hudPedagogical.js'; // Pedagogical Mode
 import { createAIHUD } from './hudAI.js'; // AI Co-Agent Integration
@@ -1693,6 +1694,9 @@ async function createHUDPanel() {
 
   // Signal Multimodality: Signal sources HUD section
   createSignalHUD(tabContainers['Signals']);
+
+  // Material Physics Engine: ARPT scores and material states
+  createMaterialPhysicsHUD(tabContainers['Signals']);
 
   // Myth Layer Compiler: Myth HUD section
   createMythHUD(tabContainers['Myth']);

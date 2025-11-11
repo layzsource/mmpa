@@ -146,6 +146,38 @@ export class TimelinePlaybackPanel {
       }
     };
 
+    // Material Physics toggle button
+    const physicsButton = document.createElement('button');
+    physicsButton.textContent = '🔬 ARPT';
+    physicsButton.style.cssText = `
+      background: rgba(168, 85, 247, 0.2);
+      border: 1px solid #a855f7;
+      color: #a855f7;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      font-family: 'Courier New', monospace;
+      margin-left: 8px;
+    `;
+    physicsButton.onmouseover = () => {
+      physicsButton.style.background = 'rgba(168, 85, 247, 0.3)';
+      physicsButton.style.borderColor = '#a855f7';
+    };
+    physicsButton.onmouseout = () => {
+      physicsButton.style.background = 'rgba(168, 85, 247, 0.2)';
+      physicsButton.style.borderColor = '#a855f7';
+    };
+    physicsButton.onclick = () => {
+      if (window.materialPhysicsPanel) {
+        window.materialPhysicsPanel.toggle();
+      } else {
+        console.warn('Material physics panel not initialized');
+      }
+    };
+
     const closeButton = document.createElement('button');
     closeButton.textContent = '✕';
     closeButton.style.cssText = `
@@ -170,6 +202,7 @@ export class TimelinePlaybackPanel {
     closeButton.onclick = () => this.close();
 
     buttonContainer.appendChild(unwrapButton);
+    buttonContainer.appendChild(physicsButton);
     buttonContainer.appendChild(closeButton);
 
     titleBar.appendChild(title);

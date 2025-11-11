@@ -29,7 +29,9 @@ import { patternCodegen } from './chronelixPatternCodegen.js';
 import { waveformVisualizer } from './chronelixWaveformVisualizer.js';
 import { cylindricalSlicer } from './chronelixCylindricalSlicer.js';
 import { CylindricalUnwrapPanel } from './cylindricalUnwrapPanel.js';
+import { MaterialPhysicsPanel } from './materialPhysicsPanel.js';
 import { ChestahedronCore } from './chestahedronCore.js';
+import { MaterialPhysicsEngine } from './materialPhysics.js';
 
 console.log("🧬 chronelixMMPAIntegrator.js loaded");
 
@@ -42,6 +44,9 @@ export class ChronelixMMPAIntegrator {
     this.amChain = null;
     this.pmChain = null;
     this.chestahedron = null;
+
+    // Material Physics Engine - Real-world physics grounding
+    this.materialPhysicsEngine = new MaterialPhysicsEngine();
 
     // Expose phase space singleton for chart access
     this.phaseSpace = phaseSpace;
@@ -109,6 +114,10 @@ export class ChronelixMMPAIntegrator {
       window.cylindricalUnwrapPanel = new CylindricalUnwrapPanel(cylindricalSlicer);
       console.log("📊 Cylindrical unwrap panel initialized - press U to toggle");
 
+      // Initialize material physics panel
+      window.materialPhysicsPanel = new MaterialPhysicsPanel();
+      console.log("🔬 Material physics panel initialized - press M to toggle");
+
       // Initialize central chestahedron
       // Positioned at center with base at AM λ disc level, apex toward PM λ disc
       this.chestahedron = new ChestahedronCore(playbackPanel.scene, {
@@ -170,6 +179,36 @@ export class ChronelixMMPAIntegrator {
 
     // 2. Extract forces for bibibinary processing
     const bibibinary = this.processBibibinary(audioMMPA, opticalMMPA);
+
+    // 2.5. Calculate material physics ARPT scores
+    // Extract audio frequency bands for material physics
+    const audioFrame = {
+      bass: audioMMPA?.spectral?.bass || 0,
+      mid: audioMMPA?.spectral?.mid || 0,
+      treble: audioMMPA?.spectral?.treble || 0
+    };
+
+    // Create simplified chestahedron face representation
+    // (7 faces: 3 kites + 3 side triangles + 1 base)
+    const chestahedronFaces = [
+      { index: 0, type: 'kite' },
+      { index: 1, type: 'kite' },
+      { index: 2, type: 'kite' },
+      { index: 3, type: 'triangle' },
+      { index: 4, type: 'triangle' },
+      { index: 5, type: 'triangle' },
+      { index: 6, type: 'base' }
+    ];
+
+    // Calculate ARPT scores using material physics
+    const arptResults = this.materialPhysicsEngine.calculateARPT(
+      chestahedronFaces,
+      audioFrame,
+      deltaTime * 1000  // Convert to milliseconds
+    );
+
+    // Store in state for HUD display and visual feedback
+    state.materialPhysicsARPT = arptResults;
 
     // 3. Update phase space with 12D state vector
     phaseSpace.update(audioMMPA, opticalMMPA, deltaTime);
