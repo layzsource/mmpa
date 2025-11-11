@@ -173,6 +173,7 @@ if (!IS_PRIMARY && navigator.requestMIDIAccess) {
 import './midiRouter.js';
 import './hudRouter.js';
 import { initAudioRouter } from './audioRouter.js';
+import { initOpticalRouter } from './opticalRouter.js';
 import './presetRouter.js';
 
 // Phase 11.2.3: Initialize unified control binding system
@@ -221,6 +222,9 @@ initAudio();
 
 // Phase 13.4: Initialize audio router event relay
 initAudioRouter();
+
+// Initialize optical router (parallel to audio router)
+initOpticalRouter();
 
 // Initialize video recorder with canvas and audio context
 // Get renderer canvas (renderer is globally available from geometry.js)

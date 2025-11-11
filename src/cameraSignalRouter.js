@@ -216,7 +216,7 @@ export class CameraSignalRouter {
     });
 
     // Also send to main signal router
-    if (this.signalRouter) {
+    if (this.signalRouter && typeof this.signalRouter.addSignal === 'function') {
       Object.keys(signals).forEach(name => {
         this.signalRouter.addSignal('camera', name, signals[name]);
       });
@@ -379,7 +379,7 @@ export class CameraSignalRouter {
     }
 
     // Send to signal router
-    if (this.signalRouter) {
+    if (this.signalRouter && typeof this.signalRouter.addSignal === 'function') {
       this.signalRouter.addSignal('gesture', gesture, confidence);
     }
   }

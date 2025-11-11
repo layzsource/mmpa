@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { getTimeline } from './timelineIntegration.js';
 import { createChestahedron, AXIS_OF_BEING } from './chestahedron.js';
+import { chronelixIntegrator } from './chronelixMMPAIntegrator.js';
 
 /**
  * TimelinePlaybackPanel - Dedicated viewer for timeline playback
@@ -45,6 +46,11 @@ export class TimelinePlaybackPanel {
     this.frameDisplay = null;
     this.audioDisplay = null;
     this.mmpaDisplay = null;
+    this.yantraDisplay = null;
+
+    // Bibibinary integrator
+    this.integrator = chronelixIntegrator;
+    this.lastUpdateTime = performance.now();
 
     console.log("⏱️ TimelinePlaybackPanel initialized");
   }
@@ -54,8 +60,7 @@ export class TimelinePlaybackPanel {
 
     this.timeline = getTimeline();
     if (!this.timeline) {
-      console.warn('⏱️ No timeline available');
-      return;
+      console.log('🧬 Opening chronelix viewer without timeline data (live mode)');
     }
 
     // Create panel container
@@ -65,8 +70,9 @@ export class TimelinePlaybackPanel {
       position: fixed;
       top: 60px;
       right: 20px;
-      width: 600px;
-      height: 700px;
+      width: 650px;
+      height: 90vh;
+      max-height: 1100px;
       background: rgba(0, 0, 0, 0.95);
       border: 2px solid #4CAF50;
       border-radius: 8px;
@@ -77,6 +83,7 @@ export class TimelinePlaybackPanel {
       box-shadow: 0 0 30px rgba(76, 175, 80, 0.7);
       display: flex;
       flex-direction: column;
+      overflow-y: auto;
     `;
 
     // Title bar with close button
@@ -127,7 +134,63 @@ export class TimelinePlaybackPanel {
     titleBar.appendChild(closeButton);
     this.panel.appendChild(titleBar);
 
-    // Canvas container for Three.js renderer
+    // 2D Circular Chart Section (Earthly Branches / Sexagenary Cycle) - AT THE TOP
+    const chartSection = document.createElement('div');
+    chartSection.style.cssText = `
+      margin-bottom: 10px;
+    `;
+
+    // Chart title
+    const chartTitle = document.createElement('div');
+    chartTitle.textContent = '🌀 Earthly Branches - Sexagenary Cycle';
+    chartTitle.style.cssText = `
+      color: #FFD700;
+      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 8px;
+      text-align: center;
+      background: rgba(255, 215, 0, 0.1);
+      padding: 5px;
+      border-radius: 4px;
+    `;
+    chartSection.appendChild(chartTitle);
+
+    // Chart container
+    this.chartContainer = document.createElement('div');
+    this.chartContainer.style.cssText = `
+      width: 100%;
+      height: 320px;
+      background: #000;
+      border: 2px solid #FFD700;
+      border-radius: 4px;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 10px;
+    `;
+
+    // Create 2D canvas for circular chart
+    this.chartCanvas = document.createElement('canvas');
+    this.chartCanvas.width = 300;
+    this.chartCanvas.height = 300;
+    this.chartCanvas.style.cssText = `
+      image-rendering: crisp-edges;
+    `;
+    this.chartContainer.appendChild(this.chartCanvas);
+    this.chartCtx = this.chartCanvas.getContext('2d');
+
+    console.log('✅ Chart canvas created:', {
+      canvas: !!this.chartCanvas,
+      context: !!this.chartCtx,
+      width: this.chartCanvas.width,
+      height: this.chartCanvas.height
+    });
+
+    chartSection.appendChild(this.chartContainer);
+    this.panel.appendChild(chartSection);
+
+    // Canvas container for Three.js renderer (moved below chart)
     this.canvasContainer = document.createElement('div');
     this.canvasContainer.style.cssText = `
       width: 100%;
@@ -254,6 +317,26 @@ export class TimelinePlaybackPanel {
     this.mmpaDisplay.style.fontFamily = 'monospace';
     mmpaSection.appendChild(this.mmpaDisplay);
     this.infoPanel.appendChild(mmpaSection);
+
+    // Bibibinary Yantra (Live MMPA Integration)
+    const yantraSection = document.createElement('div');
+    yantraSection.style.cssText = `
+      margin-top: 15px;
+      padding: 10px;
+      background: linear-gradient(135deg, rgba(20, 184, 166, 0.1), rgba(124, 58, 237, 0.1));
+      border: 1px solid #FFD700;
+      border-radius: 4px;
+    `;
+    const yantraTitle = document.createElement('div');
+    yantraTitle.textContent = '🧬 Bibibinary Yantra (Audio × Optical)';
+    yantraTitle.style.cssText = 'color: #FFD700; font-weight: bold; margin-bottom: 8px;';
+    yantraSection.appendChild(yantraTitle);
+    this.yantraDisplay = document.createElement('div');
+    this.yantraDisplay.style.fontFamily = 'monospace';
+    this.yantraDisplay.style.fontSize = '10px';
+    this.yantraDisplay.style.lineHeight = '1.4';
+    yantraSection.appendChild(this.yantraDisplay);
+    this.infoPanel.appendChild(yantraSection);
   }
 
   /**
@@ -665,6 +748,181 @@ export class TimelinePlaybackPanel {
     }
   }
 
+  /**
+   * Draw 12-segment Earthly Branches Circular Chart
+   * Sexagenary Cycle: Chromatic scale mapped to MMPA forces
+   */
+  drawEarthlyBranchesChart(mmpaData) {
+    if (!this.chartCtx) {
+      console.warn('⚠️ Chart context not available');
+      return;
+    }
+
+    const ctx = this.chartCtx;
+    const centerX = this.chartCanvas.width / 2;
+    const centerY = this.chartCanvas.height / 2;
+    const radius = 100;
+    const innerRadius = 60;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, this.chartCanvas.width, this.chartCanvas.height);
+
+    // DEBUG: Always visible test circle
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius + 10, 0, Math.PI * 2);
+    ctx.strokeStyle = '#FFD700';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // DEBUG: Log data values
+    if (!this._chartDebugLogged) {
+      console.log('🌀 Chart drawing! Data:', mmpaData);
+      if (mmpaData) {
+        console.log('  Audio:', mmpaData.audio);
+        console.log('  Optical:', mmpaData.optical);
+      }
+      this._chartDebugLogged = true;
+    }
+
+    // Chromatic scale (Earthly Branches)
+    const chromaticNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+    // MMPA force mapping (each pair of chromatic notes = one MMPA force)
+    const mmpaForceMap = {
+      'C': { force: 'Identity', color: '#00FFFF', value: 0 },      // Cyan
+      'C#': { force: 'Identity', color: '#FF00FF', value: 0 },    // Magenta
+      'D': { force: 'Relationship', color: '#00FF00', value: 0 }, // Green
+      'D#': { force: 'Relationship', color: '#00FF00', value: 0 },
+      'E': { force: 'Complexity', color: '#FF00FF', value: 0 },   // Magenta
+      'F': { force: 'Complexity', color: '#FF00FF', value: 0 },
+      'F#': { force: 'Transformation', color: '#FF4400', value: 0 }, // Orange-Red
+      'G': { force: 'Transformation', color: '#FF4400', value: 0 },
+      'G#': { force: 'Alignment', color: '#FFFF00', value: 0 },   // Yellow
+      'A': { force: 'Alignment', color: '#FFFF00', value: 0 },
+      'A#': { force: 'Potential', color: '#8800FF', value: 0 },   // Violet
+      'B': { force: 'Potential', color: '#8800FF', value: 0 }
+    };
+
+    // Extract MMPA values if available
+    // Bibibinary mapping: alternate audio/optical for each MMPA force
+    if (mmpaData) {
+      const scaleFactor = 127; // MIDI scale (0-1 → 0-127)
+
+      // Identity: C (audio) / C# (optical)
+      mmpaForceMap['C'].value = (mmpaData.audio?.identity || 0) * scaleFactor;
+      mmpaForceMap['C#'].value = (mmpaData.optical?.identity || 0) * scaleFactor;
+
+      // Relationship: D (audio) / D# (optical)
+      mmpaForceMap['D'].value = (mmpaData.audio?.relationship || 0) * scaleFactor;
+      mmpaForceMap['D#'].value = (mmpaData.optical?.relationship || 0) * scaleFactor;
+
+      // Complexity: E (audio) / F (optical)
+      mmpaForceMap['E'].value = (mmpaData.audio?.complexity || 0) * scaleFactor;
+      mmpaForceMap['F'].value = (mmpaData.optical?.complexity || 0) * scaleFactor;
+
+      // Transformation: F# (audio) / G (optical)
+      mmpaForceMap['F#'].value = (mmpaData.audio?.transformation || 0) * scaleFactor;
+      mmpaForceMap['G'].value = (mmpaData.optical?.transformation || 0) * scaleFactor;
+
+      // Alignment: G# (audio) / A (optical)
+      mmpaForceMap['G#'].value = (mmpaData.audio?.alignment || 0) * scaleFactor;
+      mmpaForceMap['A'].value = (mmpaData.optical?.alignment || 0) * scaleFactor;
+
+      // Potential: A# (audio) / B (optical)
+      mmpaForceMap['A#'].value = (mmpaData.audio?.potential || 0) * scaleFactor;
+      mmpaForceMap['B'].value = (mmpaData.optical?.potential || 0) * scaleFactor;
+    }
+
+    // Draw 12 segments
+    for (let i = 0; i < 12; i++) {
+      const note = chromaticNotes[i];
+      const noteData = mmpaForceMap[note];
+
+      // Start at top (12 o'clock) and go clockwise
+      const startAngle = (i * Math.PI / 6) - (Math.PI / 2);
+      const endAngle = ((i + 1) * Math.PI / 6) - (Math.PI / 2);
+
+      // Draw segment arc
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+      ctx.arc(centerX, centerY, innerRadius, endAngle, startAngle, true);
+      ctx.closePath();
+
+      // Fill with MMPA force color (opacity based on value)
+      const opacity = 0.3 + (noteData.value / 127) * 0.7; // 30% to 100% opacity
+
+      // Convert hex color to rgba() format
+      const hex = noteData.color.replace('#', '');
+      const r = parseInt(hex.substr(0, 2), 16);
+      const g = parseInt(hex.substr(2, 2), 16);
+      const b = parseInt(hex.substr(4, 2), 16);
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+      ctx.fill();
+
+      // Stroke segment border
+      ctx.strokeStyle = noteData.color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Draw chromatic note label
+      const labelAngle = startAngle + (Math.PI / 12);
+      const labelRadius = (radius + innerRadius) / 2;
+      const labelX = centerX + Math.cos(labelAngle) * labelRadius;
+      const labelY = centerY + Math.sin(labelAngle) * labelRadius;
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(note, labelX, labelY);
+
+      // Draw value at outer edge
+      const valueRadius = radius + 15;
+      const valueX = centerX + Math.cos(labelAngle) * valueRadius;
+      const valueY = centerY + Math.sin(labelAngle) * valueRadius;
+
+      ctx.fillStyle = noteData.color;
+      ctx.font = '10px monospace';
+      ctx.fillText(Math.floor(noteData.value), valueX, valueY);
+    }
+
+    // Draw center circle with title
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fill();
+    ctx.strokeStyle = '#FFD700';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Center label
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Earthly', centerX, centerY - 10);
+    ctx.fillText('Branches', centerX, centerY + 10);
+
+    // Draw legend for MMPA forces
+    const legendY = this.chartCanvas.height - 10;
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'left';
+    const forces = [
+      { name: 'I', color: '#00FFFF' },
+      { name: 'R', color: '#00FF00' },
+      { name: 'C', color: '#FF00FF' },
+      { name: 'T', color: '#FF4400' },
+      { name: 'A', color: '#FFFF00' },
+      { name: 'P', color: '#8800FF' }
+    ];
+
+    forces.forEach((f, idx) => {
+      const x = 10 + (idx * 45);
+      ctx.fillStyle = f.color;
+      ctx.fillText(f.name, x, legendY);
+    });
+  }
+
   initThreeJS() {
     // Create Three.js scene
     this.scene = new THREE.Scene();
@@ -766,6 +1024,12 @@ export class TimelinePlaybackPanel {
     directionalLight2.position.set(-5, -3, -5);
     this.scene.add(directionalLight2);
 
+    // Connect bibibinary integrator for live MMPA→Chronelix modulation
+    const connected = this.integrator.connect(this);
+    if (connected) {
+      console.log('🧬 Bibibinary integrator connected - Audio×Optical→Chronelix modulation active');
+    }
+
     console.log('⏱️ Three.js scene initialized with MMPA Chestahedron', { width, height });
   }
 
@@ -788,8 +1052,24 @@ export class TimelinePlaybackPanel {
         this.mesh.rotation.y += 0.01; // Vertical spin (authentic rotation)
       }
 
+      // Update bibibinary integrator (live MMPA modulation)
+      const currentTime = performance.now();
+      const deltaTime = (currentTime - this.lastUpdateTime) / 1000; // Convert to seconds
+      this.lastUpdateTime = currentTime;
+      this.integrator.update(deltaTime);
+
       // Update lambda needle rotation
       this.updateLambdaRotation();
+
+      // Update yantra display
+      this.updateYantraDisplay();
+
+      // Update Earthly Branches circular chart with live MMPA data
+      if (this.chartCtx) {
+        // Always draw the chart - use live data if available, otherwise show empty state
+        const phaseSpaceState = this.integrator?.phaseSpace?.state || null;
+        this.drawEarthlyBranchesChart(phaseSpaceState);
+      }
 
       // Update OrbitControls (required for damping)
       if (this.controls) {
@@ -900,6 +1180,26 @@ export class TimelinePlaybackPanel {
         }
       }
     }
+  }
+
+  /**
+   * Update yantra display with live bibibinary data
+   */
+  updateYantraDisplay() {
+    if (!this.yantraDisplay) return;
+
+    const yantra = this.integrator.getYantra();
+    const debug = this.integrator.getDebugInfo();
+
+    this.yantraDisplay.innerHTML = `
+<span style="color: #14b8a6">Audio:</span> ${yantra.audioPattern || 'N/A'}
+<span style="color: #7c3aed">Optical:</span> ${yantra.opticalPattern || 'N/A'}
+<span style="color: #FFD700">Sync:</span> ${yantra.synchronicityPattern || 'N/A'} (${debug.synchronicity})
+<span style="color: #FFD700">λ:</span> ${debug.lambdaRotation} @ ${debug.lambdaVelocity}
+<span style="color: #888">Chirality:</span> ${debug.chirality}
+
+<span style="color: #FFD700; font-weight: bold;">📜 ${yantra.incantation || 'Awaiting signal...'}</span>
+    `.trim();
   }
 
   formatTime(seconds) {

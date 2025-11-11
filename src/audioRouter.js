@@ -7,6 +7,8 @@ import { notifyHUDUpdate } from "./hud.js";
 import { applyAudioBandsToSprites } from "./sprites.js";
 import { state } from "./state.js";
 import { extractAudioMMPAFeatures } from "./audioFeatureExtractor.js";
+import { recipeRegistry } from "./recipeEngine.js";
+import { audioRecipe } from "./recipes/audioRecipe.js";
 
 console.log("🎶 audioRouter.js loaded (Phase 13.31)");
 
@@ -94,6 +96,10 @@ function checkAutoTone(rms) {
 export function initAudioRouter() {
   console.log("🎧 Initializing audio router event relay...");
 
+  // Register audio recipe with the global registry
+  recipeRegistry.register(audioRecipe);
+  console.log("📋 Audio recipe registered with recipe engine");
+
   let frameCount = 0;
   let audioFeatureExtractionStarted = false;  // Track if audio MMPA feature extraction has started
 
@@ -139,7 +145,23 @@ export function initAudioRouter() {
         state.mmpaFeatures = extractAudioMMPAFeatures(audioData);
         state.mmpaFeatures.enabled = true;
 
-        // Log every 180 frames (~3 seconds at 60fps)
+        // Process MMPA features through active recipe for interpretation
+        const recipeResult = recipeRegistry.process(null, state.mmpaFeatures);
+        if (recipeResult) {
+          state.recipeInterpretation = recipeResult;
+
+          // Log recipe interpretation every 180 frames (~3 seconds at 60fps)
+          if (frameCount % 180 === 0) {
+            console.log("🎵 Audio pattern recognized:", {
+              pattern: recipeResult.interpretation.pattern.type,
+              confidence: (recipeResult.interpretation.pattern.confidence * 100).toFixed(0) + '%',
+              qualities: recipeResult.interpretation.qualities.join(', '),
+              alerts: recipeResult.interpretation.alerts.length
+            });
+          }
+        }
+
+        // Log MMPA features every 180 frames (~3 seconds at 60fps)
         if (frameCount % 180 === 0) {
           console.log("🎵 Audio MMPA features extracted:", {
             level: processed.level.toFixed(3),
