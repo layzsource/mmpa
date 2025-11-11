@@ -27,6 +27,7 @@ import { waveletDecomposition } from './chronelixWaveletDecomposition.js';
 import { patternCodegen } from './chronelixPatternCodegen.js';
 import { waveformVisualizer } from './chronelixWaveformVisualizer.js';
 import { cylindricalSlicer } from './chronelixCylindricalSlicer.js';
+import { CylindricalUnwrapPanel } from './cylindricalUnwrapPanel.js';
 
 console.log("🧬 chronelixMMPAIntegrator.js loaded");
 
@@ -96,6 +97,15 @@ export class ChronelixMMPAIntegrator {
       trajectoryPlotter.init(playbackPanel.scene);
       waveformVisualizer.init(playbackPanel.scene);
       cylindricalSlicer.init(playbackPanel.CHRONELIX_CONSTANTS, playbackPanel.scene);
+
+      // Hide 3D canvas visualization by default (it's now in dedicated panel)
+      cylindricalSlicer.showUnwrappedPlot = false;
+      cylindricalSlicer.unwrapCanvasGroup.visible = false;
+
+      // Initialize cylindrical unwrap panel
+      window.cylindricalUnwrapPanel = new CylindricalUnwrapPanel(cylindricalSlicer);
+      console.log("📊 Cylindrical unwrap panel initialized - press U to toggle");
+
       console.log("⚛️ Particle stream, gates, trajectory plotter, waveform visualizer, and cylindrical slicer initialized");
     } else {
       console.warn("⚠️ Missing chronelix constants or scene for particle stream initialization");

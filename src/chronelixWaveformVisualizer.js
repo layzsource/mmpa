@@ -53,10 +53,11 @@ export class ChronelixWaveformVisualizer {
     this.audioRadiusLine = null;
     this.opticalRadiusLine = null;
 
-    // Position offset for waveforms
+    // Position offset for waveforms (AT cylinder top λ AM symbol, flowing downward)
+    // Lambda AM (teal) symbol at y ≈ +12.22, start waveforms touching it
     this.waveformOffset = {
-      x: 15,
-      y: 0,
+      x: 0,      // Centered on axis
+      y: 12.5,   // Right at λ AM symbol, entering pipeline
       z: 0
     };
 
@@ -311,17 +312,18 @@ export class ChronelixWaveformVisualizer {
 
   /**
    * Update waveform line geometries
+   * Waveforms flow INTO top of pipeline (Y-axis)
+   * Oscillate in X and Z (perpendicular to flow axis)
    */
   updateWaveformLines() {
-    const xSpacing = 0.1; // Horizontal spacing between samples
-    const yOffset = 0;    // Vertical center
+    const ySpacing = 0.1; // Vertical spacing (positive = toward pipeline)
 
-    // Audio sine waveform
+    // Audio sine waveform (oscillates in X)
     const audioSinePositions = [];
     for (let i = 0; i < this.audioWaveform.sine.length; i++) {
-      const x = this.waveformOffset.x + (i * xSpacing);
-      const y = this.waveformOffset.y + yOffset + 5; // Offset upward
-      const z = this.waveformOffset.z + this.audioWaveform.sine[i] * this.amplitudeScale;
+      const x = this.waveformOffset.x + this.audioWaveform.sine[i] * this.amplitudeScale; // Wave in X
+      const y = this.waveformOffset.y + (i * ySpacing); // Flow downward in Y
+      const z = this.waveformOffset.z + 2; // Offset forward for visibility
       audioSinePositions.push(x, y, z);
     }
     this.audioSineLine.geometry.setAttribute(
@@ -329,12 +331,12 @@ export class ChronelixWaveformVisualizer {
       new THREE.Float32BufferAttribute(audioSinePositions, 3)
     );
 
-    // Audio cosine waveform
+    // Audio cosine waveform (oscillates in Z)
     const audioCosinePositions = [];
     for (let i = 0; i < this.audioWaveform.cosine.length; i++) {
-      const x = this.waveformOffset.x + (i * xSpacing);
-      const y = this.waveformOffset.y + yOffset; // Center
-      const z = this.waveformOffset.z + this.audioWaveform.cosine[i] * this.amplitudeScale;
+      const x = this.waveformOffset.x + 2; // Offset right for visibility
+      const y = this.waveformOffset.y + (i * ySpacing); // Flow downward in Y
+      const z = this.waveformOffset.z + this.audioWaveform.cosine[i] * this.amplitudeScale; // Wave in Z
       audioCosinePositions.push(x, y, z);
     }
     this.audioCosineLine.geometry.setAttribute(
@@ -342,12 +344,12 @@ export class ChronelixWaveformVisualizer {
       new THREE.Float32BufferAttribute(audioCosinePositions, 3)
     );
 
-    // Optical sine waveform
+    // Optical sine waveform (oscillates in X, offset)
     const opticalSinePositions = [];
     for (let i = 0; i < this.opticalWaveform.sine.length; i++) {
-      const x = this.waveformOffset.x + (i * xSpacing);
-      const y = this.waveformOffset.y + yOffset - 5; // Offset downward
-      const z = this.waveformOffset.z + this.opticalWaveform.sine[i] * this.amplitudeScale;
+      const x = this.waveformOffset.x + this.opticalWaveform.sine[i] * this.amplitudeScale; // Wave in X
+      const y = this.waveformOffset.y + (i * ySpacing); // Flow downward in Y
+      const z = this.waveformOffset.z - 2; // Offset backward for visibility
       opticalSinePositions.push(x, y, z);
     }
     this.opticalSineLine.geometry.setAttribute(
@@ -355,12 +357,12 @@ export class ChronelixWaveformVisualizer {
       new THREE.Float32BufferAttribute(opticalSinePositions, 3)
     );
 
-    // Optical cosine waveform
+    // Optical cosine waveform (oscillates in Z, offset)
     const opticalCosinePositions = [];
     for (let i = 0; i < this.opticalWaveform.cosine.length; i++) {
-      const x = this.waveformOffset.x + (i * xSpacing);
-      const y = this.waveformOffset.y + yOffset - 10; // Offset further down
-      const z = this.waveformOffset.z + this.opticalWaveform.cosine[i] * this.amplitudeScale;
+      const x = this.waveformOffset.x - 2; // Offset left for visibility
+      const y = this.waveformOffset.y + (i * ySpacing); // Flow downward in Y
+      const z = this.waveformOffset.z + this.opticalWaveform.cosine[i] * this.amplitudeScale; // Wave in Z
       opticalCosinePositions.push(x, y, z);
     }
     this.opticalCosineLine.geometry.setAttribute(

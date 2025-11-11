@@ -26,6 +26,10 @@ function handler(e) {
     // S → screenshot PNG
     window.Capture?.png();
   }
+  if (e.key === "u" || e.key === "U") {
+    // U → toggle Cylindrical Unwrap panel
+    window.cylindricalUnwrapPanel?.toggle();
+  }
 }
 
 /**
@@ -34,7 +38,7 @@ function handler(e) {
 function install() {
   window.removeEventListener("keydown", handler, true);
   window.addEventListener("keydown", handler, true);
-  console.log("⌨️ Hotkeys installed (P=presentation HUD, F=fullscreen toggle, S=screenshot)");
+  console.log("⌨️ Hotkeys installed (P=presentation HUD, F=fullscreen toggle, S=screenshot, U=unwrap panel)");
 }
 
 /**

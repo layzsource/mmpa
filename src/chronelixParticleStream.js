@@ -150,8 +150,10 @@ class DataParticle {
     const angle = this.progress * C.GLOBAL_ROTATION_INCREMENT * C.UNITS_PER_CHAIN +
                   this.polarization.phase;
 
-    // Radius varies with ellipticity
-    const radius = C.HELIX_RADIUS * (1 + this.polarization.ellipticity * 0.5);
+    // Radius grows from 0 at top to full over first 20% of descent
+    // Particles enter at center axis and spiral outward
+    const radiusGrowth = Math.min(this.progress * 5, 1.0); // progress=0.2 → 1.0
+    const radius = C.HELIX_RADIUS * radiusGrowth * (1 + this.polarization.ellipticity * 0.5);
 
     const x = radius * Math.cos(angle);
     const z = radius * Math.sin(angle);
