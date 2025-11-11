@@ -25,6 +25,8 @@ import { phaseTransitionDetector } from './chronelixPhaseTransition.js';
 import { trajectoryPlotter } from './chronelixTrajectoryPlotter.js';
 import { waveletDecomposition } from './chronelixWaveletDecomposition.js';
 import { patternCodegen } from './chronelixPatternCodegen.js';
+import { waveformVisualizer } from './chronelixWaveformVisualizer.js';
+import { cylindricalSlicer } from './chronelixCylindricalSlicer.js';
 
 console.log("🧬 chronelixMMPAIntegrator.js loaded");
 
@@ -92,7 +94,9 @@ export class ChronelixMMPAIntegrator {
       particleStream.init(playbackPanel.CHRONELIX_CONSTANTS, playbackPanel.scene);
       gateAnalysis.init(playbackPanel.CHRONELIX_CONSTANTS, playbackPanel.scene);
       trajectoryPlotter.init(playbackPanel.scene);
-      console.log("⚛️ Particle stream, gates, and trajectory plotter initialized");
+      waveformVisualizer.init(playbackPanel.scene);
+      cylindricalSlicer.init(playbackPanel.CHRONELIX_CONSTANTS, playbackPanel.scene);
+      console.log("⚛️ Particle stream, gates, trajectory plotter, waveform visualizer, and cylindrical slicer initialized");
     } else {
       console.warn("⚠️ Missing chronelix constants or scene for particle stream initialization");
     }
@@ -151,19 +155,25 @@ export class ChronelixMMPAIntegrator {
     // 4. Update wavelet decomposition (multi-scale temporal analysis)
     waveletDecomposition.update(audioMMPA, opticalMMPA);
 
-    // 5. Update particle stream (emit, update positions, update visuals)
+    // 5. Update waveform visualizer (sine/cosine from unit circle)
+    waveformVisualizer.update(deltaTime, phaseSpace.state);
+
+    // 6. Update particle stream (emit, update positions, update visuals)
     particleStream.update(deltaTime, phaseSpace.state);
 
-    // 6. Analyze particles through 12 gates
+    // 6.5. Update cylindrical slicer (lambda-driven slice angle, intersection detection)
+    cylindricalSlicer.update(this.lambdaRotation, particleStream.particles);
+
+    // 7. Analyze particles through 12 gates
     const gateStats = gateAnalysis.analyzeStream(particleStream.particles);
 
-    // 7. Detect phase transitions
+    // 8. Detect phase transitions
     phaseTransitionDetector.update(phaseSpace, deltaTime);
 
-    // 8. Plot 3D trajectory
+    // 9. Plot 3D trajectory
     trajectoryPlotter.update(particleStream.particles, phaseSpace, deltaTime);
 
-    // 9. Generate patterns from analysis
+    // 10. Generate patterns from analysis
     const transitions = phaseTransitionDetector.getRecentTransitions(1);
     if (transitions.length > 0) {
       patternCodegen.analyzePhaseTransition(transitions[0], phaseSpace);
@@ -179,22 +189,22 @@ export class ChronelixMMPAIntegrator {
       patternCodegen.analyzeAttractor(phaseSpace);
     }
 
-    // 10. Calculate complex rotations using Euler's formula
+    // 11. Calculate complex rotations using Euler's formula
     const complexRotation = this.calculateComplexRotation(bibibinary);
 
-    // 11. Calculate chiral synchronicity (AM vs PM spiral relationship)
+    // 12. Calculate chiral synchronicity (AM vs PM spiral relationship)
     const chirality = this.calculateChirality(bibibinary);
 
-    // 12. Update lambda modulation
+    // 13. Update lambda modulation
     this.updateLambdaModulation(bibibinary, deltaTime);
 
-    // 13. Modulate AM chain (audio/input/teal)
+    // 14. Modulate AM chain (audio/input/teal)
     this.modulateAMChain(bibibinary.audio);
 
-    // 14. Modulate PM chain (optical/output/violet)
+    // 15. Modulate PM chain (optical/output/violet)
     this.modulatePMChain(bibibinary.optical);
 
-    // 15. Update yantra (visual pattern recognition)
+    // 16. Update yantra (visual pattern recognition)
     this.updateYantra(bibibinary, complexRotation, chirality);
   }
 
@@ -543,7 +553,8 @@ export class ChronelixMMPAIntegrator {
       transitions: phaseTransitionDetector.getDebugInfo(),
       trajectory: trajectoryPlotter.getDebugInfo(),
       wavelet: waveletDecomposition.getDebugInfo(),
-      patterns: patternCodegen.getDebugInfo()
+      patterns: patternCodegen.getDebugInfo(),
+      waveforms: waveformVisualizer.getDebugInfo()
     };
   }
 
@@ -558,7 +569,8 @@ export class ChronelixMMPAIntegrator {
       phaseTransitionDetector,
       trajectoryPlotter,
       waveletDecomposition,
-      patternCodegen
+      patternCodegen,
+      waveformVisualizer
     };
   }
 
@@ -583,6 +595,7 @@ if (typeof window !== 'undefined') {
   window.chronelixTrajectoryPlotter = trajectoryPlotter;
   window.chronelixWaveletDecomposition = waveletDecomposition;
   window.chronelixPatternCodegen = patternCodegen;
+  window.chronelixWaveformVisualizer = waveformVisualizer;
 }
 
 console.log("🧬 Chronelix-MMPA Integrator ready");
