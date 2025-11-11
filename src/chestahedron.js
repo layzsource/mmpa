@@ -170,10 +170,11 @@ export function createChestahedron(scale = 1.0, materialOptions = {}) {
 
   const mesh = new THREE.Mesh(geometry, materials);
 
-  // Apply the 36° tilt on the X-axis (The Axis of Being)
-  mesh.rotation[AXIS_OF_BEING.TILT_AXIS] = AXIS_OF_BEING.TILT_ANGLE;
+  // Rotate 90° around X-axis so base (gold triangle) points up (+Y) toward AM λ
+  // and apex points down (-Y) toward PM λ
+  mesh.rotation.x = Math.PI / 2;
 
-  console.log("💎 Chestahedron created with gold material and 36° tilt");
+  console.log("💎 Chestahedron created - base pointing up toward AM λ");
   return mesh;
 }
 

@@ -107,6 +107,45 @@ export class TimelinePlaybackPanel {
     `;
     title.textContent = '⏯️ Timeline Playback Viewer';
 
+    // Button container
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = `
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    `;
+
+    // Cylindrical Unwrap toggle button
+    const unwrapButton = document.createElement('button');
+    unwrapButton.textContent = '🔪 Unwrap';
+    unwrapButton.style.cssText = `
+      background: rgba(20, 184, 166, 0.2);
+      border: 1px solid #14b8a6;
+      color: #14b8a6;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      font-family: 'Courier New', monospace;
+    `;
+    unwrapButton.onmouseover = () => {
+      unwrapButton.style.background = 'rgba(20, 184, 166, 0.3)';
+      unwrapButton.style.borderColor = '#14b8a6';
+    };
+    unwrapButton.onmouseout = () => {
+      unwrapButton.style.background = 'rgba(20, 184, 166, 0.2)';
+      unwrapButton.style.borderColor = '#14b8a6';
+    };
+    unwrapButton.onclick = () => {
+      if (window.cylindricalUnwrapPanel) {
+        window.cylindricalUnwrapPanel.toggle();
+      } else {
+        console.warn('Cylindrical unwrap panel not initialized');
+      }
+    };
+
     const closeButton = document.createElement('button');
     closeButton.textContent = '✕';
     closeButton.style.cssText = `
@@ -130,8 +169,11 @@ export class TimelinePlaybackPanel {
     };
     closeButton.onclick = () => this.close();
 
+    buttonContainer.appendChild(unwrapButton);
+    buttonContainer.appendChild(closeButton);
+
     titleBar.appendChild(title);
-    titleBar.appendChild(closeButton);
+    titleBar.appendChild(buttonContainer);
     this.panel.appendChild(titleBar);
 
     // 2D Circular Chart Section (Earthly Branches / Sexagenary Cycle) - AT THE TOP
@@ -1046,10 +1088,10 @@ export class TimelinePlaybackPanel {
 
       this.animationFrame = requestAnimationFrame(animate);
 
-      // Rotate around Y-axis only (respecting AXIS_OF_BEING)
+      // Rotation disabled - base stays facing AM λ (top), apex stays facing PM λ (bottom)
       // The 36-degree X-axis tilt is already applied during mesh creation
       if (this.mesh) {
-        this.mesh.rotation.y += 0.01; // Vertical spin (authentic rotation)
+        // this.mesh.rotation.y += 0.01; // ROTATION DISABLED
       }
 
       // Update bibibinary integrator (live MMPA modulation)
@@ -1117,10 +1159,9 @@ export class TimelinePlaybackPanel {
 
       // Update Chestahedron based on audio
       if (this.mesh) {
-        // Audio-reactive rotation speed (Y-axis only, respecting AXIS_OF_BEING)
-        // Base rotation is handled in animate(), audio modulates the speed
+        // No rotation - base stays facing AM λ (top), apex stays facing PM λ (bottom)
         const audioEnergy = (bass + mid + treble) / 3;
-        this.mesh.rotation.y += audioEnergy * 0.02; // Faster spin with more audio energy
+        // this.mesh.rotation.z += audioEnergy * 0.02; // ROTATION DISABLED
 
         // Audio-reactive scale (pulse with audio level)
         const scale = 1.0 + frame.audio.level * 0.3;

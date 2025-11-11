@@ -17,6 +17,7 @@
  *   state.opticalMMPAFeatures      ──┘
  */
 
+import * as THREE from 'three';
 import { state } from './state.js';
 import { phaseSpace } from './chronelixPhaseSpace.js';
 import { particleStream } from './chronelixParticleStream.js';
@@ -28,6 +29,7 @@ import { patternCodegen } from './chronelixPatternCodegen.js';
 import { waveformVisualizer } from './chronelixWaveformVisualizer.js';
 import { cylindricalSlicer } from './chronelixCylindricalSlicer.js';
 import { CylindricalUnwrapPanel } from './cylindricalUnwrapPanel.js';
+import { ChestahedronCore } from './chestahedronCore.js';
 
 console.log("🧬 chronelixMMPAIntegrator.js loaded");
 
@@ -39,6 +41,7 @@ export class ChronelixMMPAIntegrator {
     this.lambdaMeshBottom = null;
     this.amChain = null;
     this.pmChain = null;
+    this.chestahedron = null;
 
     // Expose phase space singleton for chart access
     this.phaseSpace = phaseSpace;
@@ -106,7 +109,16 @@ export class ChronelixMMPAIntegrator {
       window.cylindricalUnwrapPanel = new CylindricalUnwrapPanel(cylindricalSlicer);
       console.log("📊 Cylindrical unwrap panel initialized - press U to toggle");
 
-      console.log("⚛️ Particle stream, gates, trajectory plotter, waveform visualizer, and cylindrical slicer initialized");
+      // Initialize central chestahedron
+      // Positioned at center with base at AM λ disc level, apex toward PM λ disc
+      this.chestahedron = new ChestahedronCore(playbackPanel.scene, {
+        baseRadius: 8.0,
+        height: 12.0,
+        position: new THREE.Vector3(0, 0, 0)
+      });
+      console.log("💎 Chestahedron core initialized at center");
+
+      console.log("⚛️ Particle stream, gates, trajectory plotter, waveform visualizer, cylindrical slicer, and chestahedron initialized");
     } else {
       console.warn("⚠️ Missing chronelix constants or scene for particle stream initialization");
     }
@@ -173,6 +185,11 @@ export class ChronelixMMPAIntegrator {
 
     // 6.5. Update cylindrical slicer (lambda-driven slice angle, intersection detection)
     cylindricalSlicer.update(this.lambdaRotation, particleStream.particles);
+
+    // 6.6. Update chestahedron (central 5-fold generator)
+    if (this.chestahedron) {
+      this.chestahedron.update(performance.now() / 1000);
+    }
 
     // 7. Analyze particles through 12 gates
     const gateStats = gateAnalysis.analyzeStream(particleStream.particles);
