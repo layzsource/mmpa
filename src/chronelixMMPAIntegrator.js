@@ -60,6 +60,7 @@ export class ChronelixMMPAIntegrator {
     // Lambda modulation (automatic, driven by MMPA forces)
     this.lambdaRotation = 0;  // Current λ rotation (0 to 2π)
     this.lambdaVelocity = 0;  // Rate of λ rotation (rad/s)
+    this.slicerXAxisTilt = 0; // X-axis tilt for cylindrical slicer (0-11 chromatic positions)
 
     // Yantra state (visual pattern library)
     this.currentYantra = {
@@ -222,8 +223,8 @@ export class ChronelixMMPAIntegrator {
     // 6. Update particle stream (emit, update positions, update visuals)
     particleStream.update(deltaTime, phaseSpace.state);
 
-    // 6.5. Update cylindrical slicer (lambda-driven slice angle, intersection detection)
-    cylindricalSlicer.update(this.lambdaRotation, particleStream.particles);
+    // 6.5. Update cylindrical slicer (lambda-driven slice angle + X-axis tilt, intersection detection)
+    cylindricalSlicer.update(this.lambdaRotation, particleStream.particles, this.slicerXAxisTilt);
 
     // 6.6. Update chestahedron (central 5-fold generator)
     if (this.chestahedron) {
@@ -389,10 +390,21 @@ export class ChronelixMMPAIntegrator {
   }
 
   /**
+   * Set X-axis tilt for cylindrical slicer (0-11 chromatic positions)
+   * @param {number} position - Chromatic position (0-11)
+   */
+  setSlicerXAxisTilt(position) {
+    this.slicerXAxisTilt = Math.max(0, Math.min(11, Math.floor(position)));
+    const tiltAngle = ((this.slicerXAxisTilt / 11) * 120 - 60).toFixed(1); // -60° to +60°
+    console.log(`📐 Slicer X-axis tilt: ${this.slicerXAxisTilt}/11 (${tiltAngle}° tilt)`);
+  }
+
+  /**
    * Update lambda (λ) modulation based on MMPA forces
    * Lambda represents the tuning/chromatic position, now driven by data
    */
   updateLambdaModulation(bibibinary, deltaTime) {
+
     const { audio, optical, synchronicity } = bibibinary;
 
     // Lambda velocity driven by transformation forces (change rate)

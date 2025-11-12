@@ -102,7 +102,7 @@ let loggerState = {
 // ============================================================================
 
 /**
- * Add a sample to the log
+ * Add a sample to the log (legacy φ-coherence method)
  * @param {number} stabilityMetric - φ-coherence measure
  * @param {number} fluxMetric - System activity measure
  * @param {string} archetype - Detected archetype (PERFECT_FIFTH, WOLF_FIFTH, NEUTRAL_STATE)
@@ -116,6 +116,59 @@ export function logSample(stabilityMetric, fluxMetric, archetype) {
     flux: fluxMetric,
     archetype: archetype,
     sampleIndex: loggerState.sampleCount++
+  };
+
+  loggerState.buffer.push(sample);
+}
+
+/**
+ * Add comprehensive MMPA/ARPT sample to the log
+ * @param {Object} data - Full system state including ARPT, audio, materials, PEMF
+ */
+export function logComprehensiveSample(data) {
+  if (!loggerState.isLogging) return;
+
+  const sample = {
+    timestamp: performance.now(),
+    sampleIndex: loggerState.sampleCount++,
+
+    // ARPT Scores (0-255)
+    arpt: {
+      A: data.arpt?.A || 0,
+      R: data.arpt?.R || 0,
+      P: data.arpt?.P || 0,
+      T: data.arpt?.T || 0
+    },
+
+    // Audio Bands (0-1)
+    audio: {
+      bass: data.audio?.bass || 0,
+      mid: data.audio?.mid || 0,
+      treble: data.audio?.treble || 0,
+      level: data.audio?.level || 0
+    },
+
+    // Material Physics States
+    materials: {
+      piezo_voltage: data.materials?.piezo_voltage || 0,
+      calcite_orthogonality: data.materials?.calcite_orthogonality || 0,
+      silica_charge: data.materials?.silica_charge || 0,
+      polymer_viscosity: data.materials?.polymer_viscosity || 0
+    },
+
+    // PEMF State
+    pemf: {
+      frequency: data.pemf?.frequency || 0,
+      amplitude: data.pemf?.amplitude || 0,
+      force: data.pemf?.force || 0
+    },
+
+    // Pattern Recognition
+    pattern: {
+      type: data.pattern?.type || 'unknown',
+      confidence: data.pattern?.confidence || 0,
+      qualities: data.pattern?.qualities || []
+    }
   };
 
   loggerState.buffer.push(sample);

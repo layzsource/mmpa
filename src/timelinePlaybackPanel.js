@@ -324,12 +324,13 @@ export class TimelinePlaybackPanel {
     const sliderContainer = document.createElement('div');
     sliderContainer.style.cssText = 'display: flex; align-items: center; gap: 10px;';
 
-    // Modwheel slider
+    // Discrete position slider (0-11 for 12 chromatic positions)
     const slider = document.createElement('input');
     slider.type = 'range';
     slider.min = '0';
-    slider.max = '127';
+    slider.max = '11';
     slider.value = '0';
+    slider.step = '1';  // Discrete stepping
     slider.style.cssText = `
       flex: 1;
       height: 6px;
@@ -344,11 +345,10 @@ export class TimelinePlaybackPanel {
     valueDisplay.style.cssText = 'color: #FFD700; font-family: monospace; min-width: 80px;';
     valueDisplay.textContent = 'Pos 0 (0°)';
 
-    // Slider input handler
+    // Slider input handler - discrete chromatic positions
     slider.oninput = (e) => {
-      const midiValue = parseInt(e.target.value);
-      this.setModwheelPosition(midiValue);
-      const position = this.selectedPosition;
+      const position = parseInt(e.target.value);  // Direct 0-11 position
+      this.setLambdaPosition(position);
       const degrees = Math.round(this.lambdaRotation * 180 / Math.PI);
       valueDisplay.textContent = `Pos ${position} (${degrees}°)`;
     };
@@ -793,21 +793,37 @@ export class TimelinePlaybackPanel {
   }
 
   /**
-   * Set lambda position from modwheel input (MIDI 0-127)
-   * @param {number} midiValue - MIDI modwheel value (0-127)
+   * Set lambda position from discrete chromatic position (0-11)
+   * @param {number} position - Discrete chromatic position (0-11)
    */
-  setModwheelPosition(midiValue) {
+  setLambdaPosition(position) {
     // Clamp to valid range
-    this.modwheelValue = Math.max(0, Math.min(127, midiValue));
+    this.selectedPosition = Math.max(0, Math.min(11, Math.floor(position)));
 
-    // Convert MIDI 0-127 to chromatic position 0-11
-    this.selectedPosition = Math.floor((this.modwheelValue / 127) * 12);
-    if (this.selectedPosition >= 12) this.selectedPosition = 11; // Safety clamp
-
-    // Convert to rotation angle (0 to 2π)
+    // Convert discrete position to rotation angle (30° increments) - for display only
+    // Position 0 = 0°, Position 1 = 30°, Position 2 = 60°, ..., Position 11 = 330°
     this.lambdaRotation = (this.selectedPosition / 12) * Math.PI * 2;
 
-    console.log(`λ Modwheel: ${this.modwheelValue} → Position: ${this.selectedPosition} (${Math.round(this.lambdaRotation * 180 / Math.PI)}°)`);
+    // Keep modwheel value in sync for compatibility (map back to MIDI range)
+    this.modwheelValue = Math.round((this.selectedPosition / 11) * 127);
+
+    console.log(`λ Position: ${this.selectedPosition} → X-axis tilt chromatic step (automatic rotation continues)`);
+
+    // Send X-axis tilt to integrator (controls cylindrical slicer tilt angle)
+    if (window.chronelixIntegrator) {
+      window.chronelixIntegrator.setSlicerXAxisTilt(this.selectedPosition);
+    }
+  }
+
+  /**
+   * Legacy MIDI modwheel support - converts MIDI 0-127 to discrete positions
+   * @param {number} midiValue - MIDI modwheel value (0-127)
+   * @deprecated Use setLambdaPosition() with discrete 0-11 values instead
+   */
+  setModwheelPosition(midiValue) {
+    // Convert MIDI to discrete position and delegate to setLambdaPosition
+    const discretePosition = Math.floor((midiValue / 127) * 12);
+    this.setLambdaPosition(discretePosition);
   }
 
   /**

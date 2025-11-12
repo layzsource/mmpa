@@ -25,6 +25,7 @@ export class ChronelixCylindricalSlicer {
     this.sliceAngle = 0;           // λ modulation angle (0 to 2π)
     this.planeOffset = 0;          // Plane position along slice direction
     this.planeThickness = 0.5;     // Capture zone thickness
+    this.xAxisTilt = 0;            // X-axis tilt angle (chromatic step 0-11)
 
     // Cylinder geometry (from chronelix constants)
     this.cylinderRadius = 0;
@@ -180,10 +181,14 @@ export class ChronelixCylindricalSlicer {
    * Update slicer with lambda modulation angle
    * @param {number} lambdaRotation - Current λ rotation (0 to 2π)
    * @param {Array} particles - Array of data particles from particle stream
+   * @param {number} xAxisTilt - X-axis tilt angle (chromatic step 0-11)
    */
-  update(lambdaRotation, particles) {
+  update(lambdaRotation, particles, xAxisTilt = 0) {
     // Update slice angle from lambda modulation
     this.sliceAngle = lambdaRotation;
+
+    // Update X-axis tilt (chromatic step 0-11)
+    this.xAxisTilt = xAxisTilt;
 
     // Update plane orientation
     this.updatePlaneOrientation();
@@ -201,11 +206,13 @@ export class ChronelixCylindricalSlicer {
   }
 
   /**
-   * Update slice plane orientation based on lambda angle
+   * Update slice plane orientation based on lambda angle and X-axis tilt
    *
    * Plane normal: n = [sin(λ), 0, cos(λ)]
    * This ensures the plane rotates around Y-axis (cylinder axis)
    * respecting trigonometric principles
+   *
+   * X-axis tilt adds additional rotation for chromatic stepping
    */
   updatePlaneOrientation() {
     if (!this.slicePlaneMesh) return;
@@ -225,17 +232,27 @@ export class ChronelixCylindricalSlicer {
       normal
     );
 
+    // Apply X-axis tilt from chromatic position (0-11 maps to -60° to +60°)
+    const tiltRange = Math.PI / 3; // 60° in radians
+    const tiltAngle = ((this.xAxisTilt / 11) * 2 - 1) * tiltRange; // Maps 0-11 to -60° to +60°
+
+    const xTiltQuat = new THREE.Quaternion();
+    xTiltQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), tiltAngle);
+
+    // Combine rotations: first lambda rotation, then X-axis tilt
+    quaternion.multiply(xTiltQuat);
+
     this.slicePlaneMesh.quaternion.copy(quaternion);
 
-    // Update normal arrow
+    // Update normal arrow (apply tilt to normal vector for visualization)
     if (this.planeNormalArrow) {
-      this.planeNormalArrow.setDirection(normal);
+      const tiltedNormal = normal.clone().applyQuaternion(xTiltQuat);
+      this.planeNormalArrow.setDirection(tiltedNormal);
     }
 
     // Position plane at offset along normal
-    this.slicePlaneMesh.position.copy(
-      normal.clone().multiplyScalar(this.planeOffset)
-    );
+    const basePosition = normal.clone().multiplyScalar(this.planeOffset);
+    this.slicePlaneMesh.position.copy(basePosition);
   }
 
   /**

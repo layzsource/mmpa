@@ -9,6 +9,7 @@ import { state } from "./state.js";
 import { extractAudioMMPAFeatures } from "./audioFeatureExtractor.js";
 import { recipeRegistry } from "./recipeEngine.js";
 import { audioRecipe } from "./recipes/audioRecipe.js";
+import { logComprehensiveSample } from "./dataLogger.js";
 
 console.log("🎶 audioRouter.js loaded (Phase 13.31)");
 
@@ -168,6 +169,36 @@ export function initAudioRouter() {
             identity_strength: state.mmpaFeatures.identity?.strength?.toFixed(3),
             relationship_consonance: state.mmpaFeatures.relationship?.consonance?.toFixed(3),
             transformation_flux: state.mmpaFeatures.transformation?.flux?.toFixed(3)
+          });
+        }
+
+        // Log comprehensive empirical data (if data logging is enabled)
+        if (state.materialPhysicsARPT && recipeResult) {
+          const arptData = state.materialPhysicsARPT;
+          logComprehensiveSample({
+            arpt: arptData.scores,
+            audio: {
+              bass: processed.bass,
+              mid: processed.mid,
+              treble: processed.treble,
+              level: processed.level
+            },
+            materials: {
+              piezo_voltage: arptData.details?.alignment?.piezoVoltage || 0,
+              calcite_orthogonality: arptData.details?.relationship?.orthogonality || 0,
+              silica_charge: arptData.details?.potential?.latticeCharge || 0,
+              polymer_viscosity: arptData.details?.transformation?.viscosity || 0
+            },
+            pemf: {
+              frequency: arptData.pemf?.frequency || 0,
+              amplitude: arptData.pemf?.amplitude || 0,
+              force: arptData.pemf?.currentForce || 0
+            },
+            pattern: {
+              type: recipeResult.interpretation?.pattern?.type || 'unknown',
+              confidence: recipeResult.interpretation?.pattern?.confidence || 0,
+              qualities: recipeResult.interpretation?.qualities || []
+            }
           });
         }
       } else if (!financialModeEnabled && processed.level < 0.01) {
