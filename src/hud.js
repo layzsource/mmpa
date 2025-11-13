@@ -126,7 +126,8 @@ import { createRecorderHudSection } from './hudRecorder.js'; // Video Recording
 import { createFinancialHUD } from './hudFinancial.js'; // Phase 13.27: Financial Data Pipeline
 import { initTimeline } from './timelineIntegration.js'; // Phase 13.16: Timeline & Playback System
 import { createSettingsHudSection } from './hudSettings.js'; // Settings Configuration
-import { initSettings } from './settings.js'; // Settings Manager
+import { initSettings, getSettings } from './settings.js'; // Settings Manager
+import { FlightParams } from './flightParams.js'; // Flight parameters
 import { createSynthHudSection, getSynthInstance } from './hudSynth.js'; // MMPA Synth Engine
 import { createPiPhiPanel } from './hudPiPhi.js'; // π/φ Synchronicity Detector
 import { loadSavedPalette } from './colorPalettes.js'; // Color Palette System
@@ -151,6 +152,19 @@ export async function initHUD() {
 
   // Initialize Settings
   await initSettings();
+
+  // Apply saved controller sensitivity settings
+  const settings = getSettings();
+  if (settings.controller) {
+    if (settings.controller.yawSensitivity !== undefined) {
+      FlightParams.look.yawSensitivity = settings.controller.yawSensitivity;
+      console.log(`🎮 Loaded yaw sensitivity: ${settings.controller.yawSensitivity}`);
+    }
+    if (settings.controller.pitchSensitivity !== undefined) {
+      FlightParams.look.pitchSensitivity = settings.controller.pitchSensitivity;
+      console.log(`🎮 Loaded pitch sensitivity: ${settings.controller.pitchSensitivity}`);
+    }
+  }
 
   // Load saved color palette
   loadSavedPalette();
@@ -225,7 +239,7 @@ async function createHUDPanel() {
   const tabNav = document.createElement('div');
   tabNav.className = 'hud-tabs';
 
-  const tabs = ['Morph', 'Presets', 'Audio', 'Synth', 'π/φ', 'Visual', 'Advanced', 'Settings', 'MIDI', 'VCN', 'Destinations', 'Signals', 'Myth', 'Learn', 'AI', 'Camera', 'Portal', 'Text'];
+  const tabs = ['Morph', 'Presets', 'Audio', 'Financial', 'Synth', 'π/φ', 'Visual', 'Advanced', 'Settings', 'MIDI', 'VCN', 'Destinations', 'Signals', 'Myth', 'Learn', 'AI', 'Camera', 'Portal', 'Text'];
   let activeTab = 'Morph';
   const tabButtons = {};
   const tabContainers = {};
@@ -282,7 +296,7 @@ async function createHUDPanel() {
 
   // Phase 13.27: Financial Data Pipeline HUD section
   const financialSection = createFinancialHUD();
-  tabContainers['Audio'].appendChild(financialSection);
+  tabContainers['Financial'].appendChild(financialSection);
 
   // === MMPA Features - The Ratio Engine ===
   createFeaturesHudSection(tabContainers['Audio']);
@@ -309,6 +323,9 @@ async function createHUDPanel() {
   // === π/φ Synchronicity Detector ===
   const piPhiPanel = createPiPhiPanel(tabContainers['π/φ']);
   window.piPhiPanel = piPhiPanel; // Global reference for audio analysis updates
+
+  // NOTE: Chronelix Mode selector moved to Timeline Playback Panel (timelinePlaybackPanel.js)
+  // where the Chronelix is actually displayed - access via the panel's title bar
 
   // === Phase 4.8.1/11.7.50: Particles (Modular) ===
   createParticlesHudSection(tabContainers['Visual'], notifyHUDUpdate, createToggleControl, createSliderControl);

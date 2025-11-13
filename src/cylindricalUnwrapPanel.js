@@ -28,6 +28,17 @@ export class CylindricalUnwrapPanel {
     this.canvasWidth = 640;
     this.canvasHeight = 320;
 
+    // Timeline canvas
+    this.timelineCanvas = null;
+    this.timelineCtx = null;
+    this.timelineHeight = 120;
+
+    // Timeline data
+    this.timelineHistory = [];
+    this.MAX_HISTORY_SECONDS = 60;
+    this.MAX_HISTORY_FRAMES = this.MAX_HISTORY_SECONDS * 60; // 60 FPS
+    this.timelineStartTime = Date.now();
+
     // Animation
     this.animationFrameId = null;
 
@@ -152,6 +163,111 @@ export class CylindricalUnwrapPanel {
 
     canvasContainer.appendChild(this.canvas);
 
+    // Timeline section
+    const timelineSection = document.createElement('div');
+    timelineSection.style.cssText = `
+      margin-top: 15px;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 12px;
+      border: 1px solid rgba(20, 184, 166, 0.3);
+      border-radius: 8px;
+    `;
+
+    const timelineHeader = document.createElement('div');
+    timelineHeader.style.cssText = `
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    `;
+
+    const timelineTitle = document.createElement('div');
+    timelineTitle.textContent = '⏱️ Amplitude Timeline';
+    timelineTitle.style.cssText = `
+      color: #14b8a6;
+      font-size: 12px;
+      font-weight: 600;
+    `;
+
+    const timelineLegend = document.createElement('div');
+    timelineLegend.style.cssText = `
+      display: flex;
+      gap: 12px;
+      font-size: 9px;
+    `;
+    timelineLegend.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 4px;">
+        <div style="width: 12px; height: 2px; background: #14b8a6;"></div>
+        <span style="color: #8a8d93;">Sine</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 4px;">
+        <div style="width: 12px; height: 2px; background: #7c3aed;"></div>
+        <span style="color: #8a8d93;">Cosine</span>
+      </div>
+    `;
+
+    timelineHeader.appendChild(timelineTitle);
+    timelineHeader.appendChild(timelineLegend);
+
+    // Timeline canvas
+    this.timelineCanvas = document.createElement('canvas');
+    this.timelineCanvas.width = this.canvasWidth;
+    this.timelineCanvas.height = this.timelineHeight;
+    this.timelineCanvas.style.cssText = `
+      width: 100%;
+      display: block;
+      border-radius: 4px;
+      background: #0a0a0f;
+      border: 1px solid rgba(100, 100, 100, 0.3);
+      cursor: crosshair;
+    `;
+    this.timelineCtx = this.timelineCanvas.getContext('2d');
+
+    // Timeline tooltip
+    const timelineTooltip = document.createElement('div');
+    timelineTooltip.id = 'unwrap-timeline-tooltip';
+    timelineTooltip.style.cssText = `
+      position: absolute;
+      display: none;
+      background: rgba(0, 0, 0, 0.9);
+      border: 1px solid #14b8a6;
+      border-radius: 3px;
+      padding: 6px 8px;
+      font-size: 10px;
+      color: white;
+      pointer-events: none;
+      z-index: 1000;
+      white-space: nowrap;
+    `;
+
+    // Add mouse interaction to timeline
+    this.timelineCanvas.addEventListener('mousemove', (e) => this.handleTimelineHover(e, timelineTooltip));
+    this.timelineCanvas.addEventListener('mouseleave', () => {
+      timelineTooltip.style.display = 'none';
+    });
+
+    // Time scale
+    const timeScale = document.createElement('div');
+    timeScale.style.cssText = `
+      display: flex;
+      justify-content: space-between;
+      margin-top: 6px;
+      font-size: 9px;
+      color: #666;
+    `;
+    timeScale.innerHTML = `
+      <span>-60s</span>
+      <span>-45s</span>
+      <span>-30s</span>
+      <span>-15s</span>
+      <span style="color: #14b8a6;">Now</span>
+    `;
+
+    timelineSection.appendChild(timelineHeader);
+    timelineSection.appendChild(this.timelineCanvas);
+    timelineSection.appendChild(timelineTooltip);
+    timelineSection.appendChild(timeScale);
+
     // Info section
     const infoSection = document.createElement('div');
     infoSection.id = 'unwrap-info';
@@ -183,6 +299,7 @@ export class CylindricalUnwrapPanel {
     // Assemble panel
     this.panel.appendChild(header);
     this.panel.appendChild(canvasContainer);
+    this.panel.appendChild(timelineSection);
     this.panel.appendChild(infoSection);
     this.panel.appendChild(controlsSection);
 
@@ -368,6 +485,21 @@ export class CylindricalUnwrapPanel {
       });
     }
 
+    // Calculate average amplitudes for timeline
+    let avgSineAmp = 0;
+    let avgCosineAmp = 0;
+
+    if (sineData.length > 0) {
+      avgSineAmp = sineData.reduce((sum, d) => sum + Math.abs(d.y), 0) / sineData.length;
+    }
+
+    if (cosineData.length > 0) {
+      avgCosineAmp = cosineData.reduce((sum, d) => sum + Math.abs(d.y), 0) / cosineData.length;
+    }
+
+    // Update timeline with amplitude data
+    this.updateTimeline(avgSineAmp, avgCosineAmp);
+
     // Draw waveforms
     if (sineData.length > 1) {
       this.drawWaveform(ctx, sineData, width, height, '#14b8a6', 'Sine (X)', cylinderRadius);
@@ -499,6 +631,143 @@ export class CylindricalUnwrapPanel {
    */
   update() {
     // Rendering happens in animation loop
+  }
+
+  /**
+   * Update timeline with new amplitude data
+   */
+  updateTimeline(sineAmplitude, cosineAmplitude) {
+    // Add data point to history
+    const dataPoint = {
+      timestamp: Date.now(),
+      sine: sineAmplitude,
+      cosine: cosineAmplitude
+    };
+
+    this.timelineHistory.push(dataPoint);
+
+    // Trim old data
+    if (this.timelineHistory.length > this.MAX_HISTORY_FRAMES) {
+      this.timelineHistory.shift();
+    }
+
+    // Render timeline
+    this.renderTimelineCanvas();
+  }
+
+  /**
+   * Render timeline canvas
+   */
+  renderTimelineCanvas() {
+    if (!this.timelineCtx || !this.timelineCanvas) return;
+
+    const ctx = this.timelineCtx;
+    const width = this.timelineCanvas.width;
+    const height = this.timelineCanvas.height;
+
+    // Clear canvas
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, width, height);
+
+    if (this.timelineHistory.length === 0) return;
+
+    // Draw grid lines (every 15 seconds)
+    ctx.strokeStyle = 'rgba(100, 100, 100, 0.2)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const x = (i / 4) * width;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+      ctx.stroke();
+    }
+
+    // Center line (zero)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, height / 2);
+    ctx.lineTo(width, height / 2);
+    ctx.stroke();
+
+    // Get cylinder radius for normalization
+    const cylinderRadius = this.cylindricalSlicer?.cylinderRadius || 15.0;
+
+    // Draw sine line (teal)
+    ctx.strokeStyle = '#14b8a6';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    for (let i = 0; i < this.timelineHistory.length; i++) {
+      const x = (i / Math.max(this.MAX_HISTORY_FRAMES - 1, 1)) * width;
+      const y = height / 2 - (this.timelineHistory[i].sine / cylinderRadius) * (height / 2) * 0.8;
+
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+
+    ctx.stroke();
+
+    // Draw cosine line (purple)
+    ctx.strokeStyle = '#7c3aed';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    for (let i = 0; i < this.timelineHistory.length; i++) {
+      const x = (i / Math.max(this.MAX_HISTORY_FRAMES - 1, 1)) * width;
+      const y = height / 2 - (this.timelineHistory[i].cosine / cylinderRadius) * (height / 2) * 0.8;
+
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+
+    ctx.stroke();
+
+    // Draw playhead (current time)
+    ctx.strokeStyle = 'rgba(20, 184, 166, 0.6)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(width, 0);
+    ctx.lineTo(width, height);
+    ctx.stroke();
+  }
+
+  /**
+   * Handle timeline hover interaction
+   */
+  handleTimelineHover(e, tooltip) {
+    const rect = this.timelineCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Calculate which data point we're hovering over
+    const timelineLength = this.timelineHistory.length;
+
+    if (timelineLength === 0) return;
+
+    const dataIndex = Math.floor((x / rect.width) * timelineLength);
+
+    if (dataIndex >= 0 && dataIndex < timelineLength) {
+      const dataPoint = this.timelineHistory[dataIndex];
+      const secondsAgo = Math.floor((Date.now() - dataPoint.timestamp) / 1000);
+
+      // Show tooltip
+      tooltip.style.display = 'block';
+      tooltip.style.left = `${e.clientX - rect.left + 10}px`;
+      tooltip.style.top = `${e.clientY - rect.top - 50}px`;
+
+      tooltip.innerHTML = `
+        <div style="color: #14b8a6; font-weight: bold; margin-bottom: 4px;">${secondsAgo}s ago</div>
+        <div style="color: #14b8a6;">Sine: ${dataPoint.sine.toFixed(2)}</div>
+        <div style="color: #7c3aed;">Cosine: ${dataPoint.cosine.toFixed(2)}</div>
+      `;
+    }
   }
 }
 

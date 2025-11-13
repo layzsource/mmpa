@@ -42,6 +42,11 @@ export class ChronelixCylindricalSlicer {
       time: []       // Y-position (time proxy)
     };
 
+    // Timeline data (for temporal visualization)
+    this.timelineData = [];         // Array of {time, sine, cosine, lambda}
+    this.timelineWindow = 10000;    // Time window in milliseconds (10 seconds)
+    this.timelineStartTime = Date.now();
+
     // THREE.js visualization objects
     this.slicePlaneGroup = null;
     this.intersectionGroup = null;
@@ -190,6 +195,11 @@ export class ChronelixCylindricalSlicer {
     // Update X-axis tilt (chromatic step 0-11)
     this.xAxisTilt = xAxisTilt;
 
+    // Update plane offset based on lambda rotation (oscillate back and forth)
+    // Maps lambda rotation (0 to 2π) to plane offset (-radius to +radius)
+    const offsetAmplitude = this.cylinderRadius * 0.8; // 80% of radius
+    this.planeOffset = Math.sin(lambdaRotation) * offsetAmplitude;
+
     // Update plane orientation
     this.updatePlaneOrientation();
 
@@ -244,7 +254,8 @@ export class ChronelixCylindricalSlicer {
 
     this.slicePlaneMesh.quaternion.copy(quaternion);
 
-    // Update normal arrow (apply tilt to normal vector for visualization)
+    // Update normal arrow to show the actual tilted plane normal
+    // This includes both lambda angle and X-axis tilt
     if (this.planeNormalArrow) {
       const tiltedNormal = normal.clone().applyQuaternion(xTiltQuat);
       this.planeNormalArrow.setDirection(tiltedNormal);
@@ -301,6 +312,15 @@ export class ChronelixCylindricalSlicer {
 
         // Create visual marker
         this.createIntersectionMarker(pos);
+
+        // Add to timeline data
+        const now = Date.now();
+        this.timelineData.push({
+          time: now,
+          sine: unwrapped.sine,
+          cosine: unwrapped.cosine,
+          lambda: this.sliceAngle
+        });
       }
     }
 
@@ -308,6 +328,11 @@ export class ChronelixCylindricalSlicer {
     if (this.intersectionPoints.length > this.maxIntersections) {
       this.intersectionPoints = this.intersectionPoints.slice(-this.maxIntersections);
     }
+
+    // Trim old timeline data outside time window
+    const now = Date.now();
+    const cutoff = now - this.timelineWindow;
+    this.timelineData = this.timelineData.filter(d => d.time >= cutoff);
 
     this.stats.totalIntersections = this.intersectionPoints.length;
   }
@@ -393,12 +418,16 @@ export class ChronelixCylindricalSlicer {
     const width = this.canvas2D.width;
     const height = this.canvas2D.height;
 
+    // Allocate space: 70% for waveform, 30% for timeline
+    const waveformHeight = Math.floor(height * 0.70);
+    const timelineHeight = height - waveformHeight;
+
     // Clear canvas
     ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
     ctx.fillRect(0, 0, width, height);
 
-    // Draw grid
-    this.drawGrid(ctx, width, height);
+    // Draw grid for waveform section
+    this.drawGrid(ctx, width, waveformHeight);
 
     // Collect unwrapped data from recent intersections
     const sineData = [];
@@ -421,17 +450,20 @@ export class ChronelixCylindricalSlicer {
       });
     }
 
-    // Draw waveforms
+    // Draw waveforms in upper section
     if (sineData.length > 1) {
-      this.drawWaveform(ctx, sineData, width, height, '#14b8a6', 'Sine (X)');
+      this.drawWaveform(ctx, sineData, width, waveformHeight, '#14b8a6', 'Sine (X)');
     }
 
     if (cosineData.length > 1) {
-      this.drawWaveform(ctx, cosineData, width, height, '#7c3aed', 'Cosine (Z)');
+      this.drawWaveform(ctx, cosineData, width, waveformHeight, '#7c3aed', 'Cosine (Z)');
     }
 
-    // Draw labels
-    this.drawLabels(ctx, width, height);
+    // Draw labels for waveform section
+    this.drawLabels(ctx, width, waveformHeight);
+
+    // Draw timeline in lower section
+    this.drawTimeline(ctx, width, height, waveformHeight, timelineHeight);
 
     // Update texture
     if (this.canvasTexture) {
@@ -534,6 +566,150 @@ export class ChronelixCylindricalSlicer {
     ctx.fillStyle = '#aaaaaa';
     ctx.fillText(`λ = ${(this.sliceAngle * 180 / Math.PI).toFixed(1)}°`, width - 80, 20);
     ctx.fillText(`n = ${this.intersectionPoints.length}`, width - 80, 35);
+  }
+
+  /**
+   * Draw timeline visualization
+   * Shows temporal evolution of sine/cosine waveform components
+   */
+  drawTimeline(ctx, width, totalHeight, waveformHeight, timelineHeight) {
+    const timelineY = waveformHeight;
+    const padding = 30;
+    const plotHeight = timelineHeight - padding - 20;
+    const plotWidth = width - 2 * padding;
+
+    // Draw timeline background
+    ctx.fillStyle = 'rgba(20, 20, 20, 0.8)';
+    ctx.fillRect(0, timelineY, width, timelineHeight);
+
+    // Draw timeline border
+    ctx.strokeStyle = 'rgba(100, 100, 100, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, timelineY);
+    ctx.lineTo(width, timelineY);
+    ctx.stroke();
+
+    // Draw title
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText('Timeline (10s window)', padding, timelineY + 18);
+
+    // Draw grid
+    ctx.strokeStyle = 'rgba(100, 100, 100, 0.2)';
+    ctx.lineWidth = 1;
+
+    // Horizontal grid lines
+    for (let i = 0; i <= 4; i++) {
+      const y = timelineY + padding + (i / 4) * plotHeight;
+      ctx.beginPath();
+      ctx.moveTo(padding, y);
+      ctx.lineTo(width - padding, y);
+      ctx.stroke();
+    }
+
+    // Vertical grid lines
+    for (let i = 0; i <= 8; i++) {
+      const x = padding + (i / 8) * plotWidth;
+      ctx.beginPath();
+      ctx.moveTo(x, timelineY + padding);
+      ctx.lineTo(x, timelineY + padding + plotHeight);
+      ctx.stroke();
+    }
+
+    // Draw center line (zero)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 1;
+    const centerY = timelineY + padding + plotHeight / 2;
+    ctx.beginPath();
+    ctx.moveTo(padding, centerY);
+    ctx.lineTo(width - padding, centerY);
+    ctx.stroke();
+
+    // Get time range
+    const now = Date.now();
+    const timeStart = now - this.timelineWindow;
+    const timeEnd = now;
+
+    // Find min/max values for scaling
+    let minValue = 0;
+    let maxValue = 0;
+    for (const d of this.timelineData) {
+      minValue = Math.min(minValue, d.sine, d.cosine);
+      maxValue = Math.max(maxValue, d.sine, d.cosine);
+    }
+
+    // Add padding to value range
+    const valueRange = Math.max(Math.abs(minValue), Math.abs(maxValue)) * 1.2;
+    minValue = -valueRange;
+    maxValue = valueRange;
+
+    // Helper function to map data to canvas coordinates
+    const mapToCanvas = (time, value) => {
+      const x = padding + ((time - timeStart) / (timeEnd - timeStart)) * plotWidth;
+      const y = timelineY + padding + plotHeight / 2 - (value / (maxValue - minValue)) * plotHeight;
+      return { x, y };
+    };
+
+    // Draw sine component (teal)
+    if (this.timelineData.length > 1) {
+      ctx.strokeStyle = '#14b8a6';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+
+      let firstPoint = true;
+      for (const d of this.timelineData) {
+        const pos = mapToCanvas(d.time, d.sine);
+        if (firstPoint) {
+          ctx.moveTo(pos.x, pos.y);
+          firstPoint = false;
+        } else {
+          ctx.lineTo(pos.x, pos.y);
+        }
+      }
+      ctx.stroke();
+
+      // Draw label
+      ctx.fillStyle = '#14b8a6';
+      ctx.font = '10px monospace';
+      ctx.fillText('Sine', width - padding - 40, timelineY + 18);
+    }
+
+    // Draw cosine component (purple)
+    if (this.timelineData.length > 1) {
+      ctx.strokeStyle = '#7c3aed';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+
+      let firstPoint = true;
+      for (const d of this.timelineData) {
+        const pos = mapToCanvas(d.time, d.cosine);
+        if (firstPoint) {
+          ctx.moveTo(pos.x, pos.y);
+          firstPoint = false;
+        } else {
+          ctx.lineTo(pos.x, pos.y);
+        }
+      }
+      ctx.stroke();
+
+      // Draw label
+      ctx.fillStyle = '#7c3aed';
+      ctx.font = '10px monospace';
+      ctx.fillText('Cosine', width - padding - 90, timelineY + 18);
+    }
+
+    // Draw time axis labels
+    ctx.fillStyle = '#aaaaaa';
+    ctx.font = '9px monospace';
+    ctx.fillText('10s', padding, timelineY + padding + plotHeight + 15);
+    ctx.fillText('5s', padding + plotWidth / 2, timelineY + padding + plotHeight + 15);
+    ctx.fillText('0s (now)', width - padding - 35, timelineY + padding + plotHeight + 15);
+
+    // Draw value axis labels
+    ctx.fillText(maxValue.toFixed(2), 5, timelineY + padding + 5);
+    ctx.fillText('0', 5, centerY + 5);
+    ctx.fillText(minValue.toFixed(2), 5, timelineY + padding + plotHeight);
   }
 
   /**

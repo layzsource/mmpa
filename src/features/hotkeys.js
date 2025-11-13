@@ -30,6 +30,16 @@ function handler(e) {
     // U → toggle Cylindrical Unwrap panel
     window.cylindricalUnwrapPanel?.toggle();
   }
+  if (e.key === "l" || e.key === "L") {
+    // L → toggle Living Symbol mode (cycles through STANDARD → ANALYSIS → LIVING_SYMBOL)
+    window.chronelixModeManager?.toggleMode();
+    const mode = window.chronelixModeManager?.getMode();
+    console.log(`🌸 Chronelix mode: ${mode}`);
+  }
+  if (e.key === "m" || e.key === "M") {
+    // M → toggle Material Physics panel
+    window.materialPhysicsPanel?.toggle();
+  }
 }
 
 /**
@@ -38,7 +48,7 @@ function handler(e) {
 function install() {
   window.removeEventListener("keydown", handler, true);
   window.addEventListener("keydown", handler, true);
-  console.log("⌨️ Hotkeys installed (P=presentation HUD, F=fullscreen toggle, S=screenshot, U=unwrap panel)");
+  console.log("⌨️ Hotkeys installed (P=presentation HUD, F=fullscreen toggle, S=screenshot, U=unwrap panel, L=Living Symbol, M=Material Physics)");
 }
 
 /**
