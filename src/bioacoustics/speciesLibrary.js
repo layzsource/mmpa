@@ -302,8 +302,8 @@ export class SpeciesLibrary {
     }
 
     // Simple comparison: curve lengths
-    const avgLen1 = curves1.reduce((sum, c) => sum + (c.length || 0), 0) / curves1.length;
-    const avgLen2 = curves2.reduce((sum, c) => sum + (c.length || 0), 0) / curves2.length;
+    const avgLen1 = curves1.reduce((sum, c) => sum + (c.points?.length || 0), 0) / curves1.length;
+    const avgLen2 = curves2.reduce((sum, c) => sum + (c.points?.length || 0), 0) / curves2.length;
 
     const diff = Math.abs(avgLen1 - avgLen2) / Math.max(avgLen1, avgLen2, 1e-10);
     return Math.max(0, 1 - diff);
