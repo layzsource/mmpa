@@ -138,25 +138,57 @@ export function createBioacousticPanel(container, notifyHUDUpdate) {
   statusDiv.textContent = '● Status: Performance Mode Active';
   controlsSection.appendChild(statusDiv);
 
-  // ===== PHASE 2 PLACEHOLDER =====
+  // ===== PHASE 2: ANALYSIS CONTROLS =====
   const phase2Section = document.createElement('div');
-  phase2Section.style.cssText = 'margin-top: 15px; padding: 10px; background: rgba(255,255,0,0.05); border: 1px dashed #666; border-radius: 3px;';
+  phase2Section.style.cssText = 'margin-top: 15px; padding: 10px; background: rgba(0,255,170,0.05); border: 1px solid rgba(0,255,170,0.3); border-radius: 3px;';
 
   const phase2Header = document.createElement('div');
-  phase2Header.textContent = '📋 Phase 2 (Coming Soon)';
-  phase2Header.style.cssText = 'font-weight: bold; margin-bottom: 5px; color: #ff9; font-size: 11px;';
-
-  const phase2List = document.createElement('ul');
-  phase2List.style.cssText = 'margin: 5px 0; padding-left: 20px; font-size: 10px; color: #999;';
-  phase2List.innerHTML = `
-    <li>Differential forms computation</li>
-    <li>Spectrogram → Forms pipeline</li>
-    <li>Homological integration</li>
-    <li>Species library loading</li>
-  `;
-
+  phase2Header.textContent = '📐 Phase 2: Differential Forms & Homology';
+  phase2Header.style.cssText = 'font-weight: bold; margin-bottom: 10px; color: #00ffaa; font-size: 11px;';
   phase2Section.appendChild(phase2Header);
-  phase2Section.appendChild(phase2List);
+
+  // Start/Stop Analysis button
+  const analysisButton = document.createElement('button');
+  analysisButton.textContent = '▶ Start Analysis';
+  analysisButton.style.cssText = 'width: 100%; padding: 8px; margin-bottom: 10px; background: rgba(0,255,170,0.2); border: 1px solid #00ffaa; border-radius: 3px; color: #00ffaa; cursor: pointer; font-size: 12px;';
+  analysisButton.addEventListener('click', () => {
+    const isRunning = analysisButton.textContent.startsWith('■');
+    notifyHUDUpdate({
+      bioacousticAnalysisRunning: !isRunning
+    });
+    analysisButton.textContent = isRunning ? '▶ Start Analysis' : '■ Stop Analysis';
+    analysisButton.style.background = isRunning ? 'rgba(0,255,170,0.2)' : 'rgba(255,50,50,0.2)';
+  });
+  phase2Section.appendChild(analysisButton);
+
+  // Capture Signature button
+  const captureButton = document.createElement('button');
+  captureButton.textContent = '📸 Capture Signature';
+  captureButton.style.cssText = 'width: 100%; padding: 8px; margin-bottom: 10px; background: rgba(100,150,255,0.2); border: 1px solid #6496ff; border-radius: 3px; color: #6496ff; cursor: pointer; font-size: 12px;';
+  captureButton.addEventListener('click', () => {
+    notifyHUDUpdate({ bioacousticCaptureSignature: true });
+  });
+  phase2Section.appendChild(captureButton);
+
+  // Verify Stokes' Theorem button
+  const stokesButton = document.createElement('button');
+  stokesButton.textContent = '∫ Verify Stokes\' Theorem';
+  stokesButton.style.cssText = 'width: 100%; padding: 8px; margin-bottom: 10px; background: rgba(255,200,0,0.2); border: 1px solid #ffc800; border-radius: 3px; color: #ffc800; cursor: pointer; font-size: 12px;';
+  stokesButton.addEventListener('click', () => {
+    notifyHUDUpdate({ bioacousticVerifyStokes: true });
+  });
+  phase2Section.appendChild(stokesButton);
+
+  // Status display
+  const analysisStatus = document.createElement('div');
+  analysisStatus.id = 'bioacoustic-analysis-status';
+  analysisStatus.style.cssText = 'margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 3px; font-size: 10px; color: #ccc; font-family: monospace; max-height: 120px; overflow-y: auto;';
+  analysisStatus.innerHTML = `
+    <div style="color: #00ffaa;">● Ready for analysis</div>
+    <div>Forms: 0 | Currents: 0 | Barcodes: 0</div>
+  `;
+  phase2Section.appendChild(analysisStatus);
+
   controlsSection.appendChild(phase2Section);
 
   panel.appendChild(controlsSection);

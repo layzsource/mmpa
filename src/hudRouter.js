@@ -429,6 +429,74 @@ onHUDUpdate((update) => {
     console.log(`🔬 Audio-reactive evolution: ${update.bioacousticAudioReactive ? 'ON' : 'OFF'}`);
   }
 
+  // Phase 2: Bioacoustic Analysis Controls
+  if (update.bioacousticAnalysisRunning !== undefined) {
+    if (!state.bioacoustic) state.bioacoustic = {};
+    state.bioacoustic.analysisRunning = update.bioacousticAnalysisRunning;
+    console.log(`🔬 Analysis ${update.bioacousticAnalysisRunning ? 'STARTED' : 'STOPPED'}`);
+
+    // Initialize/control bioacoustic analyzer
+    import('./bioacoustics/bioacousticAnalyzer.js').then(({ BioacousticAnalyzer }) => {
+      if (!window.bioacousticAnalyzer) {
+        // Get audio context from audio module
+        import('./audio.js').then(({ getAudioContext }) => {
+          const audioContext = getAudioContext();
+          window.bioacousticAnalyzer = new BioacousticAnalyzer(audioContext);
+
+          // Connect to microphone if available
+          if (window.microphoneSource) {
+            window.bioacousticAnalyzer.connect(window.microphoneSource);
+          }
+
+          if (update.bioacousticAnalysisRunning) {
+            window.bioacousticAnalyzer.startAnalysis();
+          }
+        });
+      } else {
+        // Analyzer already exists
+        if (update.bioacousticAnalysisRunning) {
+          window.bioacousticAnalyzer.startAnalysis();
+        } else {
+          window.bioacousticAnalyzer.stopAnalysis();
+        }
+      }
+    });
+  }
+  if (update.bioacousticCaptureSignature !== undefined) {
+    console.log('🔬 Capturing bioacoustic signature...');
+
+    if (window.bioacousticAnalyzer) {
+      // Use first default species for now (example_bird_1)
+      const success = window.bioacousticAnalyzer.captureSignature('example_bird_1');
+
+      if (success) {
+        console.log('🔬 ✓ Signature captured successfully');
+      } else {
+        console.error('🔬 ✗ Failed to capture signature');
+      }
+    } else {
+      console.warn('🔬 Analyzer not initialized. Start analysis first.');
+    }
+  }
+  if (update.bioacousticVerifyStokes !== undefined) {
+    console.log('🔬 Verifying Stokes\' theorem: ⟨∂T, α⟩ = ⟨T, dα⟩');
+
+    if (window.bioacousticAnalyzer) {
+      const result = window.bioacousticAnalyzer.verifyStokesTheorem();
+
+      if (result) {
+        console.log(`🔬 Verification: ${result.verified ? '✓ PASSED' : '✗ FAILED'}`);
+        console.log(`🔬 LHS (⟨∂T, α⟩): ${result.lhs}`);
+        console.log(`🔬 RHS (⟨T, dα⟩): ${result.rhs}`);
+        console.log(`🔬 Error: ${result.error}`);
+      } else {
+        console.warn('🔬 Verification unavailable. Need analysis data.');
+      }
+    } else {
+      console.warn('🔬 Analyzer not initialized. Start analysis first.');
+    }
+  }
+
   // Dual Trail System: Motion Trails (postprocessing)
   if (update.motionTrailsEnabled !== undefined) {
     state.motionTrailsEnabled = update.motionTrailsEnabled;
