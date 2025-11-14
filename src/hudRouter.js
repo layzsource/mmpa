@@ -385,6 +385,50 @@ onHUDUpdate((update) => {
     });
   }
 
+  // Phase 1: Bioacoustic Analysis (Sp(2,ℝ)/Z₂)
+  if (update.bioacousticMode !== undefined) {
+    if (!state.bioacoustic) state.bioacoustic = {};
+    state.bioacoustic.mode = update.bioacousticMode;
+    console.log(`🔬 Bioacoustic mode: ${update.bioacousticMode}`);
+
+    if (update.bioacousticMode === 'analysis') {
+      // Lazy-load and initialize symplectic manifold
+      import('./bioacoustics/symplecticManifold.js').then(({ SymplecticManifold }) => {
+        if (!window.symplecticManifold) {
+          window.symplecticManifold = new SymplecticManifold();
+          console.log('🔬 Sp(2,ℝ)/Z₂ manifold initialized');
+        }
+      });
+    } else {
+      console.log('🔬 Switched to Performance mode');
+    }
+  }
+  if (update.bioacousticScale !== undefined) {
+    if (!state.bioacoustic) state.bioacoustic = {};
+    state.bioacoustic.scale = update.bioacousticScale;
+    console.log(`🔬 Manifold scale: ${update.bioacousticScale.toFixed(2)}`);
+
+    // Apply to manifold instance if exists
+    if (window.symplecticManifold) {
+      window.symplecticManifold.setScale(update.bioacousticScale);
+    }
+  }
+  if (update.bioacousticParticleCount !== undefined) {
+    if (!state.bioacoustic) state.bioacoustic = {};
+    state.bioacoustic.particleCount = update.bioacousticParticleCount;
+    console.log(`🔬 Manifold particle count: ${update.bioacousticParticleCount}`);
+
+    // Apply to manifold instance if exists
+    if (window.symplecticManifold) {
+      window.symplecticManifold.setParticleCount(update.bioacousticParticleCount);
+    }
+  }
+  if (update.bioacousticAudioReactive !== undefined) {
+    if (!state.bioacoustic) state.bioacoustic = {};
+    state.bioacoustic.audioReactive = update.bioacousticAudioReactive;
+    console.log(`🔬 Audio-reactive evolution: ${update.bioacousticAudioReactive ? 'ON' : 'OFF'}`);
+  }
+
   // Dual Trail System: Motion Trails (postprocessing)
   if (update.motionTrailsEnabled !== undefined) {
     state.motionTrailsEnabled = update.motionTrailsEnabled;
@@ -566,7 +610,7 @@ onHUDUpdate((update) => {
   }
   if (update.shadowsEnabled !== undefined) {
     state.shadows.enabled = update.shadowsEnabled;
-    console.log(`🌑 Shadows enabled: ${update.shadowsEnabled}`);
+    // console.log(`🌑 Shadows);
   }
   if (update.shadowsGround !== undefined) {
     state.shadows.ground = update.shadowsGround;

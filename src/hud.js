@@ -84,6 +84,7 @@ import { state } from './state.js';
 import { createMorphHudSection } from './hudMorph.js'; // Phase 11.7.51: Modular Morph HUD
 import { createMandalaHudSection, refreshMandalaHUD } from './hudMandala.js'; // Phase 11.7.50: Modular Mandala HUD
 import { createParticlesHudSection, refreshParticlesHUD } from './hudParticles.js'; // Phase 11.7.50: Modular Particles HUD
+import { createBioacousticPanel } from './hudBioacoustics.js'; // Phase 1: Bioacoustic Analysis (Sp(2,ℝ)/Z₂)
 import { createBackgroundHudSection } from './hudBackground.js'; // Phase 11.7.50: Modular Background HUD
 import { createShadowsHudSection } from './hudShadows.js'; // Phase 11.7.50: Modular Shadows HUD
 import { createVesselHudSection } from './hudVessel.js'; // Phase 11.7.50: Modular Vessel HUD
@@ -125,6 +126,7 @@ import { createTextSignalHUD } from './hudText.js'; // Text/NLP Signals
 import { createRecorderHudSection } from './hudRecorder.js'; // Video Recording
 import { createFinancialHUD } from './hudFinancial.js'; // Phase 13.27: Financial Data Pipeline
 import { initTimeline } from './timelineIntegration.js'; // Phase 13.16: Timeline & Playback System
+import { AudioManifoldPanel } from './audioManifoldPanel.js'; // Audio Manifold UMAP/t-SNE Visualization
 import { createSettingsHudSection } from './hudSettings.js'; // Settings Configuration
 import { initSettings, getSettings } from './settings.js'; // Settings Manager
 import { FlightParams } from './flightParams.js'; // Flight parameters
@@ -317,6 +319,46 @@ async function createHUDPanel() {
   // === MMPA Unified Theory - Heart/Vortex/Archetype ===
   createTheoryHudSection(tabContainers['Audio']);
 
+  // === Audio Manifold Panel (UMAP/t-SNE Visualization) ===
+  // Initialize panel instance with AudioEngine
+  window.audioManifoldPanel = new AudioManifoldPanel(AudioEngine);
+
+  // Create toggle button section
+  const manifoldLabel = document.createElement("h4");
+  manifoldLabel.textContent = "🎨 Audio Manifold Visualization";
+  manifoldLabel.style.cssText = 'margin: 15px 0 10px 0; color: #a78bfa; font-size: 12px;';
+  tabContainers['Audio'].appendChild(manifoldLabel);
+
+  const manifoldToggle = document.createElement("button");
+  manifoldToggle.textContent = "Open Audio Manifold";
+  manifoldToggle.style.cssText = `
+    background: rgba(167, 139, 250, 0.2);
+    border: 1px solid #a78bfa;
+    color: #a78bfa;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    transition: all 0.2s;
+  `;
+  manifoldToggle.onmouseenter = () => {
+    manifoldToggle.style.background = 'rgba(167, 139, 250, 0.3)';
+    manifoldToggle.style.boxShadow = '0 0 10px rgba(167, 139, 250, 0.4)';
+  };
+  manifoldToggle.onmouseleave = () => {
+    manifoldToggle.style.background = 'rgba(167, 139, 250, 0.2)';
+    manifoldToggle.style.boxShadow = 'none';
+  };
+  manifoldToggle.onclick = () => {
+    window.audioManifoldPanel.toggle();
+    manifoldToggle.textContent = window.audioManifoldPanel.isOpen ? 'Close Audio Manifold' : 'Open Audio Manifold';
+  };
+  tabContainers['Audio'].appendChild(manifoldToggle);
+
+  console.log('🎨 Audio Manifold Panel integrated into HUD');
+
   // === MMPA Synth Engine ===
   await createSynthHudSection(tabContainers['Synth']);
 
@@ -329,6 +371,9 @@ async function createHUDPanel() {
 
   // === Phase 4.8.1/11.7.50: Particles (Modular) ===
   createParticlesHudSection(tabContainers['Visual'], notifyHUDUpdate, createToggleControl, createSliderControl);
+
+  // === Phase 1: Bioacoustic Analysis (Sp(2,ℝ)/Z₂) ===
+  createBioacousticPanel(tabContainers['Visual'], notifyHUDUpdate);
 
   // === Phase 11.7.1: Emoji Particles ===
   const emojiParticlesLabel = document.createElement("h4");
