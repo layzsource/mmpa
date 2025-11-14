@@ -14,6 +14,23 @@ setTimeout(() => {
   });
 }, 0);
 
+// Phase 3: Bioacoustic visualization loop
+function startVisualizationLoop() {
+  // Stop existing loop if running
+  if (window.visualizationLoopId) {
+    clearInterval(window.visualizationLoopId);
+  }
+
+  // Update visualizer every 500ms (2 FPS)
+  window.visualizationLoopId = setInterval(() => {
+    if (window.bioacousticVisualizer && window.bioacousticAnalyzer) {
+      window.bioacousticVisualizer.updateFromAnalyzer(window.bioacousticAnalyzer);
+    }
+  }, 500);
+
+  console.log('👁️ Visualization loop started');
+}
+
 // HUD updates to state routing
 onHUDUpdate((update) => {
   // Phase 11.4.1: Handle reset action
@@ -448,7 +465,21 @@ onHUDUpdate((update) => {
             window.bioacousticAnalyzer.connect(window.microphoneSource);
           }
 
-          if (update.bioacousticAnalysisRunning) {
+          // Initialize visualizer
+          if (window.symplecticManifold) {
+            import('./bioacoustics/bioacousticVisualizer.js').then(({ BioacousticVisualizer }) => {
+              import('./geometry.js').then(({ scene }) => {
+                window.bioacousticVisualizer = new BioacousticVisualizer(scene, window.symplecticManifold);
+                console.log('👁️ Bioacoustic visualizer initialized');
+
+                // Start visualization update loop
+                if (update.bioacousticAnalysisRunning) {
+                  window.bioacousticAnalyzer.startAnalysis();
+                  startVisualizationLoop();
+                }
+              });
+            });
+          } else if (update.bioacousticAnalysisRunning) {
             window.bioacousticAnalyzer.startAnalysis();
           }
         });
@@ -456,8 +487,15 @@ onHUDUpdate((update) => {
         // Analyzer already exists
         if (update.bioacousticAnalysisRunning) {
           window.bioacousticAnalyzer.startAnalysis();
+          if (window.bioacousticVisualizer) {
+            startVisualizationLoop();
+          }
         } else {
           window.bioacousticAnalyzer.stopAnalysis();
+          if (window.visualizationLoopId) {
+            clearInterval(window.visualizationLoopId);
+            window.visualizationLoopId = null;
+          }
         }
       }
     });
@@ -494,6 +532,52 @@ onHUDUpdate((update) => {
       }
     } else {
       console.warn('🔬 Analyzer not initialized. Start analysis first.');
+    }
+  }
+
+  // Phase 3: Visualization Visibility Controls
+  if (update.bioacousticShowCurrents !== undefined) {
+    if (window.bioacousticVisualizer) {
+      const showForms = state.bioacoustic?.showForms ?? true;
+      const showHomology = state.bioacoustic?.showHomology ?? true;
+      window.bioacousticVisualizer.setVisibility(
+        update.bioacousticShowCurrents,
+        showForms,
+        showHomology
+      );
+      if (!state.bioacoustic) state.bioacoustic = {};
+      state.bioacoustic.showCurrents = update.bioacousticShowCurrents;
+      console.log(`👁️ Show Currents: ${update.bioacousticShowCurrents ? 'ON' : 'OFF'}`);
+    }
+  }
+
+  if (update.bioacousticShowForms !== undefined) {
+    if (window.bioacousticVisualizer) {
+      const showCurrents = state.bioacoustic?.showCurrents ?? true;
+      const showHomology = state.bioacoustic?.showHomology ?? true;
+      window.bioacousticVisualizer.setVisibility(
+        showCurrents,
+        update.bioacousticShowForms,
+        showHomology
+      );
+      if (!state.bioacoustic) state.bioacoustic = {};
+      state.bioacoustic.showForms = update.bioacousticShowForms;
+      console.log(`👁️ Show Forms: ${update.bioacousticShowForms ? 'ON' : 'OFF'}`);
+    }
+  }
+
+  if (update.bioacousticShowHomology !== undefined) {
+    if (window.bioacousticVisualizer) {
+      const showCurrents = state.bioacoustic?.showCurrents ?? true;
+      const showForms = state.bioacoustic?.showForms ?? true;
+      window.bioacousticVisualizer.setVisibility(
+        showCurrents,
+        showForms,
+        update.bioacousticShowHomology
+      );
+      if (!state.bioacoustic) state.bioacoustic = {};
+      state.bioacoustic.showHomology = update.bioacousticShowHomology;
+      console.log(`👁️ Show Homology: ${update.bioacousticShowHomology ? 'ON' : 'OFF'}`);
     }
   }
 

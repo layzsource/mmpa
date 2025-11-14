@@ -215,13 +215,15 @@ export function initArchetypeMorph(scene) {
     console.log("🔄 Initializing Archetype Morph System...");
 
     // Create gold metallic material (using global GOLD_COLOR)
+    // Reduced metalness + balanced roughness for softer, more realistic appearance
     const goldMaterial = new THREE.MeshStandardMaterial({
         color: GOLD_COLOR,
-        metalness: 0.95,
-        roughness: 0.4,
+        metalness: 0.2,  // Reduced from 0.95 to show shape definition
+        roughness: 0.5,  // Balanced for softer shading (was 0.7)
         side: THREE.DoubleSide,
         transparent: true,
-        depthWrite: true
+        depthWrite: true,
+        flatShading: false  // Smooth shading for softer, more realistic appearance
     });
 
     // Create Chestahedron with 7 identical gold materials (one per face)
@@ -302,13 +304,13 @@ export function initArchetypeMorph(scene) {
 function updateSynestheticColors() {
     // DEBUG 1: Check if function is being called
     if (colorUpdateCounter === 0) {
-        console.log('🎨 DEBUG 1: updateSynestheticColors first call');
+        // console.log('🎨 DEBUG 1:);
     }
 
     // DEBUG 2: Check enabled state and mesh existence
     if (!synestheticColoringEnabled || !chestahedronMesh) {
         if (colorUpdateCounter % 120 === 0) { // Log every 2 seconds
-            console.log('🎨 DEBUG 2: Early return - enabled:', synestheticColoringEnabled, 'mesh exists:', !!chestahedronMesh);
+            // console.log('🎨 DEBUG 2:);
         }
         return;
     }
@@ -316,7 +318,7 @@ function updateSynestheticColors() {
     // DEBUG 3: Check material array
     if (!Array.isArray(chestahedronMesh.material)) {
         if (colorUpdateCounter % 120 === 0) {
-            console.log('🎨 DEBUG 3: Material not array - type:', typeof chestahedronMesh.material, 'isArray:', Array.isArray(chestahedronMesh.material));
+            // console.log('🎨 DEBUG 3:);
         }
         return;
     }
@@ -327,21 +329,21 @@ function updateSynestheticColors() {
 
     // DEBUG 4: Past throttle check (log periodically)
     if (colorUpdateCounter % 120 === 0) {
-        console.log('🎨 DEBUG 4: Past throttle check, counter:', colorUpdateCounter);
+        // console.log('🎨 DEBUG 4:);
     }
 
     try {
         // DEBUG 5: Check AudioEngine availability
         if (!AudioEngine || !AudioEngine.analyser) {
             if (colorUpdateCounter % 120 === 0) {
-                console.log('🎨 DEBUG 5: AudioEngine issue - engine exists:', !!AudioEngine, 'analyser exists:', !!AudioEngine?.analyser);
+                // console.log('🎨 DEBUG 5:);
             }
             return;
         }
 
         // DEBUG 6: AudioEngine is available
         if (colorUpdateCounter % 120 === 0) {
-            console.log('🎨 DEBUG 6: AudioEngine available, frequencyBinCount:', AudioEngine.analyser.frequencyBinCount);
+            // console.log('🎨 DEBUG 6:);
         }
 
         // Get frequency spectrum
@@ -360,7 +362,7 @@ function updateSynestheticColors() {
 
         // DEBUG 7: Log energy levels periodically
         if (colorUpdateCounter % 120 === 0) {
-            console.log('🎨 DEBUG 7: Energy:', pitchAnalysis.totalEnergy.toFixed(3), 'Threshold: 1.0');
+            // console.log('🎨 DEBUG 7:);
         }
 
         // Check if we have enough signal energy to apply coloring
@@ -371,14 +373,14 @@ function updateSynestheticColors() {
                 mat.color.lerp(new THREE.Color(GOLD_COLOR), 0.1);
             });
             if (colorUpdateCounter % 120 === 0) {
-                console.log('🎨 DEBUG 8: Below energy threshold, fading to gold');
+                // console.log('🎨 DEBUG 8:);
             }
             return;
         }
 
         // DEBUG 9: Energy threshold met - applying colors
         if (colorUpdateCounter % 60 === 0) {
-            console.log(`🎨 DEBUG 9: APPLYING COLORS - Key: ${diatonicMapping.rootNote} ${diatonicMapping.mode}, energy: ${pitchAnalysis.totalEnergy.toFixed(2)}`);
+            // console.log(`🎨 DEBUG 9:);
         }
 
         // Apply colors to each face based on scale degree energy
@@ -543,7 +545,7 @@ function applyMorph(value) {
 
     // Debug logging
     if (debugFrameCount++ % DEBUG_LOG_INTERVAL === 0) {
-        console.log(`🔄 Morph value: ${value.toFixed(1)}, Target: ${targetMorphValue}, ChestVis: ${chestahedronMesh.visible}, BellVis: ${tonalTowerMesh.visible}`);
+        // console.log(`🔄 Morph value);
     }
 
     // 1. Chestahedron fade out (0-400 range)

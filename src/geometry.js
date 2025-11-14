@@ -45,7 +45,25 @@ export function getHUDIdleSpin() {
 const canvas = document.querySelector('#app');
 export const scene = new THREE.Scene();
 export const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-export const renderer = new THREE.WebGLRenderer({ canvas });
+
+// 4K HDR-quality renderer setup
+export const renderer = new THREE.WebGLRenderer({
+  canvas,
+  antialias: true,           // Enable MSAA antialiasing
+  alpha: false,              // No alpha channel (better performance)
+  powerPreference: 'high-performance',
+  precision: 'highp'         // High precision shaders
+});
+
+// Enable HDR-like tone mapping
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+
+// High-quality output color space (Three.js r152+)
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+// Retina/4K display support - use device pixel ratio (capped at 2 for performance)
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
@@ -55,6 +73,7 @@ window.renderer = renderer;
 
 // Expose spatial grammar controls globally for console access
 import { enableSpatialGrammar, disableSpatialGrammar, getSpatialGrammarDebugInfo } from './musicalSpatialGrammar.js';
+import { globalProfiler } from './performanceProfiler.js';
 window.enableSpatialGrammar = enableSpatialGrammar;
 window.disableSpatialGrammar = disableSpatialGrammar;
 window.getSpatialGrammarDebugInfo = getSpatialGrammarDebugInfo;
@@ -341,6 +360,10 @@ window.addEventListener('resize', () => {
 
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
+
+  // Update pixel ratio for retina/4K displays
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
   renderer.setSize(window.innerWidth, window.innerHeight);
   composer.setSize(window.innerWidth, window.innerHeight);
 });
@@ -929,6 +952,7 @@ function animate() {
   requestAnimationFrame(animate);
 
   try {
+    globalProfiler.startFrame();
     // Phase 13.5.1: Get deltaTime for morphing
     const deltaTime = morphClock.getDelta();
 
@@ -937,16 +961,19 @@ function animate() {
 
   // === Spatial Grammar Update ===
   // Update musical spatial grammar (if enabled, arranges geometry by harmony)
-  updateSpatialGrammar();
+      globalProfiler.mark('spatial-grammar');
+updateSpatialGrammar();
 
   // Mouse Controls: Update OrbitControls for smooth damping
 
   // Phase 1.5: Update gamepad state every frame
   if (window.gamepadManager) {
-    window.gamepadManager.update();
+        globalProfiler.mark('gamepad');
+window.gamepadManager.update();
   }
   if (orbitControls.enabled) {
-    orbitControls.update();
+        globalProfiler.mark('orbit-controls');
+orbitControls.update();
   }
 
   // Phase 11.5.1: Log FPS every 5 seconds to detect degradation
@@ -955,29 +982,33 @@ function animate() {
   if (now - lastFpsLog > 5000) {
     const fps = (frameCount / (now - lastFpsLog)) * 1000;
     const memUsed = performance.memory ? (performance.memory.usedJSHeapSize / 1048576).toFixed(1) : 'N/A';
-    console.log(`📊 FPS: ${fps.toFixed(1)} | Mem: ${memUsed}MB | Particles: ${state.particlesCount}`);
+    // console.log(`📊 FPS);
     frameCount = 0;
     lastFpsLog = now;
   }
 
   // Phase 11.2.8: Update interpolation (modifies base state)
-  updateInterpolation();
+      globalProfiler.mark('interpolation');
+updateInterpolation();
 
   // Phase 11.3.0: Update morph chain (layers on top of interpolation)
-  updateChain();
+      globalProfiler.mark('morph-chain');
+updateChain();
 
   // MMPA Phase 2: Translate features to visual parameters
-  const mmpaVisuals = mapFeaturesToVisuals(state.mmpaFeatures);
+      globalProfiler.mark('mmpa-mapping');
+const mmpaVisuals = mapFeaturesToVisuals(state.mmpaFeatures);
 
   // Debug: Track MMPA and particle state (log every 5 seconds)
   if (!window._lastParticleDebugLog) window._lastParticleDebugLog = 0;
   if (now - window._lastParticleDebugLog > 5000) {
-    console.log(`🔍 Geometry Loop - particlesEnabled: ${state.particlesEnabled}, mmpaFeatures.enabled: ${state.mmpaFeatures.enabled}, mmpaVisuals: ${!!mmpaVisuals}, density: ${mmpaVisuals?.particleDensity?.toFixed(3) || 'N/A'}`);
+    // console.log(`🔍 Geometry);
     window._lastParticleDebugLog = now;
   }
 
   // Apply MMPA visuals when enabled
-  if (mmpaVisuals && ambientLight) {
+      globalProfiler.mark('mmpa-apply');
+if (mmpaVisuals && ambientLight) {
     // Apply Identity → Color mapping to ambient light
     const [r, g, b] = mmpaVisuals.coreColor;
     ambientLight.color.setRGB(r, g, b);
@@ -997,65 +1028,80 @@ function animate() {
   const scale = state.scale;
 
   // Apply transformations to single morph mesh
-  morphMesh.rotation.x += rotX;
+      globalProfiler.mark('geometry-transform');
+morphMesh.rotation.x += rotX;
   morphMesh.rotation.y += rotY;
   morphMesh.scale.set(scale, scale, scale);
 
   // Update audio if reactive
-  if (state.audioReactive) updateAudio();
+      globalProfiler.mark('audio-update');
+if (state.audioReactive) updateAudio();
 
   // Update geometry from current state
-  updateGeometryFromState();
+      globalProfiler.mark('geometry-state');
+updateGeometryFromState();
 
   // Update visibility based on theory mode toggle
   updateMorphVisibility();
 
   // Phase 13.5.1: Update platonic solid morphing (mergeddeep.html style)
-  updatePlatonicMorph(state.geometry.activeNotes, deltaTime, 1.0);
+      globalProfiler.mark('platonic-morph');
+updatePlatonicMorph(state.geometry.activeNotes, deltaTime, 1.0);
 
   // Update shadows
-  updateShadows(state.audioReactive);
+      globalProfiler.mark('shadows');
+updateShadows(state.audioReactive);
 
   // Update particles (MMPA Phase 2: pass visual parameters)
-  if (state.particlesEnabled) {
+      globalProfiler.mark('particles');
+if (state.particlesEnabled) {
     updateParticles(state.audioReactive, performance.now() * 0.001, mmpaVisuals);
   }
 
   // Update sprites
-  updateSprites();
+      globalProfiler.mark('sprites');
+updateSprites();
 
   // Phase 11.6.0: Update background visual (MMPA Phase 2: pass visual parameters)
-  updateVisual(camera, mmpaVisuals);
+      globalProfiler.mark('visual-background');
+updateVisual(camera, mmpaVisuals);
 
   // Update Cellular Automata ping-pong rendering
-  updateCellularAutomata(renderer);
+      globalProfiler.mark('cellular-automata');
+updateCellularAutomata(renderer);
 
   // Phase 13.7.3: Update 64×64 voxel floor
-  updateVoxelFloor(performance.now() * 0.001);
+      globalProfiler.mark('voxel-floor');
+updateVoxelFloor(performance.now() * 0.001);
 
   // Phase 13.7.3: Update shader-based volumetric mist with FBM noise
-  updateVoxelMist(performance.now() * 0.001, camera);
+      globalProfiler.mark('voxel-mist');
+updateVoxelMist(performance.now() * 0.001, camera);
 
   // Phase 11.7.3: Update emoji particles (always update if present, safe audio fallback)
-  if (window.emojiParticles) {
+      globalProfiler.mark('emoji-particles');
+if (window.emojiParticles) {
     const audioLevel = state?.audio?.level ?? 0;
     window.emojiParticles.update(audioLevel);
   }
 
   // Phase 11.7.15: Update emoji stream manager (multi-stream support)
-  if (window.emojiStreamManager) {
+      globalProfiler.mark('emoji-streams');
+if (window.emojiStreamManager) {
     const audioLevel = state?.audio?.level ?? 0;
     window.emojiStreamManager.update(audioLevel);
   }
 
   // Phase 11.7.16: Update emoji sequencer (beat-based choreography)
-  if (window.emojiSequencer) {
+      globalProfiler.mark('emoji-sequencer');
+if (window.emojiSequencer) {
     window.emojiSequencer.update();
   }
 
   // Phase 11.7.24/11.7.25/11.7.30: Update mandala controller (first-class scene citizen)
   // Phase 11.7.30: Pass audio level for ring expansion, symmetry pulse, emoji size reactivity
-  if (window.mandalaController) {
+      globalProfiler.mark('mandala');
+if (window.mandalaController) {
     const audioLevel = state?.audio?.level ?? 0;
 
     // Phase 11.7.30: Log mandala audio reactivity state on toggle (one-time)
@@ -1073,19 +1119,24 @@ function animate() {
   }
 
   // Update vessel (uses getEffectiveAudio() internally)
-  updateVessel(camera);
+      globalProfiler.mark('vessel');
+updateVessel(camera);
 
   // Update humanoid dancer at morph shape position
-  updateHumanoid(morphMesh.position);
+      globalProfiler.mark('humanoid');
+updateHumanoid(morphMesh.position);
 
   // MMPA Archetype Morph: Update Chestahedron ↔ Bell transformation
-  updateArchetypeMorph(deltaTime);
+      globalProfiler.mark('archetype-morph');
+updateArchetypeMorph(deltaTime);
 
   // Phase 2.2.0: Render shadow projection for Conflat 6
-  renderShadowProjection();
+      globalProfiler.mark('shadow-projection');
+renderShadowProjection();
 
   // VCN Phase 1: Update navigation systems
-  if (window.fpControls) {
+      globalProfiler.mark('navigation');
+if (window.fpControls) {
     window.fpControls.update(fpDelta);
   }
 
@@ -1098,12 +1149,14 @@ function animate() {
   }
 
   // Phase 1.5: Update perception state transitions
-  if (window.perceptionState) {
+      globalProfiler.mark('perception-state');
+if (window.perceptionState) {
     window.perceptionState.update(fpDelta);
   }
 
   // Stage 2: Update game mode
-  if (window.gameMode) {
+      globalProfiler.mark('game-mode');
+if (window.gameMode) {
     window.gameMode.update(fpDelta);
 
     // Update score display in HUD
@@ -1122,7 +1175,8 @@ function animate() {
   }
 
   // Skybox Destination Authoring: Update marker animations
-  if (window.destinationAuthoring) {
+      globalProfiler.mark('destination-authoring');
+if (window.destinationAuthoring) {
     window.destinationAuthoring.updateMarkers(performance.now() * 0.001);
   }
 
@@ -1132,12 +1186,14 @@ function animate() {
   }
 
   // Myth Layer Compiler: Update glyph billboarding
-  if (window.glyphRenderer) {
+      globalProfiler.mark('glyph-renderer');
+if (window.glyphRenderer) {
     window.glyphRenderer.update();
   }
 
   // Phase 2.3.3: Render Shadow Box projection
-  const shadowBox = getShadowBox();
+      globalProfiler.mark('shadow-box');
+const shadowBox = getShadowBox();
   if (shadowBox) {
     shadowBox.render(scene);
   }
@@ -1153,20 +1209,25 @@ function animate() {
   } else {
     afterimagePass.enabled = false;
   }
-  composer.render();
+      globalProfiler.mark('compositor-render');
+composer.render();
 
   // Phase 13.8: Render shadow layer AFTER main render (split-screen with phase offset)
-  if (typeof window.renderShadowLayer === 'function') {
+      globalProfiler.mark('shadow-layer');
+if (typeof window.renderShadowLayer === 'function') {
     window.renderShadowLayer();
   }
 
     // Phase 13.16: Capture timeline frame if recording
-    if (window.captureTimelineFrame) {
+        globalProfiler.mark('timeline-capture');
+if (window.captureTimelineFrame) {
       window.captureTimelineFrame();
     }
 
     // Phase 13.12: Reset error counter on successful frame
     consecutiveAnimationErrors = 0;
+
+    globalProfiler.endFrame();
 
   } catch (error) {
     // Phase 13.12: Error boundary - log but continue animation loop

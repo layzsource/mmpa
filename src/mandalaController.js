@@ -159,7 +159,7 @@ export class MandalaController {
 
       // Phase 11.7.30: Log audio reactivity state (2% sample rate)
       if (Math.random() < 0.02) {
-        console.log(`🔊 AudioLevel=${level.toFixed(2)} → rings expanded x${(1 + this.radiusPulse).toFixed(2)}, symmetry pulse ${this.anglePulse.toFixed(3)}, emoji scale x${emojiScale.toFixed(2)}, glow=${glowIntensity.toFixed(2)}`);
+        // console.log(`🔊 AudioLevel);
       }
 
       // Store emoji scale and glow for particle system to read

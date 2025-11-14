@@ -1,128 +1,215 @@
+// ✅ Phase 13.27 — Console noise guard (local-only, easy to remove)
+(() => {
+  const DROP = [
+    "HUD audioReactive update",
+    "HUD(Audio): refresh",
+    "HUD(Particles): refresh",
+    "HUD(Mandala): refresh",
+  ];
+  const _log = console.log;
+  console.log = (...a) => {
+    const first = a[0];
+    if (typeof first === "string" && DROP.some(s => first.includes(s))) return;
+    _log(...a);
+  };
+})();
+
 // ✅ HUD Safe Initialization Patch (Phase 12.1.0)
 // Absolute circular-import safety
 
-// ✅ Phase 13.1c — HUD callback sanity and ESM-safe exports
-if (!window.hudCallbacks || typeof window.hudCallbacks !== "object") {
-  window.hudCallbacks = {};
-}
+// Phase 13.25-lite: HUD audio log toggle (default OFF)
+window.__HUD_AUDIO_LOGS__ = false;
 
-export const hudCallbacks = window.hudCallbacks;
-
-export function notifyHUDUpdate() {
-  const list = (hudCallbacks && typeof hudCallbacks === "object")
-    ? Object.values(hudCallbacks)
-    : [];
-  for (const cb of list) {
-    try {
-      if (typeof cb === "function") cb();
-    } catch (e) {
-      console.error("notifyHUDUpdate callback error:", e);
+// ✅ Phase 13.2.f — HUD Signal Bridge (unified dispatcher)
+export const HUD = {
+  listeners: new Set(),
+  subscribe(fn) { if (typeof fn === "function") this.listeners.add(fn); },
+  unsubscribe(fn) { this.listeners.delete(fn); },
+  notify() {
+    for (const fn of this.listeners) {
+      try { fn(); } catch (e) { console.error("HUD listener error:", e); }
     }
+  }
+};
+
+// Back-compat shims (replace any old use sites)
+// Phase 13.4.1: Fix notifyHUDUpdate to pass data to hudRouter
+export function notifyHUDUpdate(update) {
+  if (update && typeof update === 'object') {
+    // HUD control changed - notify hudRouter with data
+    console.log('📟 notifyHUDUpdate called with:', Object.keys(update));
+    if (typeof window._hudRouterCallback === "function") {
+      try {
+        window._hudRouterCallback(update);
+      } catch (error) {
+        console.error('📟 Error in HUD router callback:', error);
+      }
+    } else {
+      console.warn('⚠️ No hudRouter callback registered!');
+    }
+  } else {
+    // Simple refresh notification - notify all Signal Bridge listeners
+    HUD.notify();
   }
 }
 
+export function registerHUDCallback(_section, fn) { HUD.subscribe(fn); }
+
+// Guard the legacy global so old code doesn't crash
+if (!window.hudCallbacks || typeof window.hudCallbacks !== "object") {
+  window.hudCallbacks = {};
+}
+window.hudCallbacks.notify = notifyHUDUpdate; // legacy alias
+
+console.log("📟 hud.js: HUD Signal Bridge online");
+
+export const hudCallbacks = window.hudCallbacks;
+
+// Legacy compatibility: onHUDUpdate
+// This is used by hudRouter.js to register its update handler
 export function onHUDUpdate(callback) {
   if (typeof callback === "function") {
-    // Register callback with HUD routing system
-    import('./hudRouter.js').then(() => {
-      callback();
-    });
+    // Register the hudRouter callback globally so notifyHUDUpdate can call it
+    window._hudRouterCallback = callback;
+    console.log("📟 HUD router callback registered");
   } else {
     // When called with no args, trigger all callbacks
     notifyHUDUpdate();
   }
 }
 
+console.log("📟 HUD registry initialized");
+
 import { state } from './state.js';
 import { createMorphHudSection } from './hudMorph.js'; // Phase 11.7.51: Modular Morph HUD
-import { createMandalaHudSection } from './hudMandala.js'; // Phase 11.7.50: Modular Mandala HUD
-import { createParticlesHudSection } from './hudParticles.js'; // Phase 11.7.50: Modular Particles HUD
+import { createMandalaHudSection, refreshMandalaHUD } from './hudMandala.js'; // Phase 11.7.50: Modular Mandala HUD
+import { createParticlesHudSection, refreshParticlesHUD } from './hudParticles.js'; // Phase 11.7.50: Modular Particles HUD
 import { createBackgroundHudSection } from './hudBackground.js'; // Phase 11.7.50: Modular Background HUD
 import { createShadowsHudSection } from './hudShadows.js'; // Phase 11.7.50: Modular Shadows HUD
 import { createVesselHudSection } from './hudVessel.js'; // Phase 11.7.50: Modular Vessel HUD
-import { createAudioHudSection } from './hudAudio.js'; // Phase 11.7.50: Modular Audio HUD
+import { createAudioHudSection, refreshAudioHUD } from './hudAudio.js'; // Phase 11.7.50: Modular Audio HUD
 import { createMidiHudSection } from './hudMidi.js'; // Phase 11.7.50: Modular MIDI HUD
 import { createTelemetryHudSection } from './hudTelemetry.js'; // Phase 11.7.50: Modular Telemetry HUD
+import { createMMPAHudSection } from './hudMMPA.js'; // Phase 13.30: MMPA V2.0 HUD
 import { createPresetsHudSection } from './hudPresets.js'; // Phase 12: Modular Presets HUD
 import { createGeometryHudSection } from './hudGeometry.js'; // Phase 12.0: Modular Geometry HUD
+import { createAcidEmpireHudSection } from './hudAcidEmpire.js'; // Phase 13.6.0: Modular Acid Empire HUD
+import { createHyperbolicTilingHudSection } from './hudHyperbolicTiling.js'; // Phase 13.29: Modular Hyperbolic Tiling HUD
+import { createVoxelWaveHudSection } from './hudVoxelWave.js'; // Phase 13.7.0: Modular Voxel Wave HUD
+import { createFeaturesHudSection } from './hudFeatures.js'; // MMPA Features (Ratio Engine)
+import { createAnchorsHudSection } from './hudAnchors.js'; // MMPA Anchors (Memory)
+import { createCommunityHudSection } from './hudCommunity.js'; // MMPA Community (Ecosystem)
+import { createSequencesHudSection } from './hudSequences.js'; // MMPA Sequences (Composition)
+import { createTheoryHudSection } from './hudTheory.js'; // MMPA Unified Theory (Heart/Vortex/Archetype)
+import { initAnchors } from './anchorSystem.js'; // MMPA Anchor System
+import { enterPerformanceMode } from './performanceMode.js'; // MMPA Performance Mode
+import { createLuminousTessellationHudSection } from './hudLuminousTessellation.js'; // Luminous Tessellation HUD
+import { createSacredGeometryHudSection } from './hudSacredGeometry.js'; // Sacred Geometry HUD
+import { createRayMarchingHudSection } from './hudRayMarching.js'; // Ray Marching HUD
+import { createLiquidSimHudSection } from './hudLiquidSim.js'; // Liquid Simulation HUD
+import { createKaleidoscopeHudSection } from './hudKaleidoscope.js'; // Kaleidoscope HUD
+import { createCellularAutomataHudSection } from './hudCellularAutomata.js'; // Cellular Automata HUD
+import { createFlowFieldHudSection } from './hudFlowField.js'; // Flow Field HUD
+import { createMandelbulbHudSection } from './hudMandelbulb.js'; // Mandelbulb Voxel Core HUD
+import { createVCNHudSection } from './hudVCN.js'; // VCN Phase 1: Navigation HUD
+import { createDestinationHUD } from './hudDestinations.js'; // Skybox Destination Authoring
+import { createSignalHUD } from './hudSignals.js'; // Signal Multimodality
+import { createMaterialPhysicsHUD } from './hudMaterialPhysics.js'; // Material Physics Engine
+import { createMythHUD } from './hudMyth.js'; // Myth Layer Compiler
+import { createPedagogicalHUD } from './hudPedagogical.js'; // Pedagogical Mode
+import { createAIHUD } from './hudAI.js'; // AI Co-Agent Integration
+import { createAIAssistantHUD } from './hudAIAssistant.js'; // AI Assistant - State-aware suggestions
+import { createCameraHUD } from './hudCamera.js'; // Camera & Biosignal Inputs
+import { createPortalHUD } from './hudPortal.js'; // Portal Builder
+import { createTextSignalHUD } from './hudText.js'; // Text/NLP Signals
+import { createRecorderHudSection } from './hudRecorder.js'; // Video Recording
+import { createFinancialHUD } from './hudFinancial.js'; // Phase 13.27: Financial Data Pipeline
+import { initTimeline } from './timelineIntegration.js'; // Phase 13.16: Timeline & Playback System
+import { AudioManifoldPanel } from './audioManifoldPanel.js'; // Audio Manifold UMAP/t-SNE Visualization
+import { createSettingsHudSection } from './hudSettings.js'; // Settings Configuration
+import { initSettings, getSettings } from './settings.js'; // Settings Manager
+import { FlightParams } from './flightParams.js'; // Flight parameters
+import { createSynthHudSection, getSynthInstance } from './hudSynth.js'; // MMPA Synth Engine
+import { createPiPhiPanel } from './hudPiPhi.js'; // π/φ Synchronicity Detector
+import { loadSavedPalette } from './colorPalettes.js'; // Color Palette System
+
+// Phase 13.4.2: Register refresh callbacks for modules that export them
+// (Most modules removed registerHUDCallback to avoid circular dependencies)
+if (typeof refreshAudioHUD === 'function') registerHUDCallback("audio", refreshAudioHUD);
+if (typeof refreshParticlesHUD === 'function') registerHUDCallback("particles", refreshParticlesHUD);
+if (typeof refreshMandalaHUD === 'function') registerHUDCallback("mandala", refreshMandalaHUD);
 
 console.log("📟 hud.js loaded");
 
-export function initHUD() {
-  const hudPanel = createHUDPanel();
+// Import Rams-inspired CSS
+const hudCSSLink = document.createElement('link');
+hudCSSLink.rel = 'stylesheet';
+hudCSSLink.href = new URL('./hud-rams.css', import.meta.url).href;
+document.head.appendChild(hudCSSLink);
+
+export async function initHUD() {
+  // Initialize MMPA Anchor System
+  initAnchors();
+
+  // Initialize Settings
+  await initSettings();
+
+  // Apply saved controller sensitivity settings
+  const settings = getSettings();
+  if (settings.controller) {
+    if (settings.controller.yawSensitivity !== undefined) {
+      FlightParams.look.yawSensitivity = settings.controller.yawSensitivity;
+      console.log(`🎮 Loaded yaw sensitivity: ${settings.controller.yawSensitivity}`);
+    }
+    if (settings.controller.pitchSensitivity !== undefined) {
+      FlightParams.look.pitchSensitivity = settings.controller.pitchSensitivity;
+      console.log(`🎮 Loaded pitch sensitivity: ${settings.controller.pitchSensitivity}`);
+    }
+  }
+
+  // Load saved color palette
+  loadSavedPalette();
+
+  const hudPanel = await createHUDPanel();
   document.body.appendChild(hudPanel);
 
-  // ✅ Activate real updater after HUD is ready
-  _onHUDUpdate = () => {
-    for (const cb of Object.values(_hudCallbacks)) {
-      if (typeof cb === "function") cb();
-    }
-    console.log("✅ HUD initialized — onHUDUpdate active");
-  };
-
-  console.log("📟 HUD initialized");
+  console.log("📟 HUD initialized with Rams design system");
 }
 
-function createHUDPanel() {
+async function createHUDPanel() {
   const panel = document.createElement('div');
   panel.id = 'hud-panel';
-  panel.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 20px;
-    border-radius: 8px;
-    font-family: monospace;
-    font-size: 14px;
-    z-index: 1000;
-    min-width: 200px;
-    max-height: 90vh;
-    overflow-y: auto;
-    scrollbar-width: thin;
-  `;
-
-  // Add webkit scrollbar styling
-  const style = document.createElement('style');
-  style.textContent = `
-    #hud-panel::-webkit-scrollbar {
-      width: 6px;
-    }
-    #hud-panel::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.3);
-      border-radius: 3px;
-    }
-    #hud-panel::-webkit-scrollbar-track {
-      background: transparent;
-    }
-  `;
-  document.head.appendChild(style);
+  // No inline styles - all handled by hud-rams.css
 
   // Phase 11.5.0: HUD collapse state
   let hudCollapsed = false;
 
-  // Header container with title + collapse button
+  // Header container with title + buttons
   const header = document.createElement('div');
-  header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;';
+  header.className = 'hud-header';
 
   const title = document.createElement('h3');
-  title.textContent = '🔺 Geometry Controls';
-  title.style.cssText = 'margin: 0; color: #00ff00;';
+  title.className = 'hud-title';
+  title.textContent = 'Controls';
 
-  // Phase 11.5.0: Collapse/Expand toggle button
+  // Button group
+  const btnGroup = document.createElement('div');
+  btnGroup.style.cssText = 'display: flex; gap: 8px; align-items: center;';
+
+  // Performance Mode button
+  const perfModeBtn = document.createElement('button');
+  perfModeBtn.className = 'hud-header-btn';
+  perfModeBtn.textContent = 'Performance';
+  perfModeBtn.title = 'Enter Performance Mode';
+  perfModeBtn.addEventListener('click', () => {
+    enterPerformanceMode();
+  });
+
+  // Collapse/Expand toggle button
   const collapseBtn = document.createElement('button');
+  collapseBtn.className = 'hud-header-btn';
   collapseBtn.textContent = '−';
-  collapseBtn.style.cssText = `
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: white;
-    padding: 2px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 18px;
-    font-weight: bold;
-  `;
+  collapseBtn.title = 'Collapse HUD';
 
   // Container for all controls (will be hidden when collapsed)
   const controlsContainer = document.createElement('div');
@@ -133,50 +220,43 @@ function createHUDPanel() {
     if (hudCollapsed) {
       controlsContainer.style.display = 'none';
       collapseBtn.textContent = '+';
+      collapseBtn.title = 'Expand HUD';
       console.log("📟 HUD collapsed (minimal mode)");
     } else {
       controlsContainer.style.display = 'block';
       collapseBtn.textContent = '−';
+      collapseBtn.title = 'Collapse HUD';
       console.log("📟 HUD expanded (full mode)");
     }
   });
 
+  btnGroup.appendChild(perfModeBtn);
+  btnGroup.appendChild(collapseBtn);
   header.appendChild(title);
-  header.appendChild(collapseBtn);
+  header.appendChild(btnGroup);
   panel.appendChild(header);
 
   // Phase 11.5.0: Tab navigation
   const tabNav = document.createElement('div');
-  tabNav.style.cssText = `
-    display: flex;
-    gap: 5px;
-    margin-bottom: 10px;
-    border-bottom: 2px solid #333;
-    padding-bottom: 5px;
-  `;
+  tabNav.className = 'hud-tabs';
 
-  const tabs = ['Morph', 'Presets', 'Audio', 'Visual', 'Advanced', 'MIDI'];
+  const tabs = ['Morph', 'Presets', 'Audio', 'Financial', 'Synth', 'π/φ', 'Visual', 'Advanced', 'Settings', 'MIDI', 'VCN', 'Destinations', 'Signals', 'Myth', 'Learn', 'AI', 'Camera', 'Portal', 'Text'];
   let activeTab = 'Morph';
   const tabButtons = {};
   const tabContainers = {};
 
   tabs.forEach(tabName => {
     const btn = document.createElement('button');
+    btn.className = 'hud-tab';
     btn.textContent = tabName;
-    btn.style.cssText = `
-      background: #222;
-      color: #aaa;
-      border: 1px solid #444;
-      padding: 5px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 11px;
-    `;
     btn.addEventListener('click', () => {
       activeTab = tabName;
       tabs.forEach(t => {
-        tabButtons[t].style.background = t === tabName ? '#555' : '#222';
-        tabButtons[t].style.color = t === tabName ? 'white' : '#aaa';
+        if (t === tabName) {
+          tabButtons[t].classList.add('active');
+        } else {
+          tabButtons[t].classList.remove('active');
+        }
         tabContainers[t].style.display = t === tabName ? 'block' : 'none';
       });
       console.log(`📟 Tab switched to: ${tabName}`);
@@ -185,6 +265,7 @@ function createHUDPanel() {
     tabButtons[tabName] = btn;
 
     const container = document.createElement('div');
+    container.className = 'hud-content';
     container.id = `tab-${tabName.toLowerCase()}`;
     container.style.display = tabName === 'Morph' ? 'block' : 'none';
     controlsContainer.appendChild(container);
@@ -192,8 +273,7 @@ function createHUDPanel() {
   });
 
   // Set initial active state
-  tabButtons['Morph'].style.background = '#555';
-  tabButtons['Morph'].style.color = 'white';
+  tabButtons['Morph'].classList.add('active');
 
   controlsContainer.insertBefore(tabNav, controlsContainer.firstChild);
 
@@ -208,6 +288,85 @@ function createHUDPanel() {
 
   // Phase 11.7.50: Modular Audio HUD section
   createAudioHudSection(tabContainers['Audio'], notifyHUDUpdate);
+
+  // Video Recording HUD section
+  createRecorderHudSection(tabContainers['Audio']);
+
+  // Phase 13.16: Timeline & Playback System
+  initTimeline(tabContainers['Audio']);
+
+  // Phase 13.27: Financial Data Pipeline HUD section
+  const financialSection = createFinancialHUD();
+  tabContainers['Financial'].appendChild(financialSection);
+
+  // === MMPA Features - The Ratio Engine ===
+  createFeaturesHudSection(tabContainers['Audio']);
+
+  // === MMPA Anchors - Memory System ===
+  createAnchorsHudSection(tabContainers['Audio']);
+
+  // === MMPA Community - Ecosystem ===
+  try {
+    createCommunityHudSection(tabContainers['Audio']);
+  } catch (error) {
+    console.error('❌ Failed to create Community HUD section:', error);
+  }
+
+  // === MMPA Sequences - Composition ===
+  createSequencesHudSection(tabContainers['Audio']);
+
+  // === MMPA Unified Theory - Heart/Vortex/Archetype ===
+  createTheoryHudSection(tabContainers['Audio']);
+
+  // === Audio Manifold Panel (UMAP/t-SNE Visualization) ===
+  // Initialize panel instance with AudioEngine
+  window.audioManifoldPanel = new AudioManifoldPanel(AudioEngine);
+
+  // Create toggle button section
+  const manifoldLabel = document.createElement("h4");
+  manifoldLabel.textContent = "🎨 Audio Manifold Visualization";
+  manifoldLabel.style.cssText = 'margin: 15px 0 10px 0; color: #a78bfa; font-size: 12px;';
+  tabContainers['Audio'].appendChild(manifoldLabel);
+
+  const manifoldToggle = document.createElement("button");
+  manifoldToggle.textContent = "Open Audio Manifold";
+  manifoldToggle.style.cssText = `
+    background: rgba(167, 139, 250, 0.2);
+    border: 1px solid #a78bfa;
+    color: #a78bfa;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    transition: all 0.2s;
+  `;
+  manifoldToggle.onmouseenter = () => {
+    manifoldToggle.style.background = 'rgba(167, 139, 250, 0.3)';
+    manifoldToggle.style.boxShadow = '0 0 10px rgba(167, 139, 250, 0.4)';
+  };
+  manifoldToggle.onmouseleave = () => {
+    manifoldToggle.style.background = 'rgba(167, 139, 250, 0.2)';
+    manifoldToggle.style.boxShadow = 'none';
+  };
+  manifoldToggle.onclick = () => {
+    window.audioManifoldPanel.toggle();
+    manifoldToggle.textContent = window.audioManifoldPanel.isOpen ? 'Close Audio Manifold' : 'Open Audio Manifold';
+  };
+  tabContainers['Audio'].appendChild(manifoldToggle);
+
+  console.log('🎨 Audio Manifold Panel integrated into HUD');
+
+  // === MMPA Synth Engine ===
+  await createSynthHudSection(tabContainers['Synth']);
+
+  // === π/φ Synchronicity Detector ===
+  const piPhiPanel = createPiPhiPanel(tabContainers['π/φ']);
+  window.piPhiPanel = piPhiPanel; // Global reference for audio analysis updates
+
+  // NOTE: Chronelix Mode selector moved to Timeline Playback Panel (timelinePlaybackPanel.js)
+  // where the Chronelix is actually displayed - access via the panel's title bar
 
   // === Phase 4.8.1/11.7.50: Particles (Modular) ===
   createParticlesHudSection(tabContainers['Visual'], notifyHUDUpdate, createToggleControl, createSliderControl);
@@ -321,7 +480,8 @@ function createHUDPanel() {
     { value: "random", label: "Random" },
     { value: "spiral", label: "Spiral 🌀" },
     { value: "wave", label: "Wave Grid 🌊" },
-    { value: "burst", label: "Burst 💥" }
+    { value: "burst", label: "Burst 💥" },
+    { value: "spectrum", label: "Spectrum 📊" }
   ];
 
   layoutOptions.forEach(opt => {
@@ -1128,7 +1288,11 @@ function createHUDPanel() {
   tabContainers['Visual'].appendChild(customPatternInput);
 
   // === Phase 11.7.21/11.7.50: Emoji Mandalas (Modular) ===
-  createMandalaHudSection(tabContainers['Visual'], notifyHUDUpdate, createToggleControl, createSliderControl);
+  try {
+    createMandalaHudSection(tabContainers['Visual'], notifyHUDUpdate, createToggleControl, createSliderControl);
+  } catch (error) {
+    console.error('❌ Failed to create Mandala HUD section:', error);
+  }
 
   // === Phase 12.0: Geometry (Morph Shape Controls) ===
   createGeometryHudSection(tabContainers['Visual'], { camera: null, renderer: null, controls: null });
@@ -1141,7 +1305,7 @@ function createHUDPanel() {
 
   // Trail enabled toggle (line trails)
   const trailEnabledControl = createToggleControl('Enable Line Trails', false, (value) => {
-    notifyHUDUpdateWithData({ particlesTrailEnabled: value });
+    notifyHUDUpdate({ particlesTrailEnabled: value });
   });
   tabContainers['Visual'].appendChild(trailEnabledControl);
 
@@ -1237,6 +1401,68 @@ function createHUDPanel() {
 
   // === Phase 11.6.0/11.7.50: Background Image (Modular) ===
   createBackgroundHudSection(tabContainers['Visual']);
+
+  // === Phase 13.6.0: Acid Empire (Modular) ===
+  createAcidEmpireHudSection(tabContainers['Visual']);
+
+  // === Phase 13.29: Hyperbolic Tiling (Modular) ===
+  createHyperbolicTilingHudSection(tabContainers['Visual']);
+
+  // === Phase 13.30: Skybox Render Mode (Global Setting) ===
+  const skyboxRenderModeLabel = document.createElement('label');
+  skyboxRenderModeLabel.textContent = "🌐 Skybox Render Mode";
+  skyboxRenderModeLabel.style.cssText = 'display: block; margin: 15px 0 5px 0; color: #00ffff; font-size: 11px; font-weight: bold;';
+  tabContainers['Visual'].appendChild(skyboxRenderModeLabel);
+
+  const skyboxRenderModeDropdown = document.createElement("select");
+  skyboxRenderModeDropdown.style.cssText = 'width: 100%; padding: 4px; background: #111; color: #0ff; border: 1px solid #0ff; margin-bottom: 10px;';
+
+  const mode360Option = document.createElement("option");
+  mode360Option.value = "360";
+  mode360Option.textContent = "360° Panorama (Seamless)";
+  skyboxRenderModeDropdown.appendChild(mode360Option);
+
+  const modePerPanelOption = document.createElement("option");
+  modePerPanelOption.value = "per-panel";
+  modePerPanelOption.textContent = "Per-Panel (6 Faces)";
+  skyboxRenderModeDropdown.appendChild(modePerPanelOption);
+
+  skyboxRenderModeDropdown.value = state.skyboxRenderMode || '360';
+
+  skyboxRenderModeDropdown.addEventListener("change", () => {
+    state.skyboxRenderMode = skyboxRenderModeDropdown.value;
+    console.log(`🌐 Skybox render mode: ${state.skyboxRenderMode}`);
+  });
+
+  skyboxRenderModeDropdown.title = '360° creates seamless equirectangular panorama. Per-Panel renders each cube face independently.';
+  tabContainers['Visual'].appendChild(skyboxRenderModeDropdown);
+
+  // === Phase 13.7.0: Voxel Wave (Modular) ===
+  createVoxelWaveHudSection(tabContainers['Visual']);
+
+  // === Luminous Tessellation (Modular) ===
+  createLuminousTessellationHudSection(tabContainers['Visual']);
+
+  // === Sacred Geometry (Modular) ===
+  createSacredGeometryHudSection(tabContainers['Visual']);
+
+  // === Ray Marching (Modular) ===
+  createRayMarchingHudSection(tabContainers['Visual']);
+
+  // === Liquid Simulation (Modular) ===
+  createLiquidSimHudSection(tabContainers['Visual']);
+
+  // === Kaleidoscope (Modular) ===
+  createKaleidoscopeHudSection(tabContainers['Visual']);
+
+  // === Cellular Automata (Modular) ===
+  createCellularAutomataHudSection(tabContainers['Visual']);
+
+  // === Flow Field (Modular) ===
+  createFlowFieldHudSection(tabContainers['Visual']);
+
+  // === Mandelbulb Voxel Core (Modular) ===
+  createMandelbulbHudSection(tabContainers['Visual']);
 
   // Ambient light intensity
   const ambientLightControl = createSliderControl('Ambient Intensity', 0.4, 0.0, 2.0, 0.1, (value) => {
@@ -1421,6 +1647,66 @@ function createHUDPanel() {
   shadowFgColorControl.title = 'Color for pixels above threshold';
   tabContainers['Visual'].appendChild(shadowFgColorControl);
 
+  // Phase 13.8: Shadow Layer pop-up window toggle
+  const shadowLayerSeparator = document.createElement('hr');
+  shadowLayerSeparator.style.cssText = 'border: 1px solid #555; margin: 15px 0;';
+  tabContainers['Visual'].appendChild(shadowLayerSeparator);
+
+  const shadowLayerTitle = document.createElement('h4');
+  shadowLayerTitle.textContent = '🌓 Shadow Layer (Interpretive Dimension)';
+  shadowLayerTitle.style.cssText = 'margin: 0 0 10px 0; color: #9966ff; font-size: 12px;';
+  tabContainers['Visual'].appendChild(shadowLayerTitle);
+
+  // Shadow Layer toggle button
+  const shadowLayerBtn = document.createElement('button');
+  shadowLayerBtn.textContent = 'Open Shadow Layer Window';
+  shadowLayerBtn.style.cssText = `
+    width: 100%;
+    padding: 10px;
+    background: linear-gradient(135deg, #2a1a4a, #4a2a6a);
+    color: #fff;
+    border: 1px solid #6644aa;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-bottom: 10px;
+    transition: all 0.2s;
+  `;
+  shadowLayerBtn.addEventListener('mouseenter', () => {
+    shadowLayerBtn.style.background = 'linear-gradient(135deg, #3a2a5a, #5a3a7a)';
+  });
+  shadowLayerBtn.addEventListener('mouseleave', () => {
+    shadowLayerBtn.style.background = 'linear-gradient(135deg, #2a1a4a, #4a2a6a)';
+  });
+  shadowLayerBtn.addEventListener('click', () => {
+    // Import and toggle shadow layer
+    import('./shadowLayer.js').then(({ toggleShadowLayer, isShadowLayerOpen }) => {
+      toggleShadowLayer();
+      // Update button text
+      setTimeout(() => {
+        shadowLayerBtn.textContent = isShadowLayerOpen()
+          ? 'Close Shadow Layer Window'
+          : 'Open Shadow Layer Window';
+      }, 100);
+    }).catch(err => {
+      console.error("Failed to load shadowLayer.js:", err);
+    });
+  });
+  shadowLayerBtn.title = 'Opens a separate window with phase-offset echo visualization for comparative analysis';
+  tabContainers['Visual'].appendChild(shadowLayerBtn);
+
+  const shadowLayerInfo = document.createElement('div');
+  shadowLayerInfo.style.cssText = 'font-size: 10px; color: #888; margin-bottom: 10px; line-height: 1.4;';
+  shadowLayerInfo.innerHTML = `
+    The Shadow Layer is a separate rendering window that shows an<br>
+    interpretive echo of the main visualization with:<br>
+    • Phase offset (30% delay)<br>
+    • Echo decay (85% intensity)<br>
+    • Color shift (+30° hue)<br>
+    Perfect for comparative analysis and visual depth.
+  `;
+  tabContainers['Visual'].appendChild(shadowLayerInfo);
+
   // === Shadows (Modular) ===
   createShadowsHudSection(tabContainers['Visual'], notifyHUDUpdate, createToggleControl, createSliderControl, createColorPickerControl);
 
@@ -1449,8 +1735,47 @@ function createHUDPanel() {
   // Phase 11.7.50: Modular Telemetry/Debug HUD section
   createTelemetryHudSection(tabContainers['Advanced'], notifyHUDUpdate);
 
+  // Phase 13.30: MMPA V2.0 Predictions HUD section
+  createMMPAHudSection(tabContainers['Advanced'], notifyHUDUpdate);
+
+  // Settings Configuration HUD section
+  createSettingsHudSection(tabContainers['Settings']);
+
   // Phase 11.7.50: Modular MIDI HUD section
   createMidiHudSection(tabContainers['MIDI'], notifyHUDUpdate);
+
+  // VCN Phase 1: Vessel Compass Navigator HUD section
+  createVCNHudSection(tabContainers['VCN'], notifyHUDUpdate);
+
+  // Skybox Destination Authoring: Destination authoring HUD section
+  createDestinationHUD(tabContainers['Destinations']);
+
+  // Signal Multimodality: Signal sources HUD section
+  createSignalHUD(tabContainers['Signals']);
+
+  // Material Physics Engine: ARPT scores and material states
+  createMaterialPhysicsHUD(tabContainers['Signals']);
+
+  // Myth Layer Compiler: Myth HUD section
+  createMythHUD(tabContainers['Myth']);
+
+  // Pedagogical Mode: Learning HUD section
+  createPedagogicalHUD(tabContainers['Learn']);
+
+  // AI Co-Agent Integration: AI generation HUD section
+  createAIHUD(tabContainers['AI']);
+
+  // AI Assistant: State-aware suggestions
+  createAIAssistantHUD(tabContainers['AI']);
+
+  // Camera & Biosignals: Camera HUD section
+  createCameraHUD(tabContainers['Camera']);
+
+  // Portal Builder: Portal HUD section
+  createPortalHUD(tabContainers['Portal']);
+
+  // Text/NLP Signals: Text Signal HUD section
+  createTextSignalHUD(tabContainers['Text']);
 
   // Phase 11.5.0: Attach controls container to panel
   panel.appendChild(controlsContainer);
@@ -1752,18 +2077,8 @@ export function updatePresetList(presets) {
   }
 }
 
-function notifyHUDUpdateWithData(update) {
-  const list = (hudCallbacks && typeof hudCallbacks === "object")
-    ? Object.values(hudCallbacks)
-    : [];
-  for (const callback of list) {
-    try {
-      if (typeof callback === "function") callback(update);
-    } catch (error) {
-      console.error('📟 Error in HUD callback:', error);
-    }
-  }
-}
+// ✅ Phase 13.4.1 — notifyHUDUpdate is now merged into notifyHUDUpdate
+// (Function removed - use notifyHUDUpdate(update) instead)
 
 // Phase 4.8.1: Performance HUD update
 export function updatePerformanceHUD(fps, drawCalls) {
@@ -1775,20 +2090,100 @@ export function updatePerformanceHUD(fps, drawCalls) {
 
 import { AudioEngine } from "./audio.js";
 import { audioState } from "./audioRouter.js";
+import { state as appState } from "./state.js";
 
 // Phase 13.1b: Audio reactive callback bridge
-window.hudCallbacks.audioReactive = (state) => {
-  console.log("🔉 HUD audioReactive update →",
-    "bass:", state.bass.toFixed(2),
-    "mid:", state.mid.toFixed(2),
-    "treble:", state.treble.toFixed(2),
-    "level:", state.level.toFixed(2)
+window.hudCallbacks.audioReactive = (audioData) => {
+  // ✅ Phase 13.27 — Minimal audio state bridge
+  // Update appState.audio with live audio data
+  appState.audio.bass = audioData.bass ?? 0;
+  appState.audio.mid = audioData.mid ?? 0;
+  appState.audio.treble = audioData.treble ?? 0;
+  appState.audio.level = audioData.level ?? 0;
+
+  window.__HUD_AUDIO_LOGS__ && console.log("🔉 HUD audioReactive update →",
+    "bass:", audioData.bass.toFixed(2),
+    "mid:", audioData.mid.toFixed(2),
+    "treble:", audioData.treble.toFixed(2),
+    "level:", audioData.level.toFixed(2)
   );
 };
 
+// 🎯 FIX 18: DISABLE audio auto-start
+// Audio now only starts when user explicitly enables it
+// Users can call window.AudioEngine.start() from console or use HUD controls
+/*
 // Arm audio once the HUD finishes setting up (no prompts; safe if device missing)
 setTimeout(() => {
   AudioEngine.start().then(ok => {
     if (ok) console.log("✅ Audio engine running");
   });
 }, 1000);
+*/
+console.log("🎤 Audio engine will NOT auto-start - call AudioEngine.start() manually or via HUD");
+
+// ——— Phase 13.20 Projector Mode toggle button (small, non-intrusive) ———
+(function addProjectorButton() {
+  // Wait until DOM is ready and HUD exists
+  const root = document.body;
+  if (!root) return;
+
+  const btn = document.createElement('button');
+  btn.textContent = '🖥️ Projector Mode';
+  btn.title = 'Shift+P toggles; Esc exits';
+  Object.assign(btn.style, {
+    position: 'fixed',
+    right: '12px',
+    bottom: '12px',
+    zIndex: 99999,
+    padding: '8px 12px',
+    background: '#111',
+    color: '#eee',
+    border: '1px solid #444',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    opacity: '0.85'
+  });
+
+  btn.addEventListener('mouseenter', () => btn.style.opacity = '1');
+  btn.addEventListener('mouseleave', () => btn.style.opacity = '0.85');
+  btn.addEventListener('click', () => window.ProjectorMode?.toggle());
+
+  root.appendChild(btn);
+
+  // Hide the button itself in projector mode (keyboard Esc to exit)
+  const obs = new MutationObserver(() => {
+    const on = document.body.classList.contains('projector-mode') || document.documentElement.classList.contains('projector-mode');
+    btn.style.display = on ? 'none' : 'block';
+  });
+  obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  obs.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+})();
+
+// ——— Phase 13.25.2: Console Noise Gate for HUD audio spam ———
+(function noiseGateHUDLogs() {
+  // Toggle in console: setAudioLog(true/false); setAudioLogRate( ms );
+  window.__AUDIO_LOG_ENABLED__ = false;   // default: muted
+  window.__AUDIO_LOG_MIN_MS__  = 1000;    // throttle window
+
+  window.setAudioLog = (on = true) => { window.__AUDIO_LOG_ENABLED__ = !!on; console.warn('🔧 Audio log:', on ? 'ON' : 'OFF'); };
+  window.setAudioLogRate = (ms = 1000) => { window.__AUDIO_LOG_MIN_MS__ = Math.max(0, ms|0); console.warn('🔧 Audio log rate set to', window.__AUDIO_LOG_MIN_MS__, 'ms'); };
+
+  const ORIG_LOG = console.log;
+  console.log = function (...args) {
+    try {
+      const first = args[0];
+      // Only gate the noisy per-frame HUD audio line
+      if (typeof first === 'string' && first.startsWith('🔉 HUD audioReactive update')) {
+        if (!window.__AUDIO_LOG_ENABLED__) return; // muted
+        const now = performance.now();
+        const last = console.__lastAudioHUD__ || 0;
+        if (now - last < (window.__AUDIO_LOG_MIN_MS__ ?? 1000)) return; // throttled
+        console.__lastAudioHUD__ = now;
+      }
+    } catch (_) {}
+    return ORIG_LOG.apply(console, args);
+  };
+
+  console.warn('🛑 HUD audio log gated (Phase 13.25.2). Use setAudioLog(true) to enable, setAudioLog(false) to mute.');
+})();

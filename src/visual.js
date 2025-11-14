@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { state } from "./state.js";
 import { initTheoryRenderer, updateTheoryRenderer } from './theoryRenderer.js';
 import { updateCalibration, getStabilityMetric, getFluxMetric } from './archetypeRecognizer.js';
+import { KochSnowflakeBackground } from './backgrounds/kochSnowflake.js';
 
 console.log("🖼️ visual.js loaded");
 
@@ -16,6 +17,9 @@ let acidShaderMaterial = null;
 let voxelWaveShaderMaterial = null;
 let hyperbolicTilingShaderMaterial = null;
 let acidClock = new THREE.Clock();
+
+// Koch Snowflake background
+let kochSnowflakeBackground = null;
 
 // Audio-reactive smoothing for Acid Empire
 let smoothedFrequency = 0.5; // Tracks dominant frequency (0-1)
@@ -2387,6 +2391,15 @@ export function initVisual(scene) {
   skyboxMesh = skyboxGroup; // Store the group as skyboxMesh
   scene.add(skyboxMesh);
 
+  // Initialize Koch Snowflake background
+  try {
+    kochSnowflakeBackground = new KochSnowflakeBackground(scene, null);
+    kochSnowflakeBackground.mesh.visible = false; // Hidden by default
+    console.log('❄️ Koch Snowflake background initialized');
+  } catch (error) {
+    console.error('❌ Failed to initialize Koch Snowflake:', error);
+  }
+
   // MMPA Unified Theory - Initialize the Heart/Vortex/Archetype visualization
   try {
     theoryRendererAPI = initTheoryRenderer(scene, {
@@ -2452,6 +2465,19 @@ export function initVisual(scene) {
 }
 
 export function updateVisual(camera, mmpaVisuals = null) {
+  // Update Koch Snowflake if active (needs to run regardless of backgroundMesh)
+  if (kochSnowflakeBackground && kochSnowflakeBackground.mesh.visible) {
+    if (!window._kochUpdateLogged) {
+      console.log('❄️ About to call kochSnowflakeBackground.update()');
+      window._kochUpdateLogged = true;
+    }
+    kochSnowflakeBackground.update();
+  } else if (kochSnowflakeBackground && !window._kochNotVisibleLogged) {
+    console.log(`❄️ Koch exists but not visible: mesh.visible=${kochSnowflakeBackground.mesh.visible}`);
+    window._kochNotVisibleLogged = true;
+  }
+
+  // Early return if no standard background mesh
   if (!backgroundMesh) return;
 
   // MMPA Phase 2: Apply feature-based color shift if enabled
@@ -3392,4 +3418,47 @@ export function updateCellularAutomata(renderer) {
       cellularCurrentTarget = 'A';
     }
   }
+}
+
+// Koch Snowflake controls
+export function setKochSnowflakeMode(enabled) {
+  console.log(`❄️ setKochSnowflakeMode called with enabled=${enabled}, kochSnowflakeBackground exists=${!!kochSnowflakeBackground}`);
+
+  if (!kochSnowflakeBackground) {
+    console.warn('❌ Koch Snowflake background not initialized yet');
+    return;
+  }
+
+  // Reset debug logging flags when toggling
+  window._kochUpdateLogged = false;
+  window._kochNotVisibleLogged = false;
+
+  // Hide other backgrounds
+  if (backgroundMesh) backgroundMesh.visible = !enabled;
+  if (skyboxMesh) skyboxMesh.visible = false;
+
+  kochSnowflakeBackground.mesh.visible = enabled;
+
+  console.log(`❄️ Koch Snowflake: ${enabled ? "ON" : "OFF"} (mesh.visible=${kochSnowflakeBackground.mesh.visible})`);
+}
+
+export function setKochColorMode(mode) {
+  if (!kochSnowflakeBackground) return;
+  kochSnowflakeBackground.setColorMode(mode); // "static", "audio", "theory"
+}
+
+export function kochZoom(factor) {
+  if (!kochSnowflakeBackground) return;
+  kochSnowflakeBackground.zoom(factor);
+}
+
+export function kochReset() {
+  if (!kochSnowflakeBackground) return;
+  kochSnowflakeBackground.reset();
+}
+
+export function setKochAutoZoom(enabled) {
+  if (!kochSnowflakeBackground) return;
+  kochSnowflakeBackground.autoZoom = enabled;
+  console.log(`❄️ Koch Auto-Zoom: ${enabled ? "ON" : "OFF"}`);
 }

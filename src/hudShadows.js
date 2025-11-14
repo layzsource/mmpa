@@ -54,7 +54,7 @@ export function createShadowsHudSection(container, notifyHUDUpdate, createToggle
   });
   container.appendChild(shadowColorControl);
 
-  console.log("🌑 Shadows HUD section created");
+  // console.log("🌑 Shadows);
 }
 
 // Phase 13.2: Register update callback

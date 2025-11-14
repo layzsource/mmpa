@@ -16,6 +16,7 @@ console.log("🔍 archetypeRecognizer.js loaded");
  */
 
 import { GLOBAL_CONSTANTS } from './state.js';
+import { isSynthMode, getSynthArchetype } from './synthPitchMapper.js';
 
 // ============================================================================
 // ARCHETYPE DEFINITIONS
@@ -216,11 +217,11 @@ function calculatePiPhi(mmpaFeatures) {
   const phiOverPi = piScore > 0.01 ? phiScore / piScore : 10; // Default to high harmony
 
   // DEBUG: Log π/φ calculation
-  console.log('🔢 ANLG π/φ Calculation:', {
-    inputs: { consonance, flux, entropy, strength, coherence },
-    scores: { pi: piScore?.toFixed(3) || '0.000', phi: phiScore?.toFixed(3) || '0.000' },
-    ratios: { phiOverPi: phiOverPi?.toFixed(2) || '0.00', piOverPhi: piOverPhi?.toFixed(2) || '0.00' }
-  });
+  // console.log('🔢 ANLG π/φ Calculation:', {
+  //   inputs: { consonance, flux, entropy, strength, coherence },
+  //   scores: { pi: piScore?.toFixed(3) || '0.000', phi: phiScore?.toFixed(3) || '0.000' },
+  //   ratios: { phiOverPi: phiOverPi?.toFixed(2) || '0.00', piOverPhi: piOverPhi?.toFixed(2) || '0.00' }
+  // });
 
   return {
     pi: piScore,
@@ -288,13 +289,13 @@ function getArchetypeFromRatio(phi, pi, strength) {
   }
 
   // DEBUG: Log archetype decision
-  console.log('🎯 ANLG Archetype Decision:', {
-    strength: strength?.toFixed(4) || '0.0000',
-    phi: phi?.toFixed(3) || '0.000',
-    pi: pi?.toFixed(3) || '0.000',
-    phiOverPi: phiOverPi?.toFixed(2) || '0.00',
-    archetype: archetype
-  });
+  // console.log('🎯 ANLG Archetype Decision:', {
+  //   strength: strength?.toFixed(4) || '0.0000',
+  //   phi: phi?.toFixed(3) || '0.000',
+  //   pi: pi?.toFixed(3) || '0.000',
+  //   phiOverPi: phiOverPi?.toFixed(2) || '0.00',
+  //   archetype: archetype
+  // });
 
   return archetype;
 }
@@ -418,7 +419,7 @@ export function recognizeArchetype(mmpaFeatures) {
   if (detectedArchetype !== recognitionState.currentArchetype) {
     // Only log if we have actual signal (not transitioning to/from silence)
     if (strength >= RECOGNITION_CONFIG.SILENCE_THRESHOLD) {
-      console.log(`🎯 ANLG evaluation - φ/π: ${phiOverPi.toFixed(3)}, π: ${pi.toFixed(3)}, φ: ${phi.toFixed(3)}, strength: ${strength.toFixed(4)}`);
+      // console.log(`🎯 ANLG evaluation - φ/π: ${phiOverPi.toFixed(3)}, π: ${pi.toFixed(3)}, φ: ${phi.toFixed(3)}, strength: ${strength.toFixed(4)}`);
     }
   }
 
@@ -522,7 +523,7 @@ function handleArchetypeTransition(newArchetype, confidence, pi, phi, phiOverPi)
 
   // Trigger specific archetype callbacks (ANLG system)
   if (newArchetype === ARCHETYPES.PURE_HARMONY) {
-    console.log(`✨💎 PURE HARMONY - Perfect Consonance (φ/π: ${phiOverPi.toFixed(3)} > ${RECOGNITION_CONFIG.PURE_HARMONY_THRESHOLD})`);
+    // console.log(`✨💎 PURE HARMONY - Perfect Consonance (φ/π: ${phiOverPi.toFixed(3)} > ${RECOGNITION_CONFIG.PURE_HARMONY_THRESHOLD})`);
     triggerCallbacks('onPureHarmonyEnter', { confidence, pi, phi, phiOverPi });
     // Legacy callback for backward compatibility
     triggerCallbacks('onPerfectFifthEnter', { confidence, pi, phi, phiOverPi });
@@ -530,7 +531,7 @@ function handleArchetypeTransition(newArchetype, confidence, pi, phi, phiOverPi)
     console.log(`✨ HIGH HARMONY - Strong Consonance (φ/π: ${phiOverPi.toFixed(3)})`);
     triggerCallbacks('onHighHarmonyEnter', { confidence, pi, phi, phiOverPi });
   } else if (newArchetype === ARCHETYPES.BALANCED) {
-    console.log(`⚖️ BALANCED - Harmony/Chaos Equilibrium (φ/π: ${phiOverPi.toFixed(3)})`);
+    // console.log(`⚖️ BALANCED - Harmony/Chaos Equilibrium (φ/π: ${phiOverPi.toFixed(3)})`);
     triggerCallbacks('onBalancedEnter', { confidence, pi, phi, phiOverPi });
   } else if (newArchetype === ARCHETYPES.HIGH_CHAOS) {
     console.log(`⚡ HIGH CHAOS - Strong Dissonance (φ/π: ${phiOverPi.toFixed(3)})`);
@@ -583,6 +584,15 @@ function triggerCallbacks(event, data) {
  * Get the current archetype
  */
 export function getCurrentArchetype() {
+  // Check if synth is active - use pitch-based archetype mapping
+  if (isSynthMode()) {
+    const synthArchetype = getSynthArchetype();
+    if (synthArchetype) {
+      return synthArchetype;
+    }
+  }
+
+  // Otherwise use normal ANLG spectrum analysis
   return recognitionState.currentArchetype;
 }
 

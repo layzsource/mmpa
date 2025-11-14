@@ -191,6 +191,44 @@ export function createBioacousticPanel(container, notifyHUDUpdate) {
 
   controlsSection.appendChild(phase2Section);
 
+  // ===== PHASE 3: VISUALIZATION CONTROLS =====
+  const phase3Section = document.createElement('div');
+  phase3Section.style.cssText = 'margin-top: 15px; padding: 10px; background: rgba(100,150,255,0.05); border: 1px solid rgba(100,150,255,0.3); border-radius: 3px;';
+
+  const phase3Header = document.createElement('div');
+  phase3Header.textContent = '👁️ Phase 3: Visualization';
+  phase3Header.style.cssText = 'font-weight: bold; margin-bottom: 10px; color: #6496ff; font-size: 11px;';
+  phase3Section.appendChild(phase3Header);
+
+  // Show Currents checkbox
+  const currentsCheckbox = createCheckbox(
+    'Show Currents (Trajectories)',
+    'bioacoustic-show-currents',
+    true,
+    (checked) => notifyHUDUpdate({ bioacousticShowCurrents: checked })
+  );
+  phase3Section.appendChild(currentsCheckbox);
+
+  // Show Forms checkbox
+  const formsCheckbox = createCheckbox(
+    'Show Forms (Color Field)',
+    'bioacoustic-show-forms',
+    true,
+    (checked) => notifyHUDUpdate({ bioacousticShowForms: checked })
+  );
+  phase3Section.appendChild(formsCheckbox);
+
+  // Show Homology checkbox
+  const homologyCheckbox = createCheckbox(
+    'Show Homology (Features)',
+    'bioacoustic-show-homology',
+    true,
+    (checked) => notifyHUDUpdate({ bioacousticShowHomology: checked })
+  );
+  phase3Section.appendChild(homologyCheckbox);
+
+  controlsSection.appendChild(phase3Section);
+
   panel.appendChild(controlsSection);
 
   container.appendChild(panel);
@@ -216,6 +254,32 @@ function createRadioOption(name, value, label, checked = false) {
 
   container.appendChild(radio);
   container.appendChild(text);
+
+  return container;
+}
+
+/**
+ * Helper: Create a checkbox control
+ */
+function createCheckbox(label, id, checked, onChange) {
+  const container = document.createElement('div');
+  container.style.cssText = 'margin: 8px 0;';
+
+  const checkboxLabel = document.createElement('label');
+  checkboxLabel.style.cssText = 'display: flex; align-items: center; cursor: pointer; color: #ccc; font-size: 12px;';
+
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.id = id;
+  checkbox.checked = checked;
+  checkbox.style.cssText = 'margin-right: 8px;';
+  checkbox.addEventListener('change', (e) => {
+    onChange(e.target.checked);
+  });
+
+  checkboxLabel.appendChild(checkbox);
+  checkboxLabel.appendChild(document.createTextNode(label));
+  container.appendChild(checkboxLabel);
 
   return container;
 }

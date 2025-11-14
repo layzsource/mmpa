@@ -62,7 +62,7 @@ export function updateShadows(audioReactive) {
 
     // Debug logging (2% sample rate)
     if (Math.random() < 0.02) {
-      console.log(`🌑 Shadows: base=${layerConfig.baseColor} audio=${layerConfig.audioColor} final=${finalColor}`);
+      // console.log(`🌑 Shadows:);
     }
 
     // Map bass → opacity pulse (±0.1 range)

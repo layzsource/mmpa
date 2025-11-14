@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import { state } from './state.js';
-import { setBackgroundScale, setSkyboxMode, setSkyboxFaceTexture } from './visual.js';
+import { setBackgroundScale, setSkyboxMode, setSkyboxFaceTexture, setKochSnowflakeMode, setKochColorMode, kochZoom, kochReset, setKochAutoZoom } from './visual.js';
 
 console.log("🖼️ hudBackground.js loaded");
 
@@ -433,6 +433,85 @@ export function createBackgroundHudSection(container) {
   // Store update function for upload handler
   window.updateSkyboxFaceIndicators = updateFaceIndicators;
 
+  // ===== KOCH SNOWFLAKE CONTROLS =====
+  const kochSeparator = document.createElement('div');
+  kochSeparator.style.cssText = 'margin: 20px 0 10px 0; padding-top: 10px; border-top: 2px solid #444;';
+  kochSeparator.innerHTML = '<div style="font-weight: bold; margin-bottom: 8px;">❄️ Koch Snowflake</div>';
+
+  const kochToggle = document.createElement('input');
+  kochToggle.type = 'checkbox';
+  kochToggle.id = 'koch-snowflake-toggle';
+  kochToggle.checked = false;
+  kochToggle.onchange = (e) => {
+    console.log(`❄️ Koch checkbox clicked, checked state: ${kochToggle.checked}`);
+    e.stopPropagation(); // Prevent event bubbling
+    setKochSnowflakeMode(kochToggle.checked);
+    if (kochToggle.checked) {
+      skyboxToggle.checked = false;
+      setSkyboxMode(false);
+    }
+  };
+
+  const kochLabel = document.createElement('label');
+  kochLabel.htmlFor = 'koch-snowflake-toggle';
+  kochLabel.innerText = ' Enable Koch Snowflake Background';
+  kochLabel.style.cssText = 'display: block; margin: 8px 0; cursor: pointer; font-size: 14px;';
+  kochLabel.prepend(kochToggle);
+
+  // Color mode selector
+  const kochColorContainer = document.createElement('div');
+  kochColorContainer.style.cssText = 'margin: 8px 0;';
+
+  const kochColorLabel = document.createElement('label');
+  kochColorLabel.textContent = 'Color Mode:';
+  kochColorLabel.style.cssText = 'display: block; margin-bottom: 4px; font-size: 12px;';
+
+  const kochColorSelect = document.createElement('select');
+  kochColorSelect.style.cssText = 'width: 100%; padding: 4px; background: #333; color: white; border: 1px solid #666; border-radius: 4px;';
+  kochColorSelect.innerHTML = `
+    <option value="static">Static</option>
+    <option value="audio">Audio Reactive</option>
+    <option value="theory">Color Theory (RGB)</option>
+  `;
+  kochColorSelect.onchange = () => setKochColorMode(kochColorSelect.value);
+
+  kochColorContainer.appendChild(kochColorLabel);
+  kochColorContainer.appendChild(kochColorSelect);
+
+  // Zoom controls
+  const kochZoomContainer = document.createElement('div');
+  kochZoomContainer.style.cssText = 'margin: 8px 0; display: flex; gap: 8px;';
+
+  const kochZoomInBtn = document.createElement('button');
+  kochZoomInBtn.innerText = 'Zoom In';
+  kochZoomInBtn.style.cssText = 'flex: 1; padding: 6px; background: #444; color: white; border: 1px solid #666; border-radius: 4px; cursor: pointer;';
+  kochZoomInBtn.onclick = () => kochZoom(1.2);
+
+  const kochZoomOutBtn = document.createElement('button');
+  kochZoomOutBtn.innerText = 'Zoom Out';
+  kochZoomOutBtn.style.cssText = 'flex: 1; padding: 6px; background: #444; color: white; border: 1px solid #666; border-radius: 4px; cursor: pointer;';
+  kochZoomOutBtn.onclick = () => kochZoom(0.8);
+
+  const kochResetBtn = document.createElement('button');
+  kochResetBtn.innerText = 'Reset';
+  kochResetBtn.style.cssText = 'flex: 1; padding: 6px; background: #444; color: white; border: 1px solid #666; border-radius: 4px; cursor: pointer;';
+  kochResetBtn.onclick = () => kochReset();
+
+  kochZoomContainer.appendChild(kochZoomInBtn);
+  kochZoomContainer.appendChild(kochZoomOutBtn);
+  kochZoomContainer.appendChild(kochResetBtn);
+
+  // Auto-zoom toggle
+  const kochAutoZoomToggle = document.createElement('input');
+  kochAutoZoomToggle.type = 'checkbox';
+  kochAutoZoomToggle.checked = false;
+  kochAutoZoomToggle.onchange = () => setKochAutoZoom(kochAutoZoomToggle.checked);
+
+  const kochAutoZoomLabel = document.createElement('label');
+  kochAutoZoomLabel.innerText = ' Bass-driven Auto-Zoom';
+  kochAutoZoomLabel.style.cssText = 'display: block; margin: 8px 0; cursor: pointer; font-size: 12px;';
+  kochAutoZoomLabel.prepend(kochAutoZoomToggle);
+
   container.appendChild(uploadButton);
   container.appendChild(uploadInput);
   container.appendChild(folderUploadButton);
@@ -445,6 +524,11 @@ export function createBackgroundHudSection(container) {
   container.appendChild(skyboxLabel);
   container.appendChild(skyboxFaceContainer);
   container.appendChild(faceStatusDiv);
+  container.appendChild(kochSeparator);
+  container.appendChild(kochLabel);
+  container.appendChild(kochColorContainer);
+  container.appendChild(kochZoomContainer);
+  container.appendChild(kochAutoZoomLabel);
 
-  console.log("🖼️ Background HUD section created (with Skybox support + face indicators)");
+  console.log("🖼️ Background HUD section created (with Skybox + Koch Snowflake support)");
 }
