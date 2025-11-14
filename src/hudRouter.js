@@ -501,14 +501,27 @@ onHUDUpdate((update) => {
     });
   }
   if (update.bioacousticCaptureSignature !== undefined) {
-    console.log('🔬 Capturing bioacoustic signature...');
+    const speciesId = update.bioacousticCaptureSignature;
+    console.log(`🔬 Capturing bioacoustic signature for species: ${speciesId}`);
 
     if (window.bioacousticAnalyzer) {
-      // Use first default species for now (example_bird_1)
-      const success = window.bioacousticAnalyzer.captureSignature('example_bird_1');
+      const success = window.bioacousticAnalyzer.captureSignature(speciesId);
 
       if (success) {
-        console.log('🔬 ✓ Signature captured successfully');
+        console.log(`🔬 ✓ Signature captured successfully for ${speciesId}`);
+
+        // Update analysis status
+        const statusDiv = document.getElementById('bioacoustic-analysis-status');
+        if (statusDiv) {
+          const state = window.bioacousticAnalyzer.getState();
+          const libStats = state.library;
+          statusDiv.innerHTML = `
+            <div style="color: #00ffaa;">● Analysis Running</div>
+            <div>Forms: ${state.forms.twoFormCount} | Currents: ${state.homology.currentCount} | Barcodes: ${state.homology.barcodeCount}</div>
+            <div style="color: #6496ff; margin-top: 3px;">✓ Captured to ${speciesId}</div>
+            <div style="font-size: 9px; margin-top: 2px;">Total Signatures: ${libStats.totalSignatures}</div>
+          `;
+        }
       } else {
         console.error('🔬 ✗ Failed to capture signature');
       }
@@ -578,6 +591,66 @@ onHUDUpdate((update) => {
       if (!state.bioacoustic) state.bioacoustic = {};
       state.bioacoustic.showHomology = update.bioacousticShowHomology;
       console.log(`👁️ Show Homology: ${update.bioacousticShowHomology ? 'ON' : 'OFF'}`);
+    }
+  }
+
+  // Phase 4: Species Comparison
+  if (update.bioacousticCompareSpecies) {
+    const { speciesA, speciesB } = update.bioacousticCompareSpecies;
+    console.log(`🔍 Comparing species: ${speciesA} vs ${speciesB}`);
+
+    if (window.bioacousticAnalyzer) {
+      const result = window.bioacousticAnalyzer.compareSpecies(speciesA, speciesB);
+
+      if (result) {
+        // Update results display in HUD
+        const resultsDiv = document.getElementById('bioacoustic-comparison-results');
+        if (resultsDiv) {
+          const similarity = (result.similarity * 100).toFixed(1);
+          const formsSim = (result.details.forms * 100).toFixed(1);
+          const currentsSim = (result.details.currents * 100).toFixed(1);
+          const homologySim = (result.details.homology * 100).toFixed(1);
+          const freqShift = result.frequencyShift.toFixed(2);
+
+          resultsDiv.innerHTML = `
+            <div style="color: #00ff00; margin-bottom: 5px;">✓ Comparison Complete</div>
+            <div style="margin-bottom: 5px;">
+              <strong>${result.species1.name}</strong> vs <strong>${result.species2.name}</strong>
+            </div>
+            <div style="border-top: 1px solid #444; padding-top: 5px; margin-top: 5px;">
+              <div style="color: #ff9632;">Overall Similarity: ${similarity}%</div>
+              <div style="margin-top: 3px; font-size: 9px;">
+                <div>• Forms: ${formsSim}%</div>
+                <div>• Currents: ${currentsSim}%</div>
+                <div>• Homology: ${homologySim}%</div>
+                <div style="margin-top: 3px;">• Frequency Shift: ${freqShift}x</div>
+              </div>
+            </div>
+          `;
+
+          console.log(`🔍 Overall Similarity: ${similarity}%`);
+          console.log(`🔍   Forms: ${formsSim}%`);
+          console.log(`🔍   Currents: ${currentsSim}%`);
+          console.log(`🔍   Homology: ${homologySim}%`);
+          console.log(`🔍   Frequency Shift: ${freqShift}x`);
+        }
+      } else {
+        const resultsDiv = document.getElementById('bioacoustic-comparison-results');
+        if (resultsDiv) {
+          resultsDiv.innerHTML = `
+            <div style="color: #ff5050;">✗ Comparison Failed</div>
+            <div>Both species need captured signatures</div>
+            <div style="font-size: 9px; margin-top: 5px;">
+              1. Start analysis<br>
+              2. Capture signatures for each species<br>
+              3. Try comparison again
+            </div>
+          `;
+        }
+        console.warn('🔍 Comparison failed: Need signatures for both species');
+      }
+    } else {
+      console.warn('🔍 Analyzer not initialized');
     }
   }
 

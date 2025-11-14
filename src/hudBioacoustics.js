@@ -161,12 +161,40 @@ export function createBioacousticPanel(container, notifyHUDUpdate) {
   });
   phase2Section.appendChild(analysisButton);
 
+  // Species selector for capture
+  const captureSpeciesContainer = document.createElement('div');
+  captureSpeciesContainer.style.cssText = 'margin-bottom: 8px;';
+
+  const captureSpeciesLabel = document.createElement('div');
+  captureSpeciesLabel.textContent = 'Capture to Species:';
+  captureSpeciesLabel.style.cssText = 'font-size: 10px; color: #aaa; margin-bottom: 3px;';
+  captureSpeciesContainer.appendChild(captureSpeciesLabel);
+
+  const captureSpeciesSelect = document.createElement('select');
+  captureSpeciesSelect.id = 'bioacoustic-capture-species';
+  captureSpeciesSelect.style.cssText = 'width: 100%; padding: 3px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #555; border-radius: 3px; font-size: 10px;';
+
+  const captureOpt1 = document.createElement('option');
+  captureOpt1.value = 'example_bird_1';
+  captureOpt1.textContent = 'Example Songbird';
+  captureOpt1.selected = true;
+  captureSpeciesSelect.appendChild(captureOpt1);
+
+  const captureOpt2 = document.createElement('option');
+  captureOpt2.value = 'example_whale_1';
+  captureOpt2.textContent = 'Example Whale';
+  captureSpeciesSelect.appendChild(captureOpt2);
+
+  captureSpeciesContainer.appendChild(captureSpeciesSelect);
+  phase2Section.appendChild(captureSpeciesContainer);
+
   // Capture Signature button
   const captureButton = document.createElement('button');
   captureButton.textContent = '📸 Capture Signature';
   captureButton.style.cssText = 'width: 100%; padding: 8px; margin-bottom: 10px; background: rgba(100,150,255,0.2); border: 1px solid #6496ff; border-radius: 3px; color: #6496ff; cursor: pointer; font-size: 12px;';
   captureButton.addEventListener('click', () => {
-    notifyHUDUpdate({ bioacousticCaptureSignature: true });
+    const selectedSpecies = captureSpeciesSelect.value;
+    notifyHUDUpdate({ bioacousticCaptureSignature: selectedSpecies });
   });
   phase2Section.appendChild(captureButton);
 
@@ -228,6 +256,95 @@ export function createBioacousticPanel(container, notifyHUDUpdate) {
   phase3Section.appendChild(homologyCheckbox);
 
   controlsSection.appendChild(phase3Section);
+
+  // ===== PHASE 4: SPECIES COMPARISON =====
+  const phase4Section = document.createElement('div');
+  phase4Section.style.cssText = 'margin-top: 15px; padding: 10px; background: rgba(255,150,50,0.05); border: 1px solid rgba(255,150,50,0.3); border-radius: 3px;';
+
+  const phase4Header = document.createElement('div');
+  phase4Header.textContent = '🔍 Phase 4: Species Comparison';
+  phase4Header.style.cssText = 'font-weight: bold; margin-bottom: 10px; color: #ff9632; font-size: 11px;';
+  phase4Section.appendChild(phase4Header);
+
+  // Species A selector
+  const speciesAContainer = document.createElement('div');
+  speciesAContainer.style.cssText = 'margin-bottom: 10px;';
+
+  const speciesALabel = document.createElement('div');
+  speciesALabel.textContent = 'Species A:';
+  speciesALabel.style.cssText = 'font-size: 11px; color: #ccc; margin-bottom: 4px;';
+  speciesAContainer.appendChild(speciesALabel);
+
+  const speciesASelect = document.createElement('select');
+  speciesASelect.id = 'bioacoustic-species-a';
+  speciesASelect.style.cssText = 'width: 100%; padding: 4px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #555; border-radius: 3px; font-size: 11px;';
+
+  // Add default option
+  const optionA1 = document.createElement('option');
+  optionA1.value = 'example_bird_1';
+  optionA1.textContent = 'Example Songbird';
+  speciesASelect.appendChild(optionA1);
+
+  const optionA2 = document.createElement('option');
+  optionA2.value = 'example_whale_1';
+  optionA2.textContent = 'Example Whale';
+  speciesASelect.appendChild(optionA2);
+
+  speciesAContainer.appendChild(speciesASelect);
+  phase4Section.appendChild(speciesAContainer);
+
+  // Species B selector
+  const speciesBContainer = document.createElement('div');
+  speciesBContainer.style.cssText = 'margin-bottom: 10px;';
+
+  const speciesBLabel = document.createElement('div');
+  speciesBLabel.textContent = 'Species B:';
+  speciesBLabel.style.cssText = 'font-size: 11px; color: #ccc; margin-bottom: 4px;';
+  speciesBContainer.appendChild(speciesBLabel);
+
+  const speciesBSelect = document.createElement('select');
+  speciesBSelect.id = 'bioacoustic-species-b';
+  speciesBSelect.style.cssText = 'width: 100%; padding: 4px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #555; border-radius: 3px; font-size: 11px;';
+
+  // Add default option
+  const optionB1 = document.createElement('option');
+  optionB1.value = 'example_bird_1';
+  optionB1.textContent = 'Example Songbird';
+  speciesBSelect.appendChild(optionB1);
+
+  const optionB2 = document.createElement('option');
+  optionB2.value = 'example_whale_1';
+  optionB2.textContent = 'Example Whale';
+  optionB2.selected = true;
+  speciesBSelect.appendChild(optionB2);
+
+  speciesBContainer.appendChild(speciesBSelect);
+  phase4Section.appendChild(speciesBContainer);
+
+  // Compare button
+  const compareButton = document.createElement('button');
+  compareButton.textContent = '🔍 Compare Species';
+  compareButton.style.cssText = 'width: 100%; padding: 8px; margin-bottom: 10px; background: rgba(255,150,50,0.2); border: 1px solid #ff9632; border-radius: 3px; color: #ff9632; cursor: pointer; font-size: 12px;';
+  compareButton.addEventListener('click', () => {
+    const speciesA = speciesASelect.value;
+    const speciesB = speciesBSelect.value;
+    notifyHUDUpdate({
+      bioacousticCompareSpecies: { speciesA, speciesB }
+    });
+  });
+  phase4Section.appendChild(compareButton);
+
+  // Comparison results display
+  const comparisonResults = document.createElement('div');
+  comparisonResults.id = 'bioacoustic-comparison-results';
+  comparisonResults.style.cssText = 'margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 3px; font-size: 10px; color: #ccc; font-family: monospace; max-height: 150px; overflow-y: auto;';
+  comparisonResults.innerHTML = `
+    <div style="color: #ff9632;">● Ready to compare species</div>
+    <div>Select two species and click Compare</div>
+  `;
+  phase4Section.appendChild(comparisonResults);
+
+  controlsSection.appendChild(phase4Section);
 
   panel.appendChild(controlsSection);
 
