@@ -346,6 +346,103 @@ export function createBioacousticPanel(container, notifyHUDUpdate) {
 
   controlsSection.appendChild(phase4Section);
 
+  // ===== PHASE 5: AUDIO SYNTHESIS & TRANSLATION =====
+  const phase5Section = document.createElement('div');
+  phase5Section.style.cssText = 'margin-top: 15px; padding: 10px; background: rgba(150,50,255,0.05); border: 1px solid rgba(150,50,255,0.3); border-radius: 3px;';
+
+  const phase5Header = document.createElement('div');
+  phase5Header.textContent = '🎵 Phase 5: Audio Synthesis';
+  phase5Header.style.cssText = 'font-weight: bold; margin-bottom: 10px; color: #9632ff; font-size: 11px;';
+  phase5Section.appendChild(phase5Header);
+
+  // Source species selector
+  const synthSourceContainer = document.createElement('div');
+  synthSourceContainer.style.cssText = 'margin-bottom: 8px;';
+
+  const synthSourceLabel = document.createElement('div');
+  synthSourceLabel.textContent = 'Source Species:';
+  synthSourceLabel.style.cssText = 'font-size: 11px; color: #ccc; margin-bottom: 4px;';
+  synthSourceContainer.appendChild(synthSourceLabel);
+
+  const synthSourceSelect = document.createElement('select');
+  synthSourceSelect.id = 'bioacoustic-synth-source';
+  synthSourceSelect.style.cssText = 'width: 100%; padding: 4px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #555; border-radius: 3px; font-size: 11px;';
+
+  const synthOpt1 = document.createElement('option');
+  synthOpt1.value = 'example_bird_1';
+  synthOpt1.textContent = 'Example Songbird';
+  synthOpt1.selected = true;
+  synthSourceSelect.appendChild(synthOpt1);
+
+  const synthOpt2 = document.createElement('option');
+  synthOpt2.value = 'example_whale_1';
+  synthOpt2.textContent = 'Example Whale';
+  synthSourceSelect.appendChild(synthOpt2);
+
+  synthSourceContainer.appendChild(synthSourceSelect);
+  phase5Section.appendChild(synthSourceContainer);
+
+  // Target species selector
+  const synthTargetContainer = document.createElement('div');
+  synthTargetContainer.style.cssText = 'margin-bottom: 10px;';
+
+  const synthTargetLabel = document.createElement('div');
+  synthTargetLabel.textContent = 'Target Frequency Range:';
+  synthTargetLabel.style.cssText = 'font-size: 11px; color: #ccc; margin-bottom: 4px;';
+  synthTargetContainer.appendChild(synthTargetLabel);
+
+  const synthTargetSelect = document.createElement('select');
+  synthTargetSelect.id = 'bioacoustic-synth-target';
+  synthTargetSelect.style.cssText = 'width: 100%; padding: 4px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #555; border-radius: 3px; font-size: 11px;';
+
+  const synthTargetOpt1 = document.createElement('option');
+  synthTargetOpt1.value = 'example_bird_1';
+  synthTargetOpt1.textContent = 'Example Songbird';
+  synthTargetSelect.appendChild(synthTargetOpt1);
+
+  const synthTargetOpt2 = document.createElement('option');
+  synthTargetOpt2.value = 'example_whale_1';
+  synthTargetOpt2.textContent = 'Example Whale';
+  synthTargetOpt2.selected = true;
+  synthTargetSelect.appendChild(synthTargetOpt2);
+
+  synthTargetContainer.appendChild(synthTargetSelect);
+  phase5Section.appendChild(synthTargetContainer);
+
+  // Translate button
+  const translateButton = document.createElement('button');
+  translateButton.textContent = '🎵 Translate & Play';
+  translateButton.style.cssText = 'width: 100%; padding: 8px; margin-bottom: 8px; background: rgba(150,50,255,0.2); border: 1px solid #9632ff; border-radius: 3px; color: #9632ff; cursor: pointer; font-size: 12px;';
+  translateButton.addEventListener('click', () => {
+    const source = synthSourceSelect.value;
+    const target = synthTargetSelect.value;
+    notifyHUDUpdate({
+      bioacousticTranslate: { source, target }
+    });
+  });
+  phase5Section.appendChild(translateButton);
+
+  // Stop button
+  const stopButton = document.createElement('button');
+  stopButton.textContent = '■ Stop Playback';
+  stopButton.style.cssText = 'width: 100%; padding: 6px; margin-bottom: 10px; background: rgba(255,50,50,0.2); border: 1px solid #ff3232; border-radius: 3px; color: #ff3232; cursor: pointer; font-size: 11px;';
+  stopButton.addEventListener('click', () => {
+    notifyHUDUpdate({ bioacousticStopPlayback: true });
+  });
+  phase5Section.appendChild(stopButton);
+
+  // Synthesis status display
+  const synthStatus = document.createElement('div');
+  synthStatus.id = 'bioacoustic-synth-status';
+  synthStatus.style.cssText = 'padding: 8px; background: rgba(0,0,0,0.3); border-radius: 3px; font-size: 10px; color: #ccc; font-family: monospace;';
+  synthStatus.innerHTML = `
+    <div style="color: #9632ff;">● Ready to synthesize</div>
+    <div style="font-size: 9px; margin-top: 3px;">Capture signatures to enable translation</div>
+  `;
+  phase5Section.appendChild(synthStatus);
+
+  controlsSection.appendChild(phase5Section);
+
   panel.appendChild(controlsSection);
 
   container.appendChild(panel);

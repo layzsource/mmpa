@@ -594,6 +594,94 @@ onHUDUpdate((update) => {
     }
   }
 
+  // Phase 5: Audio Translation & Synthesis
+  if (update.bioacousticTranslate) {
+    const { source, target } = update.bioacousticTranslate;
+    console.log(`🎵 Translating audio: ${source} → ${target}...`);
+
+    if (window.bioacousticAnalyzer) {
+      // Lazy load audio synthesizer
+      if (!window.audioSynthesizer) {
+        import('./bioacoustics/audioSynthesizer.js').then(({ AudioSynthesizer }) => {
+          window.audioSynthesizer = new AudioSynthesizer(window.bioacousticAnalyzer.audioContext);
+          console.log('🎵 Audio Synthesizer initialized');
+
+          // Perform translation
+          performTranslation(source, target);
+        });
+      } else {
+        performTranslation(source, target);
+      }
+    } else {
+      console.warn('🎵 Analyzer not initialized');
+      updateSynthStatus('✗ Analyzer not running', 'Start analysis first', '#ff5050');
+    }
+
+    function performTranslation(sourceId, targetId) {
+      const library = window.bioacousticAnalyzer.library;
+      const buffer = window.audioSynthesizer.translateSpecies(sourceId, targetId, library);
+
+      if (buffer) {
+        const statusDiv = document.getElementById('bioacoustic-synth-status');
+        if (statusDiv) {
+          const sourceSpecies = library.getSpecies(sourceId);
+          const targetSpecies = library.getSpecies(targetId);
+          const freqShift = library.computeFrequencyShift(sourceSpecies, targetSpecies);
+
+          statusDiv.innerHTML = `
+            <div style="color: #00ff00;">▶ Playing translation...</div>
+            <div style="font-size: 9px; margin-top: 3px;">
+              ${sourceSpecies.name} → ${targetSpecies.name}<br>
+              Frequency shift: ${freqShift.toFixed(2)}x<br>
+              Duration: ${buffer.duration.toFixed(1)}s
+            </div>
+          `;
+        }
+
+        // Play synthesized audio
+        window.audioSynthesizer.play(buffer, () => {
+          console.log('🎵 Translation playback complete');
+          updateSynthStatus('✓ Playback complete', 'Ready for next translation', '#00ffaa');
+        });
+
+        console.log('🎵 Translation started');
+      } else {
+        console.error('🎵 Translation failed');
+        updateSynthStatus('✗ Translation failed', 'Ensure both species have signatures', '#ff5050');
+      }
+    }
+
+    function updateSynthStatus(mainText, subText, color) {
+      const statusDiv = document.getElementById('bioacoustic-synth-status');
+      if (statusDiv) {
+        statusDiv.innerHTML = `
+          <div style="color: ${color};">${mainText}</div>
+          <div style="font-size: 9px; margin-top: 3px;">${subText}</div>
+        `;
+      }
+    }
+  }
+
+  if (update.bioacousticStopPlayback) {
+    console.log('🎵 Stopping playback...');
+
+    if (window.audioSynthesizer) {
+      window.audioSynthesizer.stop();
+
+      const statusDiv = document.getElementById('bioacoustic-synth-status');
+      if (statusDiv) {
+        statusDiv.innerHTML = `
+          <div style="color: #ff9632;">■ Playback stopped</div>
+          <div style="font-size: 9px; margin-top: 3px;">Ready for next translation</div>
+        `;
+      }
+
+      console.log('🎵 Playback stopped');
+    } else {
+      console.warn('🎵 Synthesizer not initialized');
+    }
+  }
+
   // Phase 4: Species Comparison
   if (update.bioacousticCompareSpecies) {
     const { speciesA, speciesB } = update.bioacousticCompareSpecies;
