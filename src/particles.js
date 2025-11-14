@@ -98,6 +98,14 @@ export class ParticleSystem {
     this.diffractionEnabled = false;
     this.diffractionIntensity = 1.0;     // Color intensity
     this.diffractionAngle = 0;           // Prism angle
+
+    // Generative Mandala Pattern (3D fractal-like structure)
+    this.generativeSeed = 42;            // Seed for repeatable random patterns
+    this.generativeSymmetry = 8;         // Symmetry order (3-24)
+    this.generativeLayers = 5;           // Number of concentric layers
+    this.generativeRadius = 1.0;         // Base radius multiplier
+    this.generativeComplexity = 3;       // Detail elements per core particle
+    this.generativePatternParams = null; // Cached pattern parameters
     this.diffractionSpeed = 0;           // Start at 0 - prevents cymatic motion before audio
 
     // MMPA Phase 3: Dynamic particle density control
@@ -368,6 +376,25 @@ export class ParticleSystem {
     // Pure ratios = golden proportions
     // Complex ratios = distorted proportions
     this.targetHarmonicProportions = 0.8 + harmonicOrder * 0.4;
+  }
+
+  // Generative Mandala: Generate seeded pattern parameters
+  _generatePatternParams(seed) {
+    // Simple seeded pseudo-random number generator
+    function simpleRandom(s) {
+      return function() {
+        s = Math.sin(s++) * 10000;
+        return s - Math.floor(s);
+      };
+    }
+    const rng = simpleRandom(seed);
+
+    return {
+      wave_freq: rng() * 4 + 1.0,           // 1.0 to 5.0
+      spiral_factor: rng() * 1.5,           // 0.0 to 1.5
+      petal_count: Math.floor(rng() * 9) + 3, // 3 to 11
+      noise_amplitude: rng() * 0.3          // 0.0 to 0.3
+    };
   }
 
   updateLayoutVesselPlanes() {
@@ -671,6 +698,86 @@ export class ParticleSystem {
               this.targets[p * 3 + 2] = (amplitude - 0.5) * 2.0; // Z-axis depth based on amplitude
             }
           }
+          break;
+        }
+        case 'generativeMandala': {
+          // 3D Generative Mandala with seeded patterns
+          // Generate pattern params if not cached or seed changed
+          if (!this.generativePatternParams) {
+            this.generativePatternParams = this._generatePatternParams(this.generativeSeed);
+          }
+
+          const { wave_freq, spiral_factor, petal_count, noise_amplitude } = this.generativePatternParams;
+          const symmetry = this.generativeSymmetry;
+          const layers = this.generativeLayers;
+          const radius = this.generativeRadius;
+          const complexity = this.generativeComplexity;
+
+          const angleStep = (2 * Math.PI) / symmetry;
+          const particlesPerLayer = Math.floor(this.count / layers);
+
+          let particleIndex = 0;
+
+          for (let layer = 0; layer < layers && particleIndex < this.count; layer++) {
+            const layerRadius = radius * ((layer + 1) / layers) * 2; // Scale radius up for 3D
+
+            for (let sym = 0; sym < symmetry && particleIndex < this.count; sym++) {
+              const baseAngle = sym * angleStep;
+
+              // === PRIMARY CORE PARTICLE ===
+              // Wave modulation
+              const waveOffset = wave_freq * Math.sin(sym * petal_count * angleStep);
+              const waveRadius = layerRadius * (1 + 0.1 * waveOffset);
+
+              // Spiral transformation
+              const spiralAngle = baseAngle + spiral_factor * (layer / layers);
+
+              // Add controlled noise
+              const noise = noise_amplitude * (Math.sin(particleIndex * 0.137) * 2 - 1); // Deterministic "noise"
+              const finalRadius = waveRadius * (1 + noise);
+
+              // Position core particle
+              const x = finalRadius * Math.cos(spiralAngle);
+              const y = finalRadius * Math.sin(spiralAngle);
+              const z = layer * 0.5 - layers * 0.25; // Z-depth layering
+
+              this.targets[particleIndex * 3] = x;
+              this.targets[particleIndex * 3 + 1] = y;
+              this.targets[particleIndex * 3 + 2] = z;
+
+              particleIndex++;
+
+              // === COMPLEXITY/DETAIL PARTICLES ===
+              for (let comp = 0; comp < complexity && particleIndex < this.count; comp++) {
+                const offsetAngle = spiralAngle + ((comp + 1) * Math.PI) / (complexity * 2);
+                let offsetRadius = layerRadius * (0.7 + (0.3 * comp) / complexity);
+
+                // Petal modulation for detail elements
+                const petalMod = Math.cos((comp * petal_count * Math.PI) / complexity);
+                offsetRadius *= 1 + 0.15 * petalMod;
+
+                const detailX = offsetRadius * Math.cos(offsetAngle);
+                const detailY = offsetRadius * Math.sin(offsetAngle);
+                const detailZ = z + 0.5; // Offset in Z
+
+                this.targets[particleIndex * 3] = detailX;
+                this.targets[particleIndex * 3 + 1] = detailY;
+                this.targets[particleIndex * 3 + 2] = detailZ;
+
+                particleIndex++;
+              }
+            }
+          }
+
+          // Fill any remaining particles with center cluster
+          while (particleIndex < this.count) {
+            const scatter = 0.3;
+            this.targets[particleIndex * 3] = (Math.random() - 0.5) * scatter;
+            this.targets[particleIndex * 3 + 1] = (Math.random() - 0.5) * scatter;
+            this.targets[particleIndex * 3 + 2] = (Math.random() - 0.5) * scatter;
+            particleIndex++;
+          }
+
           break;
         }
       }
@@ -1108,6 +1215,24 @@ export class ParticleSystem {
   setParticleSizeWorld(v){ this.sizeWorld = Math.max(0.05, v); }
   setParticleSize(v)     { this.sizeWorld = Math.max(0.05, v); } // Alias
   changeLayout(name)     { this.setLayout(name); }
+
+  // Generative Mandala control methods
+  setGenerativeSeed(v) {
+    this.generativeSeed = Math.floor(v);
+    this.generativePatternParams = null; // Force regeneration
+  }
+  setGenerativeSymmetry(v) {
+    this.generativeSymmetry = Math.max(3, Math.min(24, Math.floor(v)));
+  }
+  setGenerativeLayers(v) {
+    this.generativeLayers = Math.max(1, Math.min(10, Math.floor(v)));
+  }
+  setGenerativeRadius(v) {
+    this.generativeRadius = Math.max(0.1, Math.min(5.0, v));
+  }
+  setGenerativeComplexity(v) {
+    this.generativeComplexity = Math.max(0, Math.min(10, Math.floor(v)));
+  }
 
   setParticleCount(v) {
     this.dispose(this.scene);
