@@ -34,8 +34,9 @@ export class HomologicalIntegrator {
     this.persistentBarcodes = [];
     this.birthDeathPairs = [];
 
-    // Integration cache
+    // Integration cache with size limit
     this.integrationCache = new Map();
+    this.MAX_CACHE_SIZE = 1000; // Prevent memory leaks
 
     console.log('∫ Homological Integrator initialized');
   }
@@ -206,7 +207,12 @@ export class HomologicalIntegrator {
       console.warn(`∫ Degree mismatch: current degree ${current.degree}, form degree ${form.degree}`);
     }
 
-    // Cache result
+    // Cache result with size limit (FIFO eviction)
+    if (this.integrationCache.size >= this.MAX_CACHE_SIZE) {
+      // Remove oldest entry (first key in Map)
+      const firstKey = this.integrationCache.keys().next().value;
+      this.integrationCache.delete(firstKey);
+    }
     this.integrationCache.set(cacheKey, result);
 
     return result;

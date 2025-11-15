@@ -292,8 +292,145 @@ export class DifferentialFormsComputer {
    */
   pullback(form, map) {
     console.log('📐 Computing pullback F*ω');
-    // Implementation depends on the specific map
-    // For now, return placeholder
+
+    // Validate inputs
+    if (!form || !map) {
+      console.warn('📐 Invalid pullback inputs');
+      return form;
+    }
+
+    // For 0-forms (scalar functions): (F*f)(x) = f(F(x))
+    if (form.degree === 0) {
+      const pulledBack = [];
+      for (let t = 0; t < this.timeFrames; t++) {
+        const frame = [];
+        for (let f = 0; f < this.frequencyBins; f++) {
+          // Apply map to coordinates
+          const mapped = map(t, f);
+          const tMapped = Math.floor(mapped.t);
+          const fMapped = Math.floor(mapped.f);
+
+          // Sample form at mapped coordinates (with bounds checking)
+          if (tMapped >= 0 && tMapped < this.zeroForms.length &&
+              fMapped >= 0 && fMapped < this.frequencyBins) {
+            frame.push(this.zeroForms[tMapped][fMapped]);
+          } else {
+            frame.push(0); // Outside domain
+          }
+        }
+        pulledBack.push(frame);
+      }
+
+      return {
+        degree: 0,
+        data: pulledBack,
+        type: 'pullback'
+      };
+    }
+
+    // For 1-forms: F*ω = (∂F/∂x) · ω(F(x))
+    // ω = α_q dq + α_p dp
+    // F*ω = (∂F^q/∂x α_q + ∂F^p/∂x α_p) dx
+    if (form.degree === 1) {
+      const pulledBack = [];
+      const epsilon = 1e-6; // For numerical derivatives
+
+      for (let t = 1; t < this.timeFrames - 1; t++) {
+        const frame = [];
+        for (let f = 1; f < this.frequencyBins - 1; f++) {
+          // Compute Jacobian ∂F/∂x numerically
+          const F_center = map(t, f);
+          const F_dt = map(t + epsilon, f);
+          const F_df = map(t, f + epsilon);
+
+          const dFq_dt = (F_dt.t - F_center.t) / epsilon;
+          const dFq_df = (F_df.t - F_center.t) / epsilon;
+          const dFp_dt = (F_dt.f - F_center.f) / epsilon;
+          const dFp_df = (F_df.f - F_center.f) / epsilon;
+
+          // Sample 1-form at mapped point
+          const tMapped = Math.floor(F_center.t);
+          const fMapped = Math.floor(F_center.f);
+
+          let alpha_q = 0, alpha_p = 0;
+          if (tMapped >= 0 && tMapped < this.oneForms.length &&
+              fMapped >= 0 && fMapped < this.frequencyBins) {
+            const oneFormIdx = tMapped * this.frequencyBins + fMapped;
+            if (this.oneForms[tMapped] && this.oneForms[tMapped][fMapped]) {
+              alpha_q = this.oneForms[tMapped][fMapped].q || 0;
+              alpha_p = this.oneForms[tMapped][fMapped].p || 0;
+            }
+          }
+
+          // Pullback: F*ω components
+          const pulledback_q = dFq_dt * alpha_q + dFp_dt * alpha_p;
+          const pulledback_p = dFq_df * alpha_q + dFp_df * alpha_p;
+
+          frame.push({
+            q: pulledback_q,
+            p: pulledback_p,
+            frequency: f,
+            time: t
+          });
+        }
+        pulledBack.push(frame);
+      }
+
+      return {
+        degree: 1,
+        data: pulledBack,
+        type: 'pullback'
+      };
+    }
+
+    // For 2-forms: F*ω = det(∂F/∂x) ω(F(x))
+    // Since we're in 2D phase space, this is the Jacobian determinant times the form
+    if (form.degree === 2) {
+      const pulledBack = [];
+      const epsilon = 1e-6;
+
+      for (let t = 1; t < this.timeFrames - 1; t++) {
+        const frame = [];
+        for (let f = 1; f < this.frequencyBins - 1; f++) {
+          // Compute Jacobian determinant
+          const F_center = map(t, f);
+          const F_dt = map(t + epsilon, f);
+          const F_df = map(t, f + epsilon);
+
+          const dFq_dt = (F_dt.t - F_center.t) / epsilon;
+          const dFq_df = (F_df.t - F_center.t) / epsilon;
+          const dFp_dt = (F_dt.f - F_center.f) / epsilon;
+          const dFp_df = (F_df.f - F_center.f) / epsilon;
+
+          const jacobianDet = dFq_dt * dFp_df - dFq_df * dFp_dt;
+
+          // Sample 2-form at mapped point
+          const tMapped = Math.floor(F_center.t);
+          const fMapped = Math.floor(F_center.f);
+
+          let omega_value = 0;
+          if (tMapped >= 0 && tMapped < this.twoForms.length &&
+              fMapped >= 0 && fMapped < this.frequencyBins) {
+            if (this.twoForms[tMapped] && this.twoForms[tMapped][fMapped]) {
+              omega_value = this.twoForms[tMapped][fMapped];
+            }
+          }
+
+          // Pullback: det(J) × ω
+          frame.push(jacobianDet * omega_value);
+        }
+        pulledBack.push(frame);
+      }
+
+      return {
+        degree: 2,
+        data: pulledBack,
+        type: 'pullback'
+      };
+    }
+
+    // Unknown degree
+    console.warn(`📐 Pullback not implemented for degree ${form.degree}`);
     return form;
   }
 

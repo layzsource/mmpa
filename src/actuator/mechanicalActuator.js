@@ -102,7 +102,7 @@ export class MechanicalActuator {
     // Res controls maximum allowable load
     // Negative Res → reduce load capacity (conservative)
     // Positive Res → increase load capacity (aggressive)
-    let load_delta = -res * this.load_gain;
+    let load_delta = res * this.load_gain;  // Fixed: removed incorrect negative sign
     let load_target = this.currentLoadLimit + load_delta;
 
     // Apply load constraints
@@ -114,7 +114,7 @@ export class MechanicalActuator {
       action = damping_delta > 0 ? 'INCREASE_DAMPING' : 'DECREASE_DAMPING';
     }
     if (Math.abs(load_delta) > 0.05) {
-      action = load_delta > 0 ? 'REDUCE_LOAD' : 'INCREASE_LOAD';
+      action = load_delta > 0 ? 'INCREASE_LOAD' : 'REDUCE_LOAD';  // Fixed: swapped backwards actions
     }
 
     return {

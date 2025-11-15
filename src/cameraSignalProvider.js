@@ -469,12 +469,23 @@ export class CameraSignalProvider {
  * Receives OSC messages and converts to normalized signals
  */
 export class OSCSignalAdapter {
-  constructor() {
+  constructor(config = {}) {
     this.signals = {};
     this.listeners = [];
     this.connected = false;
     this.websocket = null;
     this.oscMappings = new Map(); // OSC address -> signal name
+
+    // Reconnection configuration
+    this.config = {
+      reconnectDelay: config.reconnectDelay || 3000,
+      maxReconnectAttempts: config.maxReconnectAttempts || 10,
+      ...config
+    };
+    this.reconnectAttempts = 0;
+    this.isConnecting = false;
+    this.isRunning = false;
+    this.wsUrl = null; // Store URL for reconnection
   }
 
   /**
@@ -482,16 +493,24 @@ export class OSCSignalAdapter {
    * Requires a bridge server (e.g., node-osc-bridge)
    */
   async connect(wsUrl = 'ws://localhost:8080') {
-    if (this.connected) {
-      console.log("📡 OSC already connected");
+    if (this.connected || this.isConnecting) {
+      console.log("📡 OSC already connected or connecting");
       return;
     }
+
+    this.wsUrl = wsUrl; // Store for reconnection
+    this.isRunning = true;
+    this.isConnecting = true;
+
+    console.log(`📡 Connecting to OSC WebSocket: ${wsUrl}`);
 
     try {
       this.websocket = new WebSocket(wsUrl);
 
       this.websocket.onopen = () => {
         this.connected = true;
+        this.isConnecting = false;
+        this.reconnectAttempts = 0; // Reset on successful connection
         console.log("📡 OSC WebSocket connected:", wsUrl);
         this.emitEvent('connected');
       };
@@ -507,11 +526,21 @@ export class OSCSignalAdapter {
 
       this.websocket.onclose = () => {
         this.connected = false;
+        this.isConnecting = false;
         console.log("📡 OSC WebSocket disconnected");
         this.emitEvent('disconnected');
+
+        // Attempt reconnection if still running
+        if (this.isRunning) {
+          this._attemptReconnect();
+        }
       };
     } catch (err) {
       console.error("📡 OSC connection failed:", err);
+      this.isConnecting = false;
+      if (this.isRunning) {
+        this._attemptReconnect();
+      }
       return { ok: false, error: err.message };
     }
   }
@@ -520,11 +549,41 @@ export class OSCSignalAdapter {
    * Disconnect from OSC
    */
   disconnect() {
+    console.log("📡 Stopping OSC WebSocket");
+    this.isRunning = false; // Stop reconnection attempts
+
     if (this.websocket) {
       this.websocket.close();
       this.websocket = null;
     }
     this.connected = false;
+    this.isConnecting = false;
+  }
+
+  /**
+   * Attempt reconnection with exponential backoff
+   */
+  _attemptReconnect() {
+    if (!this.isRunning || !this.wsUrl) return;
+
+    this.reconnectAttempts++;
+
+    if (this.reconnectAttempts > this.config.maxReconnectAttempts) {
+      console.error(`📡 OSC max reconnection attempts (${this.config.maxReconnectAttempts}) reached. Giving up.`);
+      this.isRunning = false;
+      return;
+    }
+
+    const delay = Math.min(
+      this.config.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1),
+      30000 // Max 30 seconds
+    );
+
+    console.log(`📡 OSC reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.config.maxReconnectAttempts})`);
+
+    setTimeout(() => {
+      this.connect(this.wsUrl);
+    }, delay);
   }
 
   /**

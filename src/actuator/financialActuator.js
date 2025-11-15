@@ -88,9 +88,9 @@ export class FinancialActuator {
 
     // --- Trade Velocity Calculation ---
     // Trans_sm controls how fast we adjust positions
-    // Negative Trans_sm → reduce positions quickly
-    // Positive Trans_sm → increase positions (rare)
-    let trade_velocity = -trans_sm * this.velocity_gain;
+    // Negative Trans_sm → reduce positions quickly (negative velocity = sell)
+    // Positive Trans_sm → increase positions (positive velocity = buy, rare)
+    let trade_velocity = trans_sm * this.velocity_gain;  // Fixed: removed incorrect negative sign
 
     // Apply rate limiting
     trade_velocity = Math.max(-this.maxTradeVelocity, Math.min(this.maxTradeVelocity, trade_velocity));
@@ -99,7 +99,7 @@ export class FinancialActuator {
     // Res controls desired exposure level
     // Negative Res → reduce exposure (defensive)
     // Positive Res → increase exposure (aggressive, rare)
-    let exposure_delta = -res * this.exposure_gain;
+    let exposure_delta = res * this.exposure_gain;  // Fixed: removed incorrect negative sign
     let exposure_target = this.currentExposure + exposure_delta;
 
     // Apply exposure constraints

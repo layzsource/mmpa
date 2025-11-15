@@ -266,11 +266,18 @@ export class SpectrogramPipeline {
   }
 
   /**
-   * Clear spectrogram buffer
+   * Clear spectrogram buffer and release memory
    */
   clear() {
     this.spectrogram = [];
-    console.log('🎵 Spectrogram buffer cleared');
+    // Also clear frequency buffers to release memory
+    if (this.frequencyData) {
+      this.frequencyData.fill(0);
+    }
+    if (this.timeDomainData) {
+      this.timeDomainData.fill(0);
+    }
+    console.log('🎵 Spectrogram buffer cleared and memory released');
   }
 
   /**
